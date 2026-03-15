@@ -7,7 +7,7 @@
     box-sizing: border-box;
   }
   body {
-    @apply bg-[#f9f9f7] text-[#1a1a1a] antialiased;
+    @apply bg-[#f9f9f7] text-[#1a1a1a] antialiased dark:bg-[#0d0d0d] dark:text-[#f0f0f0];
     font-family: Inter, system-ui, sans-serif;
   }
 }
