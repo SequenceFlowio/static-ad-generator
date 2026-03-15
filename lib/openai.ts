@@ -9,81 +9,54 @@ export function getOpenAIClient() {
 }
 
 const BRAND_RESEARCH_SYSTEM_PROMPT = `
-You are a Senior Brand Strategist. Your job is to reverse-engineer a brand's complete visual and verbal identity by searching the web and analyzing their website.
+You are a Senior Brand Strategist. Reverse-engineer a brand's visual and verbal identity by searching the web and analyzing their website.
 
-OUTPUT: Return ONLY a valid JSON object. No markdown, no code blocks, no extra text — just the JSON.
+Focus on what you can actually observe: photography style, ad creative approach, positioning, color palette (from visual inspection), and typography if publicly documented.
 
-RESEARCH STEPS (execute all):
+OUTPUT: Return ONLY valid JSON. No markdown, no code blocks.
 
-1. Search the web for:
-   - "[Brand] brand colors hex codes palette"
-   - "[Brand] font typeface typography"
-   - "[Brand] brand guidelines style guide press kit"
-   - "[Brand] design agency rebrand"
-   - "[Brand] packaging design"
-   - "[Brand] Meta Ad Library" to understand ad creative styles
-   - "[Brand] brand story mission founding"
-   - 2–3 direct competitors for context
+RESEARCH STEPS:
+1. Search: "[Brand] brand colors palette", "[Brand] font typeface", "[Brand] brand guidelines", "[Brand] Meta Ad Library", "[Brand] photography style", "[Brand] brand story"
+2. Fetch and analyze the brand URL — note the visual style, copy tone, photography, colors visible on screen
+3. Search 2–3 competitors to understand positioning
 
-2. Fetch and analyze the brand URL:
-   - Read hero copy, About page, product descriptions → extract voice adjectives
-   - Note exact colors used (try to get hex codes from CSS/design)
-   - Note fonts used for headlines vs body
-   - Note photography style, lighting, mood
-   - Note packaging if shown
-
-3. Output this exact JSON schema (use null for fields you cannot find, never guess):
+Return this exact JSON (use null for fields you genuinely cannot find — do not guess):
 
 {
   "name": "Brand name",
   "tagline": "Brand tagline or null",
-  "design_agency": "Agency name or null",
+  "design_agency": "Agency if publicly known or null",
   "voice_adjectives": ["adj1", "adj2", "adj3", "adj4", "adj5"],
-  "positioning": "1-2 sentence positioning statement or null",
-  "competitive_differentiation": "How brand differs visually from competitors or null",
-  "primary_font": "Font name or null",
-  "secondary_font": "Font name or null",
-  "primary_color": "#hexcode or null",
+  "positioning": "1-2 sentence positioning or null",
+  "competitive_differentiation": "How brand differs from competitors visually/verbally or null",
+  "primary_font": "Font name if publicly documented or null",
+  "secondary_font": "Font name if publicly documented or null",
+  "primary_color": "#hexcode if clearly identifiable or null",
   "secondary_color": "#hexcode or null",
   "accent_color": "#hexcode or null",
-  "background_colors": ["#hex1", "#hex2"],
+  "background_colors": ["#hex1"],
   "cta_color_style": "e.g. Solid black pill, white text or null",
   "lighting": "e.g. Soft natural window light or null",
-  "color_grading": "e.g. Warm golden tones or null",
+  "color_grading": "e.g. Warm golden tones, neutral or null",
   "composition": "e.g. Clean minimalist, product centered or null",
-  "subject_matter": "e.g. Product in use in kitchen setting or null",
-  "props_and_surfaces": "e.g. Marble countertop, wooden cutting board or null",
+  "subject_matter": "e.g. Product in use in kitchen or null",
+  "props_and_surfaces": "e.g. Marble countertop, wooden board or null",
   "mood": "e.g. Serene, inviting, premium or null",
-  "physical_description": "What the product looks like or null",
-  "label_logo_placement": "Where logo appears on product or null",
-  "distinctive_features": "Unique visual details or null",
-  "packaging_system": "e.g. Matte black box with gold foil or null",
-  "typical_ad_formats": "e.g. Product hero, lifestyle UGC or null",
-  "text_overlay_style": "e.g. Minimal sans-serif, white text on dark or null",
-  "photo_vs_illustration": "e.g. 90% photography, 10% illustration or null",
-  "ugc_usage": "e.g. Heavy UGC on social, polished studio for paid or null",
-  "offer_presentation": "e.g. Percentage discount, bundle offers or null",
-  "prompt_modifier": "Write a 50-75 word paragraph combining all the above into a style guide for an image generation model. Include hex colors, font style, lighting, mood, and photography direction. This is prepended to every ad prompt."
+  "prompt_modifier": "Write 50-75 words combining the above into a visual style guide for an AI image model. Include any hex colors you found, describe the font style (even if approximate), describe the photography mood and lighting. This will be prepended to every ad prompt to maintain brand consistency."
 }
 `;
 
 export async function researchBrand(
   brandName: string,
-  brandUrl: string
+  brandUrl: string,
+  manualOverrides?: Partial<BrandDnaData>
 ): Promise<BrandDnaData> {
   const client = getOpenAIClient();
-
-  const userMessage = `Research this brand completely and return the JSON:
-
-Brand Name: ${brandName}
-Brand URL: ${brandUrl}
-
-Search the web extensively. Only include what you actually find — use null for unknowns.`;
 
   const response = await client.responses.create({
     model: "gpt-4o",
     instructions: BRAND_RESEARCH_SYSTEM_PROMPT,
-    input: userMessage,
+    input: `Research this brand:\n\nBrand Name: ${brandName}\nBrand URL: ${brandUrl}\n\nSearch extensively. Return the JSON only.`,
     tools: [{ type: "web_search_preview" }],
     text: { format: { type: "json_object" } },
   });
@@ -102,11 +75,20 @@ Search the web extensively. Only include what you actually find — use null for
 
   if (!text) throw new Error("No response from OpenAI.");
 
-  const parsed = JSON.parse(text) as BrandDnaData;
+  const aiData = JSON.parse(text) as BrandDnaData;
 
-  // Ensure arrays are arrays
-  if (!Array.isArray(parsed.voice_adjectives)) parsed.voice_adjectives = [];
-  if (!Array.isArray(parsed.background_colors)) parsed.background_colors = [];
+  if (!Array.isArray(aiData.voice_adjectives)) aiData.voice_adjectives = [];
+  if (!Array.isArray(aiData.background_colors)) aiData.background_colors = [];
 
-  return parsed;
+  // Manual overrides win — user knows their brand better than scraping
+  if (manualOverrides) {
+    for (const [key, value] of Object.entries(manualOverrides)) {
+      if (value !== null && value !== undefined && value !== "" &&
+          !(Array.isArray(value) && value.length === 0)) {
+        (aiData as unknown as Record<string, unknown>)[key] = value;
+      }
+    }
+  }
+
+  return aiData;
 }

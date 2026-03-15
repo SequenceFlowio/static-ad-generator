@@ -56,18 +56,6 @@ Subject Matter: ${dna.subject_matter ?? "N/A"}
 Props & Surfaces: ${dna.props_and_surfaces ?? "N/A"}
 Mood: ${dna.mood ?? "N/A"}
 
-PRODUCT:
-Physical Description: ${dna.physical_description ?? "N/A"}
-Label/Logo Placement: ${dna.label_logo_placement ?? "N/A"}
-Distinctive Features: ${dna.distinctive_features ?? "N/A"}
-Packaging: ${dna.packaging_system ?? "N/A"}
-
-AD CREATIVE STYLE:
-Typical Formats: ${dna.typical_ad_formats ?? "N/A"}
-Text Overlay: ${dna.text_overlay_style ?? "N/A"}
-UGC Usage: ${dna.ugc_usage ?? "N/A"}
-Offer Presentation: ${dna.offer_presentation ?? "N/A"}
-
 PROMPT MODIFIER (prepend to every prompt):
 ${dna.prompt_modifier}
 `.trim();

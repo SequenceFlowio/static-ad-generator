@@ -1,14 +1,16 @@
 "use client";
 
+import { useState } from "react";
 import type { BrandDnaData } from "@/types";
 
 function ColorSwatch({ hex, label }: { hex: string | null; label: string }) {
-  if (!hex) return (
-    <div className="flex items-center gap-2">
-      <div className="h-5 w-5 rounded border border-dashed border-gray-300" />
-      <span className="text-xs text-gray-400">{label}: —</span>
-    </div>
-  );
+  if (!hex)
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-5 w-5 rounded border border-dashed border-gray-300" />
+        <span className="text-xs text-gray-400">{label}: —</span>
+      </div>
+    );
   return (
     <div className="flex items-center gap-2">
       <div
@@ -25,7 +27,9 @@ function Row({ label, value }: { label: string; value: string | null | undefined
   return (
     <div className="flex gap-3 py-1.5 border-b border-gray-50 last:border-0">
       <span className="text-xs text-gray-400 w-36 flex-shrink-0">{label}</span>
-      <span className="text-xs text-gray-700">{value ?? <span className="text-gray-300">—</span>}</span>
+      <span className="text-xs text-gray-700">
+        {value ?? <span className="text-gray-300">—</span>}
+      </span>
     </div>
   );
 }
@@ -38,6 +42,8 @@ interface Props {
 }
 
 export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Props) {
+  const [showModifier, setShowModifier] = useState(false);
+
   return (
     <div className="space-y-5">
       {/* Brand Overview */}
@@ -51,7 +57,10 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
           {data.voice_adjectives.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-1">
               {data.voice_adjectives.map((adj) => (
-                <span key={adj} className="rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs text-gray-600">
+                <span
+                  key={adj}
+                  className="rounded-full bg-white border border-gray-200 px-2 py-0.5 text-xs text-gray-600"
+                >
                   {adj}
                 </span>
               ))}
@@ -94,23 +103,21 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
         </div>
       </div>
 
-      {/* Product Details */}
+      {/* Style Fingerprint (collapsed by default) */}
       <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Product Details</p>
-        <div className="rounded-xl bg-gray-50 px-4 py-3">
-          <Row label="Description" value={data.physical_description} />
-          <Row label="Logo Placement" value={data.label_logo_placement} />
-          <Row label="Distinctive Features" value={data.distinctive_features} />
-          <Row label="Packaging" value={data.packaging_system} />
-        </div>
-      </div>
-
-      {/* Prompt Modifier */}
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Image Generation Prompt Modifier</p>
-        <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/40 px-4 py-3">
-          <p className="text-xs leading-relaxed text-gray-700">{data.prompt_modifier}</p>
-        </div>
+        <button
+          onClick={() => setShowModifier((s) => !s)}
+          className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600"
+        >
+          <span>{showModifier ? "▲" : "▼"}</span>
+          <span>Auto-generated style fingerprint</span>
+          <span className="text-gray-300">· used for image prompts</span>
+        </button>
+        {showModifier && (
+          <div className="mt-2 rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/40 px-4 py-3">
+            <p className="text-xs leading-relaxed text-gray-700">{data.prompt_modifier}</p>
+          </div>
+        )}
       </div>
 
       {/* Actions */}

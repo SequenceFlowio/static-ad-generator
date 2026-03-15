@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import BrandDnaCard from "@/components/BrandDnaCard";
 import BrandDnaForm from "@/components/BrandDnaForm";
 import type { BrandDna, BrandDnaData } from "@/types";
@@ -12,59 +12,82 @@ interface Props {
   onComplete: (dna: BrandDna) => void;
 }
 
-const EMPTY_DNA: BrandDnaData = {
-  name: "",
-  tagline: null,
-  design_agency: null,
-  voice_adjectives: [],
-  positioning: null,
-  competitive_differentiation: null,
-  primary_font: null,
-  secondary_font: null,
-  primary_color: null,
-  secondary_color: null,
-  accent_color: null,
-  background_colors: [],
-  cta_color_style: null,
-  lighting: null,
-  color_grading: null,
-  composition: null,
-  subject_matter: null,
-  props_and_surfaces: null,
-  mood: null,
-  physical_description: null,
-  label_logo_placement: null,
-  distinctive_features: null,
-  packaging_system: null,
-  typical_ad_formats: null,
-  text_overlay_style: null,
-  photo_vs_illustration: null,
-  ugc_usage: null,
-  offer_presentation: null,
-  prompt_modifier: "",
-};
+type Step = "idle" | "filling" | "saving" | "done";
+type AiStatus = "idle" | "running" | "complete" | "error";
 
 export default function Phase1Research({ brandId, brandUrl, initialDna, onComplete }: Props) {
   const [dna, setDna] = useState<BrandDna | null>(initialDna);
-  const [mode, setMode] = useState<"view" | "edit" | "manual">("view");
-  const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState<Step>(initialDna ? "done" : "idle");
+  const [aiStatus, setAiStatus] = useState<AiStatus>("idle");
   const [error, setError] = useState("");
   const [open, setOpen] = useState(!initialDna);
+  const [showEdit, setShowEdit] = useState(false);
+  const [reSearching, setReSearching] = useState(false);
 
-  async function handleResearch() {
-    setLoading(true);
+  // Holds the in-flight AI research promise so we can await it before PATCH
+  const aiPromiseRef = useRef<Promise<BrandDna | null> | null>(null);
+
+  function startResearch() {
+    setStep("filling");
+    setAiStatus("running");
     setError("");
-    const res = await fetch(`/api/brands/${brandId}/research`, { method: "POST" });
-    const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error ?? "Research failed."); return; }
-    setDna(data.brand_dna);
-    setMode("view");
-    onComplete(data.brand_dna);
+
+    const promise = fetch(`/api/brands/${brandId}/research`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manual: {} }),
+    })
+      .then(async (res) => {
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error ?? "Research failed");
+        setAiStatus("complete");
+        return data.brand_dna as BrandDna;
+      })
+      .catch((err: Error) => {
+        setAiStatus("error");
+        setError(err.message);
+        return null;
+      });
+
+    aiPromiseRef.current = promise;
   }
 
-  async function handleSave(formData: BrandDnaData) {
-    setLoading(true);
+  // Called when user clicks "Save Brand DNA" from the manual form
+  async function handleResearchSave(formData: Partial<BrandDnaData>) {
+    setStep("saving");
+    setError("");
+
+    // Wait for AI to finish — ensures POST saves its result before our PATCH
+    await aiPromiseRef.current;
+
+    // Filter out blank values so we don't overwrite AI data with empty strings
+    const filtered: Partial<BrandDnaData> = {};
+    for (const [k, v] of Object.entries(formData)) {
+      if (v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)) {
+        (filtered as Record<string, unknown>)[k] = v;
+      }
+    }
+
+    const res = await fetch(`/api/brands/${brandId}/research`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(filtered),
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      setError(data.error ?? "Save failed");
+      setStep("filling");
+      return;
+    }
+
+    setDna(data.brand_dna);
+    onComplete(data.brand_dna);
+    setStep("done");
+  }
+
+  // Called when user saves edits to existing DNA
+  async function handleEditSave(formData: Partial<BrandDnaData>) {
     setError("");
     const res = await fetch(`/api/brands/${brandId}/research`, {
       method: "PATCH",
@@ -72,12 +95,35 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
       body: JSON.stringify(formData),
     });
     const data = await res.json();
-    setLoading(false);
-    if (!res.ok) { setError(data.error ?? "Save failed."); return; }
+    if (!res.ok) { setError(data.error ?? "Save failed"); return; }
     setDna(data.brand_dna);
-    setMode("view");
+    onComplete(data.brand_dna);
+    setShowEdit(false);
+  }
+
+  async function handleReResearch() {
+    setReSearching(true);
+    setError("");
+    const res = await fetch(`/api/brands/${brandId}/research`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manual: {} }),
+    });
+    const data = await res.json();
+    setReSearching(false);
+    if (!res.ok) { setError(data.error ?? "Re-research failed"); return; }
+    setDna(data.brand_dna);
     onComplete(data.brand_dna);
   }
+
+  const savingLabel =
+    step === "saving"
+      ? aiStatus === "running"
+        ? "Waiting for AI…"
+        : "Saving…"
+      : aiStatus === "complete"
+      ? "Save Brand DNA ▶"
+      : "Save Brand DNA ▶";
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
@@ -86,13 +132,21 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
         className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${dna ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 text-gray-500"}`}>
+          <span
+            className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
+              dna ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 text-gray-500"
+            }`}
+          >
             {dna ? "✓" : "1"}
           </span>
           <div>
             <p className="font-semibold text-sm">Phase 1 — Brand DNA</p>
             <p className="text-xs text-gray-400">
-              {dna ? `Brand DNA saved · ${new Date(dna.generated_at).toLocaleDateString()}` : "Research & build your brand identity"}
+              {dna
+                ? `Brand DNA saved · ${new Date(dna.generated_at).toLocaleDateString()}`
+                : step === "filling" || step === "saving"
+                ? "Building brand identity…"
+                : "Research & build your brand identity"}
             </p>
           </div>
         </div>
@@ -100,66 +154,112 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
       </button>
 
       {open && (
-        <div className="border-t border-gray-100 px-6 py-5">
+        <div className="border-t border-gray-100 px-6 py-5 space-y-5">
           {error && (
-            <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
           )}
 
-          {/* No DNA yet — show options */}
-          {!dna && mode === "view" && (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5">
-                <p className="text-sm font-medium mb-1">Auto-Research</p>
-                <p className="text-xs text-gray-400 mb-3">
-                  OpenAI searches the web and scrapes your website to fill in brand identity fields automatically.
-                  {!brandUrl && <span className="text-amber-500"> Set a website URL on this brand first for best results.</span>}
+          {/* Step 1 — Start */}
+          {step === "idle" && (
+            <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 space-y-3">
+              <div>
+                <p className="text-sm font-medium mb-1">Auto-Research your Brand</p>
+                <p className="text-xs text-gray-400">
+                  We'll search the web and analyze your website to extract colors, fonts, photography style, and positioning automatically.
                 </p>
-                <button
-                  onClick={handleResearch}
-                  disabled={loading}
-                  className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
-                >
-                  {loading ? "Researching… (~60s)" : "Research Brand ▶"}
-                </button>
               </div>
-
-              <div className="text-center text-xs text-gray-300">or</div>
-
+              {brandUrl ? (
+                <p className="text-xs font-mono text-gray-500 truncate">{brandUrl}</p>
+              ) : (
+                <p className="text-xs text-amber-500">No website URL set — results may be limited.</p>
+              )}
               <button
-                onClick={() => setMode("manual")}
-                className="w-full rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-400 hover:border-gray-300 hover:text-gray-500"
+                onClick={startResearch}
+                className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
               >
-                Fill in manually →
+                Start Research ▶
               </button>
             </div>
           )}
 
-          {/* Manual entry (no prior DNA) */}
-          {mode === "manual" && (
-            <BrandDnaForm
-              initialData={EMPTY_DNA}
-              onSave={handleSave}
-              onCancel={() => setMode("view")}
-              loading={loading}
-            />
+          {/* Step 2 — AI running in background, manual form visible */}
+          {(step === "filling" || step === "saving") && (
+            <div className="space-y-5">
+              {/* AI status banner */}
+              <div
+                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
+                  aiStatus === "running"
+                    ? "bg-blue-50 text-blue-600"
+                    : aiStatus === "complete"
+                    ? "bg-[#C7F56F]/10 text-[#1a1a1a]"
+                    : aiStatus === "error"
+                    ? "bg-red-50 text-red-600"
+                    : ""
+                }`}
+              >
+                {aiStatus === "running" && (
+                  <>
+                    <span className="inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
+                    <span>AI is researching your brand in the background (~60s)… fill in what you know below.</span>
+                  </>
+                )}
+                {aiStatus === "complete" && (
+                  <>
+                    <span className="flex-shrink-0">✓</span>
+                    <span>AI research complete — click "Save Brand DNA" to combine everything.</span>
+                  </>
+                )}
+                {aiStatus === "error" && (
+                  <>
+                    <span className="flex-shrink-0">⚠</span>
+                    <span>AI research failed — your manual entries will still be saved.</span>
+                  </>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-1 text-sm font-medium">Fill in what you know</p>
+                <p className="mb-4 text-xs text-gray-400">
+                  These fields are hard for AI to find — add what you can, leave the rest blank. AI fills everything else.
+                </p>
+                <BrandDnaForm
+                  initialData={{
+                    voice_adjectives: [],
+                    positioning: null,
+                    primary_font: null,
+                    secondary_font: null,
+                    primary_color: null,
+                    secondary_color: null,
+                    accent_color: null,
+                    background_colors: [],
+                    cta_color_style: null,
+                  }}
+                  onSave={handleResearchSave}
+                  onCancel={null}
+                  loading={step === "saving"}
+                  saveLabel={savingLabel}
+                />
+              </div>
+            </div>
           )}
 
-          {/* DNA exists — show card or edit form */}
-          {dna && mode === "view" && (
+          {/* Step 3 — Done — show card or edit form */}
+          {step === "done" && dna && !showEdit && (
             <BrandDnaCard
               data={dna.data}
-              onEdit={() => setMode("edit")}
-              onReResearch={handleResearch}
-              loading={loading}
+              onEdit={() => setShowEdit(true)}
+              onReResearch={handleReResearch}
+              loading={reSearching}
             />
           )}
 
-          {dna && mode === "edit" && (
+          {step === "done" && dna && showEdit && (
             <BrandDnaForm
               initialData={dna.data}
-              onSave={handleSave}
-              onCancel={() => setMode("view")}
-              loading={loading}
+              onSave={handleEditSave}
+              onCancel={() => setShowEdit(false)}
+              loading={false}
+              saveLabel="Save Changes"
             />
           )}
         </div>

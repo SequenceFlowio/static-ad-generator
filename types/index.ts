@@ -14,7 +14,7 @@ export interface BrandDnaData {
   voice_adjectives: string[];
   positioning: string | null;
   competitive_differentiation: string | null;
-  // Visual System
+  // Visual System (hard to scrape — filled manually)
   primary_font: string | null;
   secondary_font: string | null;
   primary_color: string | null;
@@ -22,25 +22,14 @@ export interface BrandDnaData {
   accent_color: string | null;
   background_colors: string[];
   cta_color_style: string | null;
-  // Photography Direction
+  // Photography Direction (scraped from website/ads)
   lighting: string | null;
   color_grading: string | null;
   composition: string | null;
   subject_matter: string | null;
   props_and_surfaces: string | null;
   mood: string | null;
-  // Product Details
-  physical_description: string | null;
-  label_logo_placement: string | null;
-  distinctive_features: string | null;
-  packaging_system: string | null;
-  // Ad Creative Style
-  typical_ad_formats: string | null;
-  text_overlay_style: string | null;
-  photo_vs_illustration: string | null;
-  ugc_usage: string | null;
-  offer_presentation: string | null;
-  // Auto-generated prompt modifier
+  // Auto-generated style fingerprint prepended to every image prompt
   prompt_modifier: string;
 }
 

@@ -3,12 +3,16 @@ import { getServerSupabase } from "@/lib/supabase";
 import { researchBrand } from "@/lib/openai";
 import type { BrandDnaData } from "@/types";
 
-// POST /api/brands/[id]/research — Phase 1: auto-research and generate Brand DNA JSON
+// POST /api/brands/[id]/research
+// Body: { manual?: Partial<BrandDnaData> } — manual fields override AI results
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  const body = await req.json().catch(() => ({}));
+  const manualOverrides: Partial<BrandDnaData> = body.manual ?? {};
+
   const db = getServerSupabase();
 
   const { data: brand, error: brandErr } = await db
@@ -26,9 +30,8 @@ export async function POST(
   }
 
   try {
-    const dnaData = await researchBrand(brand.name, brand.url);
+    const dnaData = await researchBrand(brand.name, brand.url, manualOverrides);
 
-    // Delete old DNA, insert fresh
     await db.from("brand_dna").delete().eq("brand_id", id);
 
     const { data: dna, error: insertErr } = await db
@@ -46,7 +49,7 @@ export async function POST(
   }
 }
 
-// PATCH /api/brands/[id]/research — save manually edited brand DNA fields
+// PATCH /api/brands/[id]/research — save manual edits to existing DNA
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -56,7 +59,6 @@ export async function PATCH(
 
   const db = getServerSupabase();
 
-  // Load existing DNA and merge
   const { data: existing } = await db
     .from("brand_dna")
     .select("*")
