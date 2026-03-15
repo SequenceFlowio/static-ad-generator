@@ -32,7 +32,6 @@ function BrandCard({
               <p className="mt-1 text-xs text-gray-400 truncate max-w-[180px]">{brand.url}</p>
             )}
           </div>
-          <span className="text-xs text-gray-300 mt-0.5">→</span>
         </div>
         <p className="mt-3 text-xs text-gray-400">
           {new Date(brand.created_at).toLocaleDateString("en-US", {
