@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { researchBrand } from "@/lib/openai";
+import type { BrandDnaData } from "@/types";
 
-// POST /api/brands/[id]/research — Phase 1: research brand and generate Brand DNA
+// POST /api/brands/[id]/research — Phase 1: auto-research and generate Brand DNA JSON
 export async function POST(
   _req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -10,7 +11,6 @@ export async function POST(
   const { id } = await params;
   const db = getServerSupabase();
 
-  // Load brand
   const { data: brand, error: brandErr } = await db
     .from("brands")
     .select("*")
@@ -26,15 +26,14 @@ export async function POST(
   }
 
   try {
-    const dnaContent = await researchBrand(brand.name, brand.url);
+    const dnaData = await researchBrand(brand.name, brand.url);
 
-    // Delete old DNA for this brand (keep only latest)
+    // Delete old DNA, insert fresh
     await db.from("brand_dna").delete().eq("brand_id", id);
 
-    // Insert new DNA
     const { data: dna, error: insertErr } = await db
       .from("brand_dna")
-      .insert({ brand_id: id, content: dnaContent })
+      .insert({ brand_id: id, data: dnaData })
       .select()
       .single();
 
@@ -47,23 +46,46 @@ export async function POST(
   }
 }
 
-// PATCH /api/brands/[id]/research — save manually edited brand DNA
+// PATCH /api/brands/[id]/research — save manually edited brand DNA fields
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { content } = await req.json();
-  if (!content) return NextResponse.json({ error: "content is required" }, { status: 400 });
+  const body = await req.json() as Partial<BrandDnaData>;
 
   const db = getServerSupabase();
-  const { data, error } = await db
-    .from("brand_dna")
-    .update({ content, generated_at: new Date().toISOString() })
-    .eq("brand_id", id)
-    .select()
-    .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  return NextResponse.json({ brand_dna: data });
+  // Load existing DNA and merge
+  const { data: existing } = await db
+    .from("brand_dna")
+    .select("*")
+    .eq("brand_id", id)
+    .order("generated_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const merged: BrandDnaData = { ...(existing?.data ?? {}), ...body } as BrandDnaData;
+
+  let result;
+  if (existing) {
+    const { data, error } = await db
+      .from("brand_dna")
+      .update({ data: merged, generated_at: new Date().toISOString() })
+      .eq("id", existing.id)
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    result = data;
+  } else {
+    const { data, error } = await db
+      .from("brand_dna")
+      .insert({ brand_id: id, data: merged })
+      .select()
+      .single();
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    result = data;
+  }
+
+  return NextResponse.json({ brand_dna: result });
 }

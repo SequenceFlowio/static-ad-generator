@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import type { BrandDna } from "@/types";
+import BrandDnaCard from "@/components/BrandDnaCard";
+import BrandDnaForm from "@/components/BrandDnaForm";
+import type { BrandDna, BrandDnaData } from "@/types";
 
 interface Props {
   brandId: string;
@@ -10,10 +12,41 @@ interface Props {
   onComplete: (dna: BrandDna) => void;
 }
 
+const EMPTY_DNA: BrandDnaData = {
+  name: "",
+  tagline: null,
+  design_agency: null,
+  voice_adjectives: [],
+  positioning: null,
+  competitive_differentiation: null,
+  primary_font: null,
+  secondary_font: null,
+  primary_color: null,
+  secondary_color: null,
+  accent_color: null,
+  background_colors: [],
+  cta_color_style: null,
+  lighting: null,
+  color_grading: null,
+  composition: null,
+  subject_matter: null,
+  props_and_surfaces: null,
+  mood: null,
+  physical_description: null,
+  label_logo_placement: null,
+  distinctive_features: null,
+  packaging_system: null,
+  typical_ad_formats: null,
+  text_overlay_style: null,
+  photo_vs_illustration: null,
+  ugc_usage: null,
+  offer_presentation: null,
+  prompt_modifier: "",
+};
+
 export default function Phase1Research({ brandId, brandUrl, initialDna, onComplete }: Props) {
   const [dna, setDna] = useState<BrandDna | null>(initialDna);
-  const [editing, setEditing] = useState(false);
-  const [draftContent, setDraftContent] = useState(initialDna?.content ?? "");
+  const [mode, setMode] = useState<"view" | "edit" | "manual">("view");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(!initialDna);
@@ -21,43 +54,33 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
   async function handleResearch() {
     setLoading(true);
     setError("");
-    const res = await fetch(`/api/brands/${brandId}/research`, {
-      method: "POST",
-    });
+    const res = await fetch(`/api/brands/${brandId}/research`, { method: "POST" });
     const data = await res.json();
     setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Research failed.");
-      return;
-    }
+    if (!res.ok) { setError(data.error ?? "Research failed."); return; }
     setDna(data.brand_dna);
-    setDraftContent(data.brand_dna.content);
-    setEditing(false);
+    setMode("view");
     onComplete(data.brand_dna);
   }
 
-  async function handleSave() {
+  async function handleSave(formData: BrandDnaData) {
     setLoading(true);
     setError("");
     const res = await fetch(`/api/brands/${brandId}/research`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content: draftContent }),
+      body: JSON.stringify(formData),
     });
     const data = await res.json();
     setLoading(false);
-    if (!res.ok) {
-      setError(data.error ?? "Save failed.");
-      return;
-    }
+    if (!res.ok) { setError(data.error ?? "Save failed."); return; }
     setDna(data.brand_dna);
-    setEditing(false);
+    setMode("view");
     onComplete(data.brand_dna);
   }
 
   return (
     <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
-      {/* Header */}
       <button
         onClick={() => setOpen((o) => !o)}
         className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
@@ -67,9 +90,9 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
             {dna ? "✓" : "1"}
           </span>
           <div>
-            <p className="font-semibold text-sm">Phase 1 — Brand Research</p>
+            <p className="font-semibold text-sm">Phase 1 — Brand DNA</p>
             <p className="text-xs text-gray-400">
-              {dna ? `Brand DNA generated · ${new Date(dna.generated_at).toLocaleDateString()}` : "Research the brand and generate Brand DNA"}
+              {dna ? `Brand DNA saved · ${new Date(dna.generated_at).toLocaleDateString()}` : "Research & build your brand identity"}
             </p>
           </div>
         </div>
@@ -78,88 +101,67 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
 
       {open && (
         <div className="border-t border-gray-100 px-6 py-5">
-          {!dna && (
-            <div className="mb-4 rounded-lg bg-gray-50 p-4 text-sm text-gray-600">
-              <p>This will use OpenAI web search to reverse-engineer the brand&apos;s visual identity and generate a Brand DNA document.</p>
-              {!brandUrl && (
-                <p className="mt-2 text-amber-600 text-xs">
-                  ⚠ No website URL set for this brand. Add one by editing the brand to get better research results.
-                </p>
-              )}
-            </div>
-          )}
-
           {error && (
             <p className="mb-4 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
           )}
 
-          {/* DNA viewer / editor */}
-          {dna && !editing && (
-            <div className="mb-4">
-              <pre className="max-h-96 overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs leading-relaxed text-gray-700 whitespace-pre-wrap">
-                {dna.content}
-              </pre>
-            </div>
-          )}
-
-          {editing && (
-            <div className="mb-4">
-              <textarea
-                value={draftContent}
-                onChange={(e) => setDraftContent(e.target.value)}
-                rows={20}
-                className="w-full rounded-lg border border-gray-200 p-3 font-mono text-xs leading-relaxed outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 resize-y"
-              />
-            </div>
-          )}
-
-          <div className="flex flex-wrap gap-2">
-            {!dna && (
-              <button
-                onClick={handleResearch}
-                disabled={loading}
-                className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
-              >
-                {loading ? "Researching… (may take ~60s)" : "Research Brand ▶"}
-              </button>
-            )}
-
-            {dna && !editing && (
-              <>
+          {/* No DNA yet — show options */}
+          {!dna && mode === "view" && (
+            <div className="space-y-4">
+              <div className="rounded-xl border border-gray-100 bg-gray-50 p-5">
+                <p className="text-sm font-medium mb-1">Auto-Research</p>
+                <p className="text-xs text-gray-400 mb-3">
+                  OpenAI searches the web and scrapes your website to fill in brand identity fields automatically.
+                  {!brandUrl && <span className="text-amber-500"> Set a website URL on this brand first for best results.</span>}
+                </p>
                 <button
                   onClick={handleResearch}
                   disabled={loading}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  {loading ? "Re-researching…" : "Re-research"}
-                </button>
-                <button
-                  onClick={() => { setEditing(true); setDraftContent(dna.content); }}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  Edit DNA
-                </button>
-              </>
-            )}
-
-            {editing && (
-              <>
-                <button
-                  onClick={handleSave}
-                  disabled={loading}
                   className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
                 >
-                  {loading ? "Saving…" : "Save Changes"}
+                  {loading ? "Researching… (~60s)" : "Research Brand ▶"}
                 </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-              </>
-            )}
-          </div>
+              </div>
+
+              <div className="text-center text-xs text-gray-300">or</div>
+
+              <button
+                onClick={() => setMode("manual")}
+                className="w-full rounded-xl border border-dashed border-gray-200 p-4 text-sm text-gray-400 hover:border-gray-300 hover:text-gray-500"
+              >
+                Fill in manually →
+              </button>
+            </div>
+          )}
+
+          {/* Manual entry (no prior DNA) */}
+          {mode === "manual" && (
+            <BrandDnaForm
+              initialData={EMPTY_DNA}
+              onSave={handleSave}
+              onCancel={() => setMode("view")}
+              loading={loading}
+            />
+          )}
+
+          {/* DNA exists — show card or edit form */}
+          {dna && mode === "view" && (
+            <BrandDnaCard
+              data={dna.data}
+              onEdit={() => setMode("edit")}
+              onReResearch={handleResearch}
+              loading={loading}
+            />
+          )}
+
+          {dna && mode === "edit" && (
+            <BrandDnaForm
+              initialData={dna.data}
+              onSave={handleSave}
+              onCancel={() => setMode("view")}
+              loading={loading}
+            />
+          )}
         </div>
       )}
     </div>

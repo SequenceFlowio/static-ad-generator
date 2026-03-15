@@ -1,21 +1,20 @@
-import { getServerSupabase, uploadToStorage, listStorageFiles } from "@/lib/supabase";
+import { getServerSupabase, uploadToStorage } from "@/lib/supabase";
 import { generateImages } from "@/lib/kie";
 import type { SseEvent, GenerateRequest, PromptItem } from "@/types";
 
-export const maxDuration = 300; // 5 min timeout for long generation runs
+export const maxDuration = 300;
 
-// POST /api/brands/[id]/generate — Phase 3: generate ads via kie.ai, stream progress via SSE
+// POST /api/brands/[id]/generate — Phase 3: generate ads via kie.ai, stream via SSE
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, prompt_set_id } = body;
+  const { template_numbers, resolution, num_images = 4, prompt_set_id } = body;
 
   const db = getServerSupabase();
 
-  // Load brand
   const { data: brand, error: brandErr } = await db
     .from("brands")
     .select("*")
@@ -29,7 +28,6 @@ export async function POST(
     });
   }
 
-  // Load prompt set
   const { data: promptSet, error: promptErr } = await db
     .from("prompt_sets")
     .select("*")
@@ -48,31 +46,36 @@ export async function POST(
     ? allPrompts.filter((p) => template_numbers.includes(p.template_number))
     : allPrompts;
 
-  // Get product image URLs from Supabase Storage
-  const productImageUrls = await listStorageFiles("product-images", brand.slug);
+  // Get product reference image URLs from the linked product
+  let productImageUrls: string[] = [];
+  if (promptSet.product_id) {
+    const { data: product } = await db
+      .from("products")
+      .select("image_urls")
+      .eq("id", promptSet.product_id)
+      .single();
+    productImageUrls = (product?.image_urls as string[]) ?? [];
+  }
 
   // Create generation job rows
-  const jobInserts = selectedPrompts.map((p) => ({
-    brand_id: id,
-    prompt_set_id,
-    template_number: p.template_number,
-    template_name: p.template_name,
-    resolution,
-    status: "pending" as const,
-  }));
-
   const { data: jobs } = await db
     .from("generation_jobs")
-    .insert(jobInserts)
+    .insert(
+      selectedPrompts.map((p) => ({
+        brand_id: id,
+        prompt_set_id,
+        template_number: p.template_number,
+        template_name: p.template_name,
+        resolution,
+        num_images,
+        status: "pending",
+      }))
+    )
     .select();
 
-  const jobMap = new Map(
-    (jobs ?? []).map((j) => [j.template_number, j.id])
-  );
+  const jobMap = new Map((jobs ?? []).map((j) => [j.template_number, j.id]));
 
-  // SSE stream
   const encoder = new TextEncoder();
-
   function encodeEvent(event: SseEvent): Uint8Array {
     return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
   }
@@ -82,12 +85,8 @@ export async function POST(
       for (const promptItem of selectedPrompts) {
         const jobId = jobMap.get(promptItem.template_number);
 
-        // Mark job as running
         if (jobId) {
-          await db
-            .from("generation_jobs")
-            .update({ status: "running" })
-            .eq("id", jobId);
+          await db.from("generation_jobs").update({ status: "running" }).eq("id", jobId);
         }
 
         controller.enqueue(
@@ -105,16 +104,14 @@ export async function POST(
               ? productImageUrls
               : undefined;
 
-          // Call kie.ai — waits for generation (with internal polling)
           const kieImageUrls = await generateImages({
             prompt: promptItem.prompt,
             aspect_ratio: promptItem.aspect_ratio,
             resolution,
-            num_images: 4,
+            num_images,
             reference_image_urls: refImages,
           });
 
-          // Download each image from kie.ai and re-upload to Supabase Storage
           const storedUrls: string[] = [];
           const folderName = `${String(promptItem.template_number).padStart(2, "0")}-${promptItem.template_name}`;
 
@@ -127,7 +124,6 @@ export async function POST(
             storedUrls.push(url);
           }
 
-          // Update job record
           if (jobId) {
             await db
               .from("generation_jobs")
@@ -146,14 +142,12 @@ export async function POST(
           );
         } catch (err) {
           const message = err instanceof Error ? err.message : String(err);
-
           if (jobId) {
             await db
               .from("generation_jobs")
               .update({ status: "failed", error: message })
               .eq("id", jobId);
           }
-
           controller.enqueue(
             encodeEvent({
               type: "error",
@@ -166,7 +160,6 @@ export async function POST(
         }
       }
 
-      // Signal all done
       controller.enqueue(encodeEvent({ type: "complete" }));
       controller.close();
     },

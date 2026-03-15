@@ -2,22 +2,21 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { generatePrompts } from "@/lib/prompt-generator";
 
-// POST /api/brands/[id]/prompts — Phase 2: generate prompts from Brand DNA
+// POST /api/brands/[id]/prompts — Phase 2: generate prompts from Brand DNA + product
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { product_name } = await req.json();
+  const { product_id } = await req.json();
 
-  if (!product_name) {
-    return NextResponse.json({ error: "product_name is required" }, { status: 400 });
+  if (!product_id) {
+    return NextResponse.json({ error: "product_id is required" }, { status: 400 });
   }
 
   const db = getServerSupabase();
 
-  // Load brand + latest DNA
-  const [brandRes, dnaRes] = await Promise.all([
+  const [brandRes, dnaRes, productRes] = await Promise.all([
     db.from("brands").select("*").eq("id", id).single(),
     db
       .from("brand_dna")
@@ -26,23 +25,26 @@ export async function POST(
       .order("generated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    db.from("products").select("*").eq("id", product_id).single(),
   ]);
 
   if (brandRes.error || !brandRes.data) {
     return NextResponse.json({ error: "Brand not found" }, { status: 404 });
   }
-
   if (!dnaRes.data) {
-    return NextResponse.json(
-      { error: "Brand DNA not found. Run Phase 1 (Research) first." },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Brand DNA not found. Run Phase 1 first." }, { status: 400 });
   }
+  if (productRes.error || !productRes.data) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
+  const product = productRes.data;
 
   try {
     const promptsJson = await generatePrompts(
-      dnaRes.data.content,
-      product_name,
+      dnaRes.data.data,
+      product.name,
+      product.description,
       brandRes.data.name
     );
 
@@ -50,7 +52,8 @@ export async function POST(
       .from("prompt_sets")
       .insert({
         brand_id: id,
-        product_name,
+        product_id,
+        product_name: product.name,
         prompts_json: promptsJson,
       })
       .select()
