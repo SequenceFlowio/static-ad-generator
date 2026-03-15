@@ -88,7 +88,7 @@ export default function DashboardPage() {
             <button
               onClick={(e) => handleDelete(e, brand)}
               disabled={deletingId === brand.id}
-              className="absolute top-3 right-3 hidden group-hover:flex items-center justify-center h-6 w-6 rounded-md text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+              className="absolute top-3 right-3 flex items-center justify-center h-6 w-6 rounded-md text-gray-300 opacity-0 group-hover:opacity-100 hover:bg-red-50 hover:text-red-500 transition-all disabled:opacity-50"
               title="Delete brand"
             >
               {deletingId === brand.id ? "…" : "✕"}
