@@ -165,7 +165,7 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
               <div>
                 <p className="text-sm font-medium mb-1">Auto-Research your Brand</p>
                 <p className="text-xs text-gray-400">
-                  We'll search the web and analyze your website to extract colors, fonts, photography style, and positioning automatically.
+                  We&apos;ll search the web and analyze your website to extract colors, fonts, photography style, and positioning automatically.
                 </p>
               </div>
               {brandUrl ? (
@@ -206,7 +206,7 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
                 {aiStatus === "complete" && (
                   <>
                     <span className="flex-shrink-0">✓</span>
-                    <span>AI research complete — click "Save Brand DNA" to combine everything.</span>
+                    <span>AI research complete — click &quot;Save Brand DNA&quot; to combine everything.</span>
                   </>
                 )}
                 {aiStatus === "error" && (
