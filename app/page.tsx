@@ -7,6 +7,7 @@ import type { Brand } from "@/types";
 export default function DashboardPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/brands")
@@ -17,6 +18,15 @@ export default function DashboardPage() {
       })
       .catch(() => setLoading(false));
   }, []);
+
+  async function handleDelete(e: React.MouseEvent, brand: Brand) {
+    e.preventDefault();
+    if (!confirm(`Delete "${brand.name}"? This cannot be undone.`)) return;
+    setDeletingId(brand.id);
+    await fetch(`/api/brands/${brand.id}`, { method: "DELETE" });
+    setBrands((prev) => prev.filter((b) => b.id !== brand.id));
+    setDeletingId(null);
+  }
 
   return (
     <div>
@@ -53,28 +63,37 @@ export default function DashboardPage() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {brands.map((brand) => (
-          <Link
-            key={brand.id}
-            href={`/brands/${brand.id}`}
-            className="group rounded-xl border border-gray-200 bg-white p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="font-semibold group-hover:text-[#1a1a1a]">{brand.name}</h2>
-                {brand.url && (
-                  <p className="mt-1 text-xs text-gray-400 truncate max-w-[180px]">{brand.url}</p>
-                )}
+          <div key={brand.id} className="relative group">
+            <Link
+              href={`/brands/${brand.id}`}
+              className="block rounded-xl border border-gray-200 bg-white p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
+            >
+              <div className="flex items-start justify-between">
+                <div>
+                  <h2 className="font-semibold">{brand.name}</h2>
+                  {brand.url && (
+                    <p className="mt-1 text-xs text-gray-400 truncate max-w-[180px]">{brand.url}</p>
+                  )}
+                </div>
+                <span className="text-xs text-gray-300 mt-0.5">→</span>
               </div>
-              <span className="text-xs text-gray-300 mt-0.5">→</span>
-            </div>
-            <p className="mt-3 text-xs text-gray-400">
-              {new Date(brand.created_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </p>
-          </Link>
+              <p className="mt-3 text-xs text-gray-400">
+                {new Date(brand.created_at).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  year: "numeric",
+                })}
+              </p>
+            </Link>
+            <button
+              onClick={(e) => handleDelete(e, brand)}
+              disabled={deletingId === brand.id}
+              className="absolute top-3 right-3 hidden group-hover:flex items-center justify-center h-6 w-6 rounded-md text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors disabled:opacity-50"
+              title="Delete brand"
+            >
+              {deletingId === brand.id ? "…" : "✕"}
+            </button>
+          </div>
         ))}
       </div>
     </div>
