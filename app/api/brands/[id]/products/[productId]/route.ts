@@ -1,7 +1,34 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 
-// PATCH /api/brands/[id]/products/[productId] — update product fields
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ id: string; productId: string }> }
+) {
+  const { productId } = await params;
+  const db = getServerSupabase();
+
+  const [productRes, promptRes] = await Promise.all([
+    db.from("products").select("*").eq("id", productId).single(),
+    db
+      .from("prompt_sets")
+      .select("*")
+      .eq("product_id", productId)
+      .order("generated_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ]);
+
+  if (productRes.error || !productRes.data) {
+    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  }
+
+  return NextResponse.json({
+    product: productRes.data,
+    prompt_set: promptRes.data ?? null,
+  });
+}
+
 export async function PATCH(
   req: Request,
   { params }: { params: Promise<{ id: string; productId: string }> }
@@ -21,7 +48,6 @@ export async function PATCH(
   return NextResponse.json(data);
 }
 
-// DELETE /api/brands/[id]/products/[productId]
 export async function DELETE(
   _req: Request,
   { params }: { params: Promise<{ id: string; productId: string }> }

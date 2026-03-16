@@ -45,6 +45,7 @@ export interface Product {
   brand_id: string;
   name: string;
   description: string | null;
+  url: string | null;
   image_urls: string[];
   created_at: string;
 }
@@ -63,6 +64,7 @@ export interface PromptsJson {
   product: string;
   generated_at: string;
   prompts: PromptItem[];
+  prompts_original?: PromptItem[];
 }
 
 export interface PromptItem {
