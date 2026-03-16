@@ -81,17 +81,25 @@ export default function GalleryPage() {
         <span className="text-gray-700 font-medium">Gallery</span>
       </div>
 
-      <div className="mb-8 flex items-end justify-between">
+      <div className="mb-4 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold">{brandName} — Ad Gallery</h1>
           <p className="mt-1 text-sm text-gray-400">All generated ads, grouped by template.</p>
         </div>
         <Link
           href={`/brands/${id}`}
-          className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+          className="flex-shrink-0 rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
         >
-          ← Back to Pipeline
+          ← Back to Brand
         </Link>
+      </div>
+
+      {/* 48-hour notice */}
+      <div className="mb-8 flex items-center gap-2 rounded-xl border border-amber-100 bg-amber-50 px-4 py-2.5 text-xs text-amber-700">
+        <svg className="h-4 w-4 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+          <circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />
+        </svg>
+        Generated ads are kept for <strong className="mx-1">48 hours</strong> — download anything you want to keep.
       </div>
 
       {loading && <p className="text-sm text-gray-400">Loading gallery…</p>}
@@ -124,7 +132,7 @@ export default function GalleryPage() {
                 <p className="mb-3 text-xs text-gray-400">
                   Generated {new Date(job.created_at).toLocaleString()} · {job.resolution}
                 </p>
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
+                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
                   {(job.image_urls ?? []).map((url, i) => (
                     <div key={i} className="group relative">
                       <img
