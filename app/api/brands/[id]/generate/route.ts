@@ -1,4 +1,4 @@
-import { getServerSupabase, uploadToStorage } from "@/lib/supabase";
+import { getServerSupabase } from "@/lib/supabase";
 import { generateImages } from "@/lib/kie";
 import type { SseEvent, GenerateRequest, PromptItem } from "@/types";
 
@@ -122,22 +122,11 @@ export async function POST(
             reference_image_urls: refImages.length > 0 ? refImages : undefined,
           });
 
-          const storedUrls: string[] = [];
-          const folderName = `${String(promptItem.template_number).padStart(2, "0")}-${promptItem.template_name}`;
-
-          for (let i = 0; i < kieImageUrls.length; i++) {
-            const imgRes = await fetch(kieImageUrls[i]);
-            if (!imgRes.ok) continue;
-            const buffer = Buffer.from(await imgRes.arrayBuffer());
-            const path = `${brand.slug}/${folderName}/v${i + 1}.png`;
-            const url = await uploadToStorage("generated-ads", path, buffer, "image/png");
-            storedUrls.push(url);
-          }
-
+          // Store kie.ai CDN URLs directly — avoids download+re-upload latency on Hostinger
           if (jobId) {
             await db
               .from("generation_jobs")
-              .update({ status: "done", image_urls: storedUrls })
+              .update({ status: "done", image_urls: kieImageUrls })
               .eq("id", jobId);
           }
 
@@ -146,7 +135,7 @@ export async function POST(
               type: "done",
               template_number: promptItem.template_number,
               template_name: promptItem.template_name,
-              image_urls: storedUrls,
+              image_urls: kieImageUrls,
               job_id: jobId,
             })
           );
