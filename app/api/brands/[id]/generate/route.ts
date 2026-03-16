@@ -1,10 +1,57 @@
+import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { generateImages } from "@/lib/kie";
-import type { SseEvent, GenerateRequest, PromptItem } from "@/types";
+import type { GenerateRequest, PromptItem } from "@/types";
 
 export const maxDuration = 300;
 
-// POST /api/brands/[id]/generate — Phase 3: generate ads via kie.ai, stream via SSE
+// Background processor — runs after response is sent, updates job rows in DB
+async function runGeneration(
+  jobs: Array<{ id: string; template_number: number }>,
+  prompts: PromptItem[],
+  logoUrl: string | null,
+  productImageUrls: string[],
+  resolution: string,
+  num_images: number
+) {
+  const db = getServerSupabase();
+  for (const promptItem of prompts) {
+    const job = jobs.find((j) => j.template_number === promptItem.template_number);
+    if (!job) continue;
+    try {
+      await db.from("generation_jobs").update({ status: "running" }).eq("id", job.id);
+
+      const refImages: string[] = [];
+      if (logoUrl) refImages.push(logoUrl);
+      if (promptItem.needs_product_images && productImageUrls.length > 0) {
+        refImages.push(...productImageUrls);
+      }
+
+      const imageUrls = await generateImages({
+        prompt: promptItem.prompt,
+        aspect_ratio: promptItem.aspect_ratio,
+        resolution,
+        num_images,
+        reference_image_urls: refImages.length > 0 ? refImages : undefined,
+      });
+
+      await db
+        .from("generation_jobs")
+        .update({ status: "done", image_urls: imageUrls })
+        .eq("id", job.id);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      await db
+        .from("generation_jobs")
+        .update({ status: "failed", error: message })
+        .eq("id", job.id);
+    }
+  }
+}
+
+// POST /api/brands/[id]/generate
+// Creates job rows immediately, starts generation in background, returns job IDs.
+// Client polls /api/brands/[id]/jobs?prompt_set_id=... to track progress.
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -22,10 +69,7 @@ export async function POST(
   ]);
 
   if (brandErr || !brand) {
-    return new Response(JSON.stringify({ error: "Brand not found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json({ error: "Brand not found" }, { status: 404 });
   }
 
   const logoUrl: string | null = (brandDna?.data as { logo_url?: string | null })?.logo_url ?? null;
@@ -37,10 +81,7 @@ export async function POST(
     .single();
 
   if (promptErr || !promptSet) {
-    return new Response(JSON.stringify({ error: "Prompt set not found" }), {
-      status: 404,
-      headers: { "Content-Type": "application/json" },
-    });
+    return NextResponse.json({ error: "Prompt set not found" }, { status: 404 });
   }
 
   const allPrompts: PromptItem[] = promptSet.prompts_json.prompts ?? [];
@@ -48,7 +89,6 @@ export async function POST(
     ? allPrompts.filter((p) => template_numbers.includes(p.template_number))
     : allPrompts;
 
-  // Get product reference image URLs from the linked product
   let productImageUrls: string[] = [];
   if (promptSet.product_id) {
     const { data: product } = await db
@@ -59,8 +99,8 @@ export async function POST(
     productImageUrls = (product?.image_urls as string[]) ?? [];
   }
 
-  // Create generation job rows
-  const { data: jobs } = await db
+  // Create all job rows as "pending" upfront
+  const { data: jobs, error: jobErr } = await db
     .from("generation_jobs")
     .insert(
       selectedPrompts.map((p) => ({
@@ -75,104 +115,14 @@ export async function POST(
     )
     .select();
 
-  const jobMap = new Map((jobs ?? []).map((j) => [j.template_number, j.id]));
-
-  const encoder = new TextEncoder();
-  function encodeEvent(event: SseEvent): Uint8Array {
-    return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
+  if (jobErr || !jobs) {
+    return NextResponse.json({ error: "Failed to create jobs" }, { status: 500 });
   }
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      // Send a keepalive comment every 20s to prevent nginx/proxy timeouts on Hostinger
-      const keepalive = setInterval(() => {
-        try { controller.enqueue(encoder.encode(": keepalive\n\n")); } catch { /* closed */ }
-      }, 20_000);
+  // Fire off generation in the background — response returns immediately
+  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, num_images).catch(
+    (err) => console.error("runGeneration error:", err)
+  );
 
-      try {
-      for (const promptItem of selectedPrompts) {
-        const jobId = jobMap.get(promptItem.template_number);
-
-        if (jobId) {
-          await db.from("generation_jobs").update({ status: "running" }).eq("id", jobId);
-        }
-
-        controller.enqueue(
-          encodeEvent({
-            type: "start",
-            template_number: promptItem.template_number,
-            template_name: promptItem.template_name,
-            job_id: jobId,
-          })
-        );
-
-        try {
-          // Build reference image list: logo first (always), then product images when needed
-          const refImages: string[] = [];
-          if (logoUrl) refImages.push(logoUrl);
-          if (promptItem.needs_product_images && productImageUrls.length > 0) {
-            refImages.push(...productImageUrls);
-          }
-
-          const kieImageUrls = await generateImages({
-            prompt: promptItem.prompt,
-            aspect_ratio: promptItem.aspect_ratio,
-            resolution,
-            num_images,
-            reference_image_urls: refImages.length > 0 ? refImages : undefined,
-          });
-
-          // Store kie.ai CDN URLs directly — avoids download+re-upload latency on Hostinger
-          if (jobId) {
-            await db
-              .from("generation_jobs")
-              .update({ status: "done", image_urls: kieImageUrls })
-              .eq("id", jobId);
-          }
-
-          controller.enqueue(
-            encodeEvent({
-              type: "done",
-              template_number: promptItem.template_number,
-              template_name: promptItem.template_name,
-              image_urls: kieImageUrls,
-              job_id: jobId,
-            })
-          );
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          if (jobId) {
-            await db
-              .from("generation_jobs")
-              .update({ status: "failed", error: message })
-              .eq("id", jobId);
-          }
-          controller.enqueue(
-            encodeEvent({
-              type: "error",
-              template_number: promptItem.template_number,
-              template_name: promptItem.template_name,
-              error: message,
-              job_id: jobId,
-            })
-          );
-        }
-      }
-
-      controller.enqueue(encodeEvent({ type: "complete" }));
-      controller.close();
-      } finally {
-        clearInterval(keepalive);
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      "Content-Type": "text/event-stream",
-      "Cache-Control": "no-cache",
-      "Connection": "keep-alive",
-      "X-Accel-Buffering": "no", // disable nginx proxy buffering so SSE events flush immediately
-    },
-  });
+  return NextResponse.json({ job_ids: jobs.map((j) => j.id), prompt_set_id });
 }

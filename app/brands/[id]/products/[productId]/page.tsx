@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Brand, Product, PromptSet, PromptItem, SseEvent, Resolution } from "@/types";
+import type { Brand, Product, PromptSet, PromptItem, Resolution } from "@/types";
 
 const TEMPLATES = [
   { number: 1, name: "headline", label: "01 Headline", aspect: "4:5" },
@@ -53,8 +53,6 @@ function ProgressBar({ p }: { p: TemplateProgress }) {
     : p.status === "error" ? "bg-red-400"
     : "bg-[#C7F56F]/60";
 
-  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-
   return (
     <div className="rounded-xl border border-gray-100 bg-white p-4">
       <div className="mb-2 flex items-center justify-between text-sm">
@@ -65,7 +63,7 @@ function ProgressBar({ p }: { p: TemplateProgress }) {
         <span className="text-xs text-gray-400">
           {p.status === "done" && <span className="text-[#4a7c20] font-medium">✓ Done · {p.image_urls?.length} images</span>}
           {p.status === "error" && <span className="text-red-500 truncate max-w-[180px]">{p.error}</span>}
-          {p.status === "running" && <span className="tabular-nums">{fmt(elapsed)} / ~{AVG_GEN_SECONDS}s</span>}
+          {p.status === "running" && <span className="tabular-nums">{fillPct}%</span>}
           {p.status === "idle" && <span className="text-gray-300">Waiting…</span>}
         </span>
       </div>
@@ -235,9 +233,19 @@ export default function ProductPage() {
     if (product) setProduct({ ...product, image_urls: [] });
   }
 
-  // Image generation
+  // Image generation — fire-and-forget + client-side polling
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  function stopPolling() {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }
+
   const handleGenerate = useCallback(async () => {
     if (!promptSet || selectedTemplates.length === 0) return;
+    stopPolling();
     setGenerating(true);
     setGenError("");
     setProgress(selectedTemplates.map((n) => ({ template_number: n, status: "idle" })));
@@ -253,42 +261,44 @@ export default function ProductPage() {
       }),
     });
 
-    if (!res.ok || !res.body) {
-      const data = await res.json().catch(() => ({}));
-      setGenError((data as { error?: string }).error ?? "Generation failed.");
+    const data = await res.json();
+    if (!res.ok) {
+      setGenError(data.error ?? "Generation failed.");
       setGenerating(false);
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-    let buffer = "";
+    const { prompt_set_id } = data as { job_ids: string[]; prompt_set_id: string };
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n\n");
-      buffer = lines.pop() ?? "";
-      for (const line of lines) {
-        if (!line.startsWith("data: ")) continue;
-        const raw = line.slice(6).trim();
-        if (!raw) continue;
-        try {
-          const event: SseEvent = JSON.parse(raw);
-          if (event.type === "start") {
-            setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "running", startedAt: Date.now() } : p));
-          } else if (event.type === "done") {
-            setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "done", image_urls: event.image_urls } : p));
-          } else if (event.type === "error") {
-            setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "error", error: event.error } : p));
-          } else if (event.type === "complete") {
-            setGenerating(false);
-          }
-        } catch { /* ignore */ }
+    // Mark all as running immediately
+    setProgress(selectedTemplates.map((n) => ({ template_number: n, status: "running", startedAt: Date.now() })));
+
+    // Poll job statuses every 3 seconds
+    pollIntervalRef.current = setInterval(async () => {
+      const jobsRes = await fetch(`/api/brands/${brandId}/jobs?prompt_set_id=${prompt_set_id}`);
+      if (!jobsRes.ok) return;
+      const jobs: Array<{ template_number: number; status: string; image_urls: string[] | null; error: string | null; created_at: string }> = await jobsRes.json();
+
+      setProgress((prev) =>
+        prev.map((p) => {
+          const job = jobs.find((j) => j.template_number === p.template_number);
+          if (!job) return p;
+          if (job.status === "done") return { ...p, status: "done", image_urls: job.image_urls ?? [] };
+          if (job.status === "failed") return { ...p, status: "error", error: job.error ?? "Failed" };
+          if (job.status === "running" && p.status === "idle") return { ...p, status: "running", startedAt: Date.now() };
+          return p;
+        })
+      );
+
+      // All settled?
+      const settled = jobs.filter((j) =>
+        selectedTemplates.includes(j.template_number) && (j.status === "done" || j.status === "failed")
+      );
+      if (settled.length === selectedTemplates.length) {
+        stopPolling();
+        setGenerating(false);
       }
-    }
-    setGenerating(false);
+    }, 3000);
   }, [brandId, promptSet, selectedTemplates, resolution, numImages]);
 
   const estimatedCost = selectedTemplates.length * numImages * (COST_PER_IMAGE[resolution] ?? 0.06);
