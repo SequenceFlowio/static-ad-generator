@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { product_id } = await req.json();
+  const { product_id, num_variants = 2, hook_intent = null, background_intent = null } = await req.json();
 
   if (!product_id) {
     return NextResponse.json({ error: "product_id is required" }, { status: 400 });
@@ -45,7 +45,10 @@ export async function POST(
       dnaRes.data.data,
       product.name,
       product.description,
-      brandRes.data.name
+      brandRes.data.name,
+      num_variants,
+      hook_intent,
+      background_intent
     );
 
     // Store prompts_original alongside prompts so user can reset edits

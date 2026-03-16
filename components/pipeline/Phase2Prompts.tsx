@@ -265,7 +265,14 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
                   </button>
                   {expandedTemplate === p.template_number && (
                     <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                      <p className="text-xs leading-relaxed text-gray-600 whitespace-pre-wrap">{p.prompt}</p>
+                      <p className="text-xs leading-relaxed text-gray-600 whitespace-pre-wrap">{p.background_prompt}</p>
+                      {p.hook_variants?.length > 0 && (
+                        <div className="mt-2 space-y-1">
+                          {p.hook_variants.map((h, i) => (
+                            <p key={i} className="text-xs text-gray-500 pl-3 border-l-2 border-[#C7F56F]">{h}</p>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

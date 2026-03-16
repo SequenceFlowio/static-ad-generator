@@ -65,6 +65,9 @@ export interface PromptsJson {
   brand: string;
   product: string;
   generated_at: string;
+  num_variants: number;
+  hook_intent: string | null;
+  background_intent: string | null;
   prompts: PromptItem[];
   prompts_original?: PromptItem[];
 }
@@ -72,10 +75,11 @@ export interface PromptsJson {
 export interface PromptItem {
   template_number: number;
   template_name: string;
-  prompt: string;
   aspect_ratio: string;
   needs_product_images: boolean;
   notes: string;
+  background_prompt: string;  // scene/product/visual — shared across all variants
+  hook_variants: string[];    // N unique headline+subtitle+CTA texts, one per variant
 }
 
 export interface GenerationJob {
@@ -118,7 +122,6 @@ export const MODEL_CONFIGS: Record<KieModel, {
 export interface GenerateRequest {
   template_numbers: number[];
   resolution: Resolution;
-  num_images: number;
   prompt_set_id: string;
   model: KieModel;
 }

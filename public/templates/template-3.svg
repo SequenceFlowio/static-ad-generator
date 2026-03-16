@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400">
+  <rect width="400" height="400" fill="#f3f4f6"/>
+  <rect x="40" y="60" width="320" height="260" rx="8" fill="#e5e7eb"/>
+  <text x="65" y="125" font-family="Georgia, serif" font-size="56" fill="#9ca3af">"</text>
+  <rect x="65" y="135" width="270" height="10" rx="3" fill="#d1d5db"/>
+  <rect x="65" y="155" width="240" height="10" rx="3" fill="#d1d5db"/>
+  <rect x="65" y="175" width="200" height="10" rx="3" fill="#d1d5db"/>
+  <text x="200" y="235" text-anchor="middle" font-family="system-ui, sans-serif" font-size="18" fill="#f59e0b">★★★★★</text>
+  <rect x="130" y="252" width="140" height="8" rx="3" fill="#e5e7eb"/>
+  <text x="200" y="370" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" fill="#6b7280">Testimonial · 1:1</text>
+</svg>

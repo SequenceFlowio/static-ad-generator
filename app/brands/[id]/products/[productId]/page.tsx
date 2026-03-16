@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { Brand, Product, PromptSet, PromptItem, Resolution, KieModel } from "@/types";
 import { MODEL_CONFIGS } from "@/types";
 
@@ -14,15 +15,14 @@ const TEMPLATES = [
   { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle", aspect: "9:16" },
 ];
 
-
-const AVG_GEN_SECONDS = 30;
+const AVG_GEN_SECONDS = 40; // slightly longer since we make N sequential calls
 
 interface TemplateProgress {
   template_number: number;
   status: "idle" | "running" | "done" | "error";
   image_urls?: string[];
   error?: string;
-  startedAt?: number; // ms timestamp
+  startedAt?: number;
 }
 
 function ProgressBar({ p }: { p: TemplateProgress }) {
@@ -95,16 +95,21 @@ export default function ProductPage() {
   // Prompts
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
   const [expandedTemplate, setExpandedTemplate] = useState<number | null>(null);
-  const [editedPrompts, setEditedPrompts] = useState<Record<number, string>>({});
+  // editedPrompts: { [templateNumber]: { background_prompt?, hook_variants? } }
+  const [editedPrompts, setEditedPrompts] = useState<Record<number, Partial<PromptItem>>>({});
   const [savingPrompts, setSavingPrompts] = useState(false);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [promptError, setPromptError] = useState("");
+
+  // Intent fields (shown before generating prompts)
+  const [hookIntent, setHookIntent] = useState("");
+  const [backgroundIntent, setBackgroundIntent] = useState("");
+  const [numVariants, setNumVariants] = useState(2);
 
   // Image generation
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
   const [model, setModel] = useState<KieModel>("nano-banana-2");
   const [resolution, setResolution] = useState<Resolution>("2K");
-  const [numImages, setNumImages] = useState(2);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<TemplateProgress[]>([]);
   const [genError, setGenError] = useState("");
@@ -127,13 +132,17 @@ export default function ProductPage() {
       setPromptSet(productData.prompt_set);
       if (productData.prompt_set?.prompts_json?.prompts) {
         setPrompts(productData.prompt_set.prompts_json.prompts);
+        // Restore intent fields from saved prompt set
+        const pj = productData.prompt_set.prompts_json;
+        if (pj.hook_intent) setHookIntent(pj.hook_intent);
+        if (pj.background_intent) setBackgroundIntent(pj.background_intent);
+        if (pj.num_variants) setNumVariants(pj.num_variants);
       }
       setLoading(false);
     }
     load();
   }, [brandId, productId, router]);
 
-  // Product save
   async function handleSaveProduct() {
     if (!product) return;
     setSavingProduct(true);
@@ -159,14 +168,18 @@ export default function ProductPage() {
     setEditingProduct(true);
   }
 
-  // Generate prompts
   async function handleGeneratePrompts() {
     setGeneratingPrompts(true);
     setPromptError("");
     const res = await fetch(`/api/brands/${brandId}/prompts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ product_id: productId }),
+      body: JSON.stringify({
+        product_id: productId,
+        num_variants: numVariants,
+        hook_intent: hookIntent.trim() || null,
+        background_intent: backgroundIntent.trim() || null,
+      }),
     });
     const data = await res.json();
     setGeneratingPrompts(false);
@@ -176,14 +189,18 @@ export default function ProductPage() {
     setEditedPrompts({});
   }
 
-  // Save edited prompts
   async function handleSavePrompts() {
     if (!promptSet) return;
     setSavingPrompts(true);
-    const updatedPrompts = prompts.map((p) => ({
-      ...p,
-      prompt: editedPrompts[p.template_number] ?? p.prompt,
-    }));
+    const updatedPrompts = prompts.map((p) => {
+      const edits = editedPrompts[p.template_number];
+      if (!edits) return p;
+      return {
+        ...p,
+        background_prompt: edits.background_prompt ?? p.background_prompt,
+        hook_variants: edits.hook_variants ?? p.hook_variants,
+      };
+    });
     const res = await fetch(`/api/brands/${brandId}/prompts`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -198,18 +215,40 @@ export default function ProductPage() {
     }
   }
 
-  // Reset a prompt to original
   function resetPrompt(templateNumber: number) {
     const originals = promptSet?.prompts_json?.prompts_original;
     if (!originals) return;
     const original = originals.find((p) => p.template_number === templateNumber);
     if (!original) return;
-    setEditedPrompts((prev) => ({ ...prev, [templateNumber]: original.prompt }));
+    setEditedPrompts((prev) => ({
+      ...prev,
+      [templateNumber]: {
+        background_prompt: original.background_prompt,
+        hook_variants: [...original.hook_variants],
+      },
+    }));
+  }
+
+  function updateHookVariant(templateNumber: number, variantIndex: number, value: string) {
+    setEditedPrompts((prev) => {
+      const existing = prev[templateNumber] ?? {};
+      const prompt = prompts.find((p) => p.template_number === templateNumber);
+      const currentHooks = existing.hook_variants ?? prompt?.hook_variants ?? [];
+      const newHooks = [...currentHooks];
+      newHooks[variantIndex] = value;
+      return { ...prev, [templateNumber]: { ...existing, hook_variants: newHooks } };
+    });
+  }
+
+  function updateBackgroundPrompt(templateNumber: number, value: string) {
+    setEditedPrompts((prev) => ({
+      ...prev,
+      [templateNumber]: { ...(prev[templateNumber] ?? {}), background_prompt: value },
+    }));
   }
 
   const hasUnsavedPrompts = Object.keys(editedPrompts).length > 0;
 
-  // Upload product images
   async function handleUploadImages(files: FileList) {
     setUploading(true);
     const formData = new FormData();
@@ -230,7 +269,6 @@ export default function ProductPage() {
     if (product) setProduct({ ...product, image_urls: [] });
   }
 
-  // Image generation — fire-and-forget + client-side polling
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function stopPolling() {
@@ -253,7 +291,6 @@ export default function ProductPage() {
       body: JSON.stringify({
         template_numbers: selectedTemplates,
         resolution,
-        num_images: numImages,
         prompt_set_id: promptSet.id,
         model,
       }),
@@ -268,14 +305,12 @@ export default function ProductPage() {
 
     const { prompt_set_id } = data as { job_ids: string[]; prompt_set_id: string };
 
-    // Mark all as running immediately
     setProgress(selectedTemplates.map((n) => ({ template_number: n, status: "running", startedAt: Date.now() })));
 
-    // Poll job statuses every 3 seconds
     pollIntervalRef.current = setInterval(async () => {
       const jobsRes = await fetch(`/api/brands/${brandId}/jobs?prompt_set_id=${prompt_set_id}`);
       if (!jobsRes.ok) return;
-      const jobs: Array<{ template_number: number; status: string; image_urls: string[] | null; error: string | null; created_at: string }> = await jobsRes.json();
+      const jobs: Array<{ template_number: number; status: string; image_urls: string[] | null; error: string | null }> = await jobsRes.json();
 
       setProgress((prev) =>
         prev.map((p) => {
@@ -288,7 +323,6 @@ export default function ProductPage() {
         })
       );
 
-      // All settled?
       const settled = jobs.filter((j) =>
         selectedTemplates.includes(j.template_number) && (j.status === "done" || j.status === "failed")
       );
@@ -297,11 +331,14 @@ export default function ProductPage() {
         setGenerating(false);
       }
     }, 3000);
-  }, [brandId, promptSet, selectedTemplates, resolution, numImages]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [brandId, promptSet, selectedTemplates, resolution, model]);
 
   const modelConfig = MODEL_CONFIGS[model];
-  const estimatedCost = selectedTemplates.length * numImages * (modelConfig.costPerImage[resolution] ?? 0.06);
+  const numVariantsFromSet = promptSet?.prompts_json?.num_variants ?? numVariants;
+  const estimatedCost = selectedTemplates.length * numVariantsFromSet * (modelConfig.costPerImage[resolution] ?? 0.06);
   const inputBase = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
+  const textareaBase = `${inputBase} resize-y font-mono text-xs leading-relaxed text-gray-700`;
 
   if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
   if (!product || !brand) return null;
@@ -412,41 +449,83 @@ export default function ProductPage() {
                   {savingPrompts ? "Saving…" : "Save Edits"}
                 </button>
               )}
-              <button
-                onClick={handleGeneratePrompts}
-                disabled={generatingPrompts}
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
-              >
-                {generatingPrompts ? "Regenerating…" : "Regenerate All"}
-              </button>
             </div>
           )}
         </div>
 
         {promptError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{promptError}</p>}
 
-        {/* No prompts yet */}
-        {prompts.length === 0 && (
-          <div className="rounded-xl border border-dashed border-gray-200 p-8 text-center">
-            <p className="mb-4 text-sm text-gray-400">No prompts generated yet for this product.</p>
+        {/* Intent fields + variant count — always visible */}
+        <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 space-y-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Generation intent</p>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Hook &amp; copy intent
+              </label>
+              <textarea
+                value={hookIntent}
+                onChange={(e) => setHookIntent(e.target.value)}
+                rows={2}
+                placeholder="e.g. visual harmony with the kitchen, premium quality, confidence"
+                className={`${inputBase} resize-none text-xs`}
+              />
+              <p className="mt-1 text-xs text-gray-400">What should the headline &amp; CTA communicate?</p>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">
+                Background &amp; scene intent
+              </label>
+              <textarea
+                value={backgroundIntent}
+                onChange={(e) => setBackgroundIntent(e.target.value)}
+                rows={2}
+                placeholder="e.g. dark brown marble counter, minimal props, no extra objects"
+                className={`${inputBase} resize-none text-xs`}
+              />
+              <p className="mt-1 text-xs text-gray-400">What scene, surface, and props should the background use?</p>
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-medium text-gray-600">Variants per template</label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setNumVariants(n)}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${numVariants === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                >
+                  {n}
+                </button>
+              ))}
+              <span className="self-center text-xs text-gray-400 ml-1">= {numVariants} unique hook{numVariants !== 1 ? "s" : ""} per template</span>
+            </div>
+          </div>
+
+          <div className="flex gap-2 flex-wrap">
             <button
               onClick={handleGeneratePrompts}
               disabled={generatingPrompts}
-              className="rounded-lg bg-[#C7F56F] px-5 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
+              className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
             >
-              {generatingPrompts ? "Generating… (~30s)" : "Generate Prompts ▶"}
+              {generatingPrompts ? "Generating… (~30s)" : prompts.length > 0 ? "Regenerate All" : "Generate Prompts ▶"}
             </button>
           </div>
-        )}
+        </div>
 
         {/* Prompt list */}
         {prompts.length > 0 && (
           <div className="space-y-2">
             {prompts.map((p) => {
               const tpl = TEMPLATES.find((t) => t.number === p.template_number);
-              const currentText = editedPrompts[p.template_number] ?? p.prompt;
-              const isEdited = editedPrompts[p.template_number] !== undefined;
+              const edits = editedPrompts[p.template_number];
+              const currentBg = edits?.background_prompt ?? p.background_prompt;
+              const currentHooks = edits?.hook_variants ?? p.hook_variants;
+              const isEdited = !!edits;
               const hasOriginals = !!promptSet?.prompts_json?.prompts_original;
+
               return (
                 <div key={p.template_number} className="rounded-xl border border-gray-100 overflow-hidden">
                   <button
@@ -462,20 +541,45 @@ export default function ProductPage() {
                       {p.needs_product_images && (
                         <span className="text-xs bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">product ref</span>
                       )}
+                      <span className="text-xs bg-gray-50 text-gray-500 rounded px-1.5 py-0.5">{currentHooks.length} hook{currentHooks.length !== 1 ? "s" : ""}</span>
                       {isEdited && (
                         <span className="text-xs bg-amber-50 text-amber-600 rounded px-1.5 py-0.5">edited</span>
                       )}
                     </div>
                     <span className="text-gray-300 text-xs">{expandedTemplate === p.template_number ? "▲" : "▼"}</span>
                   </button>
+
                   {expandedTemplate === p.template_number && (
-                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 space-y-2">
-                      <textarea
-                        value={currentText}
-                        onChange={(e) => setEditedPrompts((prev) => ({ ...prev, [p.template_number]: e.target.value }))}
-                        rows={6}
-                        className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs leading-relaxed text-gray-700 outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 resize-y font-mono"
-                      />
+                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 space-y-4">
+                      {/* Background prompt */}
+                      <div>
+                        <label className="mb-1 block text-xs font-semibold text-gray-500 uppercase tracking-wide">Background / Scene Prompt</label>
+                        <textarea
+                          value={currentBg}
+                          onChange={(e) => updateBackgroundPrompt(p.template_number, e.target.value)}
+                          rows={5}
+                          className={`w-full rounded-lg border border-gray-200 bg-white px-3 py-2 ${textareaBase}`}
+                        />
+                      </div>
+
+                      {/* Hook variants */}
+                      <div>
+                        <label className="mb-2 block text-xs font-semibold text-gray-500 uppercase tracking-wide">Hook Variants ({currentHooks.length})</label>
+                        <div className="space-y-2">
+                          {currentHooks.map((hook, i) => (
+                            <div key={i}>
+                              <label className="mb-1 block text-xs text-gray-400">Hook {i + 1}</label>
+                              <textarea
+                                value={hook}
+                                onChange={(e) => updateHookVariant(p.template_number, i, e.target.value)}
+                                rows={2}
+                                className={`w-full rounded-lg border border-gray-200 bg-white px-3 py-2 ${textareaBase}`}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
                       {hasOriginals && isEdited && (
                         <button
                           onClick={() => resetPrompt(p.template_number)}
@@ -498,37 +602,43 @@ export default function ProductPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-5">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Generate Images</h2>
 
-          {/* Template checkboxes */}
+          {/* Template visual cards */}
           <div>
-            <p className="mb-2 text-sm font-medium">Select templates</p>
-            <div className="space-y-0.5">
-              {TEMPLATES.map((t) => (
-                <label key={t.number} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
-                  <input
-                    type="checkbox"
-                    checked={selectedTemplates.includes(t.number)}
-                    onChange={() => setSelectedTemplates((prev) =>
+            <p className="mb-3 text-sm font-medium">Select templates</p>
+            <div className="grid grid-cols-5 gap-3">
+              {TEMPLATES.map((t) => {
+                const isSelected = selectedTemplates.includes(t.number);
+                return (
+                  <button
+                    key={t.number}
+                    onClick={() => setSelectedTemplates((prev) =>
                       prev.includes(t.number) ? prev.filter((n) => n !== t.number) : [...prev, t.number]
                     )}
-                    className="rounded border-gray-300 accent-[#C7F56F]"
-                  />
-                  <span className="text-sm">{t.label}</span>
-                  <span className="text-xs text-gray-400">{t.aspect}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-
-          {/* Images per template */}
-          <div>
-            <p className="mb-2 text-sm font-medium">Images per template</p>
-            <div className="flex gap-2">
-              {[1, 2, 4].map((n) => (
-                <button key={n} onClick={() => setNumImages(n)}
-                  className={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${numImages === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
-                  {n}
-                </button>
-              ))}
+                    className={`relative rounded-xl border-2 overflow-hidden transition-all ${isSelected ? "border-[#C7F56F]" : "border-gray-200 opacity-60 hover:opacity-80"}`}
+                  >
+                    <div className="relative w-full aspect-square bg-gray-100">
+                      <Image
+                        src={`/templates/template-${t.number}.svg`}
+                        alt={t.label}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[#C7F56F] flex items-center justify-center">
+                          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="#1a1a1a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-2 py-1.5 text-left">
+                      <p className="text-xs font-medium truncate">{t.label}</p>
+                      <p className="text-xs text-gray-400">{t.aspect}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
@@ -543,11 +653,9 @@ export default function ProductPage() {
                     key={id}
                     className={`rounded-xl border transition-colors ${isSelected ? "border-[#C7F56F] bg-[#C7F56F]/5" : "border-gray-200 bg-white opacity-60"}`}
                   >
-                    {/* Model button */}
                     <button
                       onClick={() => {
                         setModel(id);
-                        // Reset resolution if current not available in new model
                         if (!cfg.resolutions.includes(resolution)) {
                           setResolution(cfg.resolutions[0]);
                         }
@@ -561,7 +669,6 @@ export default function ProductPage() {
                       <div className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${isSelected ? "border-[#C7F56F] bg-[#C7F56F]" : "border-gray-300"}`} />
                     </button>
 
-                    {/* Resolution pills — only when selected */}
                     {isSelected && (
                       <div className="flex flex-wrap items-center gap-2 border-t border-[#C7F56F]/20 px-4 py-3">
                         {cfg.resolutions.map((r) => (
@@ -571,7 +678,7 @@ export default function ProductPage() {
                           </button>
                         ))}
                         <span className="text-xs text-gray-400 ml-1">
-                          ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numImages} images
+                          ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numVariantsFromSet} image{selectedTemplates.length * numVariantsFromSet !== 1 ? "s" : ""}
                         </span>
                       </div>
                     )}
@@ -583,7 +690,6 @@ export default function ProductPage() {
 
           {genError && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{genError}</p>}
 
-          {/* Progress */}
           {progress.length > 0 && (
             <div className="space-y-2">
               {progress.map((p) => <ProgressBar key={p.template_number} p={p} />)}

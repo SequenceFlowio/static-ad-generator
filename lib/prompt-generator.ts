@@ -5,28 +5,33 @@ import type { BrandDnaData, PromptsJson } from "@/types";
 const PROMPT_GENERATION_INSTRUCTIONS = `
 You are a prompt engineer specializing in AI image generation for DTC brands.
 
-Your job: Take structured brand data and a product, fill all template placeholders with brand-specific details to create production-ready image generation prompts.
+Your job: For each ad template, generate TWO things:
+1. background_prompt — the full visual/scene/product-placement prompt for the image generator. This describes the background, scene, product placement, lighting, colors, and brand aesthetic. Does NOT include any text overlay copy.
+2. hook_variants — an array of N short text overlay copy strings. Each hook variant contains the headline, optional subtitle, and CTA text that will appear as overlay text in the ad. Each must be meaningfully different in angle, tone, or message — not just synonym swaps.
 
-Rules:
-1. Replace every [BRACKETED PLACEHOLDER] with brand-specific details from the brand data
-2. Prepend the prompt_modifier from the brand data to the START of every prompt
-3. Keep template_number and template_name exactly as provided
-4. Make the copy specific and compelling — not generic filler
-5. Output ONLY valid JSON — no markdown, no code blocks
+Critical rules:
+- The background_prompt must STRICTLY follow the reference image(s) provided. Do NOT invent props, objects, or surfaces not present in the reference images. If reference images show a specific product, describe ONLY that product exactly.
+- hook_variants must reflect the hookIntent provided by the user — use it as the core theme/angle.
+- background_prompt must reflect the backgroundIntent provided by the user — use their described scene/props/surfaces as the visual foundation.
+- Replace every [BRACKETED PLACEHOLDER] in the template with brand-specific details from the brand data.
+- Prepend the brand's prompt_modifier to the START of every background_prompt.
+- Keep template_number and template_name exactly as provided.
+- Output ONLY valid JSON — no markdown, no code blocks.
 
 JSON Schema:
 {
-  "brand": "Brand Name",
-  "product": "Product Name",
-  "generated_at": "ISO timestamp",
   "prompts": [
     {
       "template_number": 1,
       "template_name": "headline",
-      "prompt": "Full prompt starting with prompt_modifier...",
       "aspect_ratio": "4:5",
       "needs_product_images": true,
-      "notes": "Any notes"
+      "notes": "Any notes",
+      "background_prompt": "Full visual scene prompt starting with prompt_modifier...",
+      "hook_variants": [
+        "Headline: [text] | Subtitle: [text] | CTA: [text]",
+        "Headline: [different text] | Subtitle: [different text] | CTA: [text]"
+      ]
     }
   ]
 }
@@ -56,7 +61,7 @@ Subject Matter: ${dna.subject_matter ?? "N/A"}
 Props & Surfaces: ${dna.props_and_surfaces ?? "N/A"}
 Mood: ${dna.mood ?? "N/A"}
 
-PROMPT MODIFIER (prepend to every prompt):
+PROMPT MODIFIER (prepend to every background_prompt):
 ${dna.prompt_modifier}
 `.trim();
 }
@@ -65,7 +70,10 @@ export async function generatePrompts(
   brandDna: BrandDnaData,
   productName: string,
   productDescription: string | null,
-  brandName: string
+  brandName: string,
+  numVariants: number = 2,
+  hookIntent: string | null = null,
+  backgroundIntent: string | null = null
 ): Promise<PromptsJson> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -91,12 +99,22 @@ Product Description: ${productDescription ?? "No description provided"}
 
 ---
 
+User Intent:
+Hook/Copy intent (what the headline & CTA should communicate): ${hookIntent ?? "Not specified — use brand positioning and product benefits"}
+Background/Scene intent (what the visual scene should look like): ${backgroundIntent ?? "Not specified — use brand photography direction and product imagery"}
+
+---
+
+Number of hook variants to generate per template: ${numVariants}
+
+---
+
 Templates to fill:
 ${templatesText}
 
 ---
 
-Generate prompts JSON for all ${TEMPLATES.length} templates. Output ONLY the JSON object.`;
+Generate the prompts JSON for all ${TEMPLATES.length} templates. Each template needs exactly ${numVariants} hook_variants. Output ONLY the JSON object with a "prompts" array.`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",
@@ -111,7 +129,7 @@ Generate prompts JSON for all ${TEMPLATES.length} templates. Output ONLY the JSO
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("No content returned from OpenAI.");
 
-  const parsed = JSON.parse(content) as PromptsJson;
+  const parsed = JSON.parse(content) as { prompts: PromptsJson["prompts"] };
   if (!parsed.prompts || !Array.isArray(parsed.prompts)) {
     throw new Error("Invalid prompts JSON structure returned by OpenAI.");
   }
@@ -120,6 +138,9 @@ Generate prompts JSON for all ${TEMPLATES.length} templates. Output ONLY the JSO
     brand: brandName,
     product: productName,
     generated_at: new Date().toISOString(),
+    num_variants: numVariants,
+    hook_intent: hookIntent,
+    background_intent: backgroundIntent,
     prompts: parsed.prompts,
   };
 }

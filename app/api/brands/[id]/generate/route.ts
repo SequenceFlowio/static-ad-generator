@@ -12,7 +12,6 @@ async function runGeneration(
   logoUrl: string | null,
   productImageUrls: string[],
   resolution: string,
-  num_images: number,
   model: KieModel
 ) {
   const db = getServerSupabase();
@@ -28,18 +27,24 @@ async function runGeneration(
         refImages.push(...productImageUrls);
       }
 
-      const imageUrls = await generateImages({
-        prompt: promptItem.prompt,
-        aspect_ratio: promptItem.aspect_ratio,
-        resolution,
-        num_images,
-        reference_image_urls: refImages.length > 0 ? refImages : undefined,
-        model,
-      });
+      // Generate one image per hook variant
+      const allUrls: string[] = [];
+      for (const hookVariant of promptItem.hook_variants) {
+        const combinedPrompt = `${promptItem.background_prompt}\n\nText in the ad: ${hookVariant}`;
+        const urls = await generateImages({
+          prompt: combinedPrompt,
+          aspect_ratio: promptItem.aspect_ratio,
+          resolution,
+          num_images: 1,
+          reference_image_urls: refImages.length > 0 ? refImages : undefined,
+          model,
+        });
+        allUrls.push(...urls);
+      }
 
       await db
         .from("generation_jobs")
-        .update({ status: "done", image_urls: imageUrls })
+        .update({ status: "done", image_urls: allUrls })
         .eq("id", job.id);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
@@ -60,7 +65,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, num_images = 4, prompt_set_id, model = "nano-banana-2" } = body;
+  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2" } = body;
 
   const db = getServerSupabase();
 
@@ -111,7 +116,7 @@ export async function POST(
         template_number: p.template_number,
         template_name: p.template_name,
         resolution,
-        num_images,
+        num_images: p.hook_variants.length,
         status: "pending",
       }))
     )
@@ -122,7 +127,7 @@ export async function POST(
   }
 
   // Fire off generation in the background — response returns immediately
-  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, num_images, model).catch(
+  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model).catch(
     (err) => console.error("runGeneration error:", err)
   );
 
