@@ -75,13 +75,11 @@ Clean, confident, easy to scan at a glance. 2K resolution.`,
     template_name: "ugc-lifestyle",
     aspect_ratio: "9:16",
     needs_product_images: true,
-    prompt_template: `UGC-style lifestyle static ad for [BRAND_NAME] that looks like an authentic social media post.
-Slightly imperfect framing — not polished studio photography.
-Scene: [LIFESTYLE_SCENE]. [PRODUCT_NAME] appears naturally in the scene — not posed, as if casually placed.
-Soft natural light, [COLOR_GRADING] color grade. Slight grain texture overlay to increase authenticity.
-Bold [PRIMARY_FONT] hook text centered at the very top of the frame reads: "[HOOK_TEXT]" in [LETTERTYPE_COLOR].
-Small [BRAND_NAME] watermark in bottom-left corner in [SECONDARY_FONT], small and unobtrusive.
-9:16 aspect ratio for Stories/Reels. Looks like it was shot on a good iPhone, not a commercial shoot. 2K resolution.`,
+    prompt_template: `UGC-style lifestyle photo ad. Scene: [LIFESTYLE_SCENE]. [PRODUCT_NAME] sits naturally in the scene, casually placed — not posed. Soft natural light, [COLOR_GRADING] color grade, slight film grain.
+At the very top of the image: large bold [PRIMARY_FONT] hook text "[HOOK_TEXT]" floats directly over the photo — NO background box, NO overlay panel, NO text container, text sits on top of the image.
+Directly below the hook text: smaller [SECONDARY_FONT] CTA text "[CTA_TEXT]".
+No logo. No watermark. No brand badge. No extra UI elements. Just the photo and the two lines of text at the top.
+9:16 vertical. Shot-on-iPhone aesthetic, not a commercial shoot. 2K resolution.`,
   },
 ];
 
