@@ -23,7 +23,8 @@ async function runGeneration(
       await db.from("generation_jobs").update({ status: "running" }).eq("id", job.id);
 
       const refImages: string[] = [];
-      if (logoUrl) refImages.push(logoUrl);
+      const isUgc = promptItem.template_name === "ugc-lifestyle";
+      if (logoUrl && !isUgc) refImages.push(logoUrl);
       if (promptItem.needs_product_images && productImageUrls.length > 0) {
         refImages.push(...productImageUrls);
       }
