@@ -9,6 +9,10 @@ Your job: For each ad template, generate TWO things:
 1. background_prompt — the full visual/scene/product-placement prompt for the image generator. Describes the background, scene, product placement, lighting, colors, and brand aesthetic. Does NOT include any text overlay copy.
 2. hook_variants — an array of N short text overlay copy strings. Each hook variant contains the headline, optional subtitle, and CTA text that will appear as overlay text in the ad. Each must be meaningfully different in angle, tone, or message.
 
+LANGUAGE RULE:
+- ALL hook_variants MUST be written in the language specified in the brand data. This is non-negotiable.
+- The background_prompt MUST always be written in English regardless of language — it is a technical prompt for an image generator, not customer-facing copy.
+
 CRITICAL RULES — VISUAL:
 - The background_prompt MUST include the brand's font name(s) explicitly — e.g. "typography in Neue Haas Grotesk"
 - The background_prompt MUST describe brand colors by their VISUAL APPEARANCE — e.g. "warm off-white background", "deep charcoal text", "bright lime green accent". NEVER write hex codes (#xxxxxx) in the background_prompt — image generators render hex strings as literal text on the image.
@@ -63,6 +67,7 @@ function brandDnaToText(dna: BrandDnaData, selectedDesire: string | null): strin
 
   return `
 BRAND: ${dna.name}
+Ad Copy Language: ${dna.language ?? "English"} ← write ALL hook_variants in this language
 Tagline: ${dna.tagline ?? "N/A"}
 Brand Story: ${dna.brand_story ?? "N/A"}
 Target Audience: ${dna.target_audience ?? "N/A"}

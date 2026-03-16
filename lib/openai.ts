@@ -75,6 +75,7 @@ export async function researchBrand(
   if (!Array.isArray(aiData.voice_adjectives)) aiData.voice_adjectives = [];
   if (!Array.isArray(aiData.customer_desires)) aiData.customer_desires = [];
   if (!Array.isArray(aiData.hook_examples)) aiData.hook_examples = [];
+  if (!aiData.language) aiData.language = "English";
 
   // Manual overrides win — user knows their brand better than scraping
   if (manualOverrides) {

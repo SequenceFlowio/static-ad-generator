@@ -150,6 +150,27 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
         <p className="mt-1.5 text-xs text-gray-400">PNG or SVG with transparent background recommended. Used as reference in every generated ad.</p>
       </section>
 
+      {/* Language */}
+      <section>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Ad Copy Language</p>
+        <div>
+          <label className="mb-1 block text-xs font-medium text-gray-500">Language</label>
+          <select
+            value={d.language ?? "English"}
+            onChange={(e) => set("language", e.target.value as never)}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 bg-white"
+          >
+            <option value="English">English</option>
+            <option value="Dutch">Dutch</option>
+            <option value="Spanish">Spanish</option>
+            <option value="French">French</option>
+            <option value="German">German</option>
+            <option value="Portuguese">Portuguese</option>
+          </select>
+          <p className="mt-1.5 text-xs text-gray-400">All generated hook copy will be written in this language. Visual prompts always stay in English.</p>
+        </div>
+      </section>
+
       {/* Brand Overview */}
       <section>
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Overview</p>

@@ -25,6 +25,8 @@ export interface BrandDnaData {
   accent_color: string | null;      // brand accent / CTA color hex
   lettertype_color: string | null;  // primary text/font color hex
   background_color: string | null;  // primary background color hex
+  // Output language for hook copy
+  language: string;
   // Brand logo (public URL in Supabase Storage)
   logo_url: string | null;
 }

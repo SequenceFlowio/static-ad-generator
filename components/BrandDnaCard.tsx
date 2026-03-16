@@ -43,6 +43,14 @@ interface Props {
 export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Props) {
   return (
     <div className="space-y-5">
+      {/* Language */}
+      {data.language && (
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-400">Ad copy language:</span>
+          <span className="text-xs font-medium text-gray-700">{data.language}</span>
+        </div>
+      )}
+
       {/* Brand Overview */}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Overview</p>
