@@ -169,8 +169,8 @@ export default function BrandPage() {
       <section>
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Products</h2>
-          <Link href={`/brands/${id}/gallery`} className="text-xs text-gray-400 hover:text-gray-600">
-            Gallery →
+          <Link href={`/brands/${id}/gallery`} className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-xs font-semibold text-[#C7F56F] hover:bg-black transition-colors">
+            View Gallery →
           </Link>
         </div>
         {!dna && (
