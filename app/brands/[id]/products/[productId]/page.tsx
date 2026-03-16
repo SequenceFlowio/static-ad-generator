@@ -186,7 +186,6 @@ export default function ProductPage() {
   const handleGenerate = useCallback(async () => {
     if (!promptSet || selectedTemplates.length === 0) return;
     setGenerating(true);
-    setGenComplete(false);
     setGenError("");
     setProgress(selectedTemplates.map((n) => ({ template_number: n, status: "idle" })));
 
