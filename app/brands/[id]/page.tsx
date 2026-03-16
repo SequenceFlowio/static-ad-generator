@@ -166,12 +166,15 @@ export default function BrandPage() {
 
       {/* Products */}
       <section>
-        <div className="mb-3">
+        <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Products</h2>
-          {!dna && (
-            <p className="mt-1 text-xs text-gray-400">Complete Brand DNA first to enable product generation.</p>
-          )}
+          <Link href={`/brands/${id}/gallery`} className="text-xs text-gray-400 hover:text-gray-600">
+            Gallery →
+          </Link>
         </div>
+        {!dna && (
+          <p className="mb-3 text-xs text-gray-400">Complete Brand DNA first to enable product generation.</p>
+        )}
 
         <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${!dna ? "opacity-50 pointer-events-none" : ""}`}>
           {products.map((product) => (

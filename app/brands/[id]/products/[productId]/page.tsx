@@ -510,7 +510,7 @@ export default function ProductPage() {
             </div>
           )}
 
-          <div className="flex gap-3">
+          <div className="flex gap-3 flex-wrap">
             <button
               onClick={handleGenerate}
               disabled={generating || selectedTemplates.length === 0}
@@ -520,12 +520,10 @@ export default function ProductPage() {
                 ? `Generating… (${progress.filter((p) => p.status === "done").length}/${selectedTemplates.length} done)`
                 : "Generate Ads ▶"}
             </button>
-            {genComplete && (
-              <Link href={`/brands/${brandId}/gallery`}
-                className="rounded-lg bg-[#1a1a1a] px-5 py-2 text-sm font-semibold text-white hover:bg-gray-800">
-                View Gallery →
-              </Link>
-            )}
+            <Link href={`/brands/${brandId}/gallery`}
+              className="rounded-lg border border-gray-200 px-5 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50">
+              View Gallery →
+            </Link>
           </div>
         </div>
       )}

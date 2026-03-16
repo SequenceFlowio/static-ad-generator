@@ -82,6 +82,12 @@ export async function POST(
 
   const stream = new ReadableStream({
     async start(controller) {
+      // Send a keepalive comment every 20s to prevent nginx/proxy timeouts on Hostinger
+      const keepalive = setInterval(() => {
+        try { controller.enqueue(encoder.encode(": keepalive\n\n")); } catch { /* closed */ }
+      }, 20_000);
+
+      try {
       for (const promptItem of selectedPrompts) {
         const jobId = jobMap.get(promptItem.template_number);
 
@@ -162,6 +168,9 @@ export async function POST(
 
       controller.enqueue(encodeEvent({ type: "complete" }));
       controller.close();
+      } finally {
+        clearInterval(keepalive);
+      }
     },
   });
 
