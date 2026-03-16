@@ -89,7 +89,7 @@ export default function Header() {
       <div className="mx-auto flex max-w-5xl items-center justify-between">
         <Link href="/">
           <Image
-            src={dark ? "/Logo wit.png" : "/Logo zwart.png"}
+            src={dark ? "/logo-white.png" : "/logo-black.png"}
             alt="SequenceFlow"
             width={480}
             height={108}
