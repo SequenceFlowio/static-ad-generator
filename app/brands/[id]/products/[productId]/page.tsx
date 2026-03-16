@@ -8,11 +8,11 @@ import type { Brand, Product, PromptSet, PromptItem, Resolution, KieModel } from
 import { MODEL_CONFIGS } from "@/types";
 
 const TEMPLATES = [
-  { number: 1, name: "headline", label: "01 Headline" },
-  { number: 2, name: "offer-promotion", label: "02 Offer / Promo" },
-  { number: 3, name: "testimonial", label: "03 Testimonial" },
-  { number: 4, name: "vs-them", label: "04 Us vs Them" },
-  { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle" },
+  { number: 1, name: "headline", label: "01 Headline", thumb: "/template thumbnails/headline.jpg" },
+  { number: 2, name: "offer-promotion", label: "02 Offer / Promo", thumb: "/template thumbnails/offer.jpg" },
+  { number: 3, name: "testimonial", label: "03 Testimonial", thumb: "/template thumbnails/testimonial.jpg" },
+  { number: 4, name: "vs-them", label: "04 Us vs Them", thumb: "/template thumbnails/us_vs_them.jpg" },
+  { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle", thumb: "/template thumbnails/ugc_lifestyle.jpg" },
 ];
 
 const ASPECT_RATIOS = ["1:1", "3:4", "9:16"];
@@ -527,7 +527,7 @@ export default function ProductPage() {
                     className={`relative rounded-xl border-2 overflow-hidden transition-all ${isSelected ? "border-[#C7F56F]" : "border-gray-200 opacity-60 hover:opacity-80"}`}
                   >
                     <div className="relative w-full aspect-square bg-gray-100">
-                      <Image src={`/templates/template-${t.number}.svg`} alt={t.label} fill className="object-cover" unoptimized />
+                      <Image src={t.thumb} alt={t.label} fill className="object-cover" unoptimized />
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[#C7F56F] flex items-center justify-center">
                           <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
