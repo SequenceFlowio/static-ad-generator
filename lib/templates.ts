@@ -74,7 +74,7 @@ Clean, confident, easy to scan at a glance. 2K resolution.`,
     template_number: 5,
     template_name: "ugc-lifestyle",
     aspect_ratio: "9:16",
-    needs_product_images: false,
+    needs_product_images: true,
     prompt_template: `UGC-style lifestyle static ad for [BRAND_NAME] that looks like an authentic social media post.
 Slightly imperfect framing — not polished studio photography.
 Scene: [LIFESTYLE_SCENE]. [PRODUCT_NAME] appears naturally in the scene — not posed, as if casually placed.
