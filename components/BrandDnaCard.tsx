@@ -93,6 +93,35 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
         </div>
       </div>
 
+      {/* Copy Strategy */}
+      {((data.customer_desires ?? []).length > 0 || (data.hook_examples ?? []).length > 0) && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Copy Strategy</p>
+          <div className="rounded-xl bg-gray-50 px-4 py-3 space-y-3">
+            {(data.customer_desires ?? []).length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs text-gray-400">Customer Desires</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {data.customer_desires.map((d, i) => (
+                    <span key={i} className="rounded-full bg-white border border-gray-200 px-2.5 py-0.5 text-xs text-gray-700">{d}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+            {(data.hook_examples ?? []).length > 0 && (
+              <div>
+                <p className="mb-1.5 text-xs text-gray-400">Hook Examples</p>
+                <div className="space-y-1">
+                  {data.hook_examples.map((h, i) => (
+                    <p key={i} className="text-xs text-gray-700 leading-relaxed">&ldquo;{h}&rdquo;</p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Logo */}
       {data.logo_url && (
         <div>

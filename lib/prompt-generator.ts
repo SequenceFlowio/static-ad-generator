@@ -9,16 +9,31 @@ Your job: For each ad template, generate TWO things:
 1. background_prompt — the full visual/scene/product-placement prompt for the image generator. Describes the background, scene, product placement, lighting, colors, and brand aesthetic. Does NOT include any text overlay copy.
 2. hook_variants — an array of N short text overlay copy strings. Each hook variant contains the headline, optional subtitle, and CTA text that will appear as overlay text in the ad. Each must be meaningfully different in angle, tone, or message.
 
-CRITICAL RULES:
+CRITICAL RULES — VISUAL:
 - The background_prompt MUST include the brand's font name(s) explicitly — e.g. "typography in Neue Haas Grotesk"
 - The background_prompt MUST describe brand colors by their VISUAL APPEARANCE — e.g. "warm off-white background", "deep charcoal text", "bright lime green accent". NEVER write hex codes (#xxxxxx) in the background_prompt — image generators render hex strings as literal text on the image.
 - Use the provided hex codes only to determine the color's visual description (e.g. #C7F56F → "bright lime green", #1a1a1a → "near-black charcoal", #FFFFFF → "clean white").
 - The background_prompt MUST STRICTLY follow reference images — do NOT invent props, objects, or surfaces not present in the reference images
-- hook_variants must reflect the hookIntent provided — use it as the core theme/angle
 - background_prompt must reflect the backgroundIntent — use their described scene/props as the visual foundation
 - Replace every [BRACKETED PLACEHOLDER] with brand-specific details
 - Keep template_number and template_name exactly as provided
 - Output ONLY valid JSON — no markdown, no code blocks
+
+CRITICAL RULES — COPY (hook_variants):
+Every hook_variant MUST satisfy all three elements:
+1. AVATAR MATCH — say something specific the ideal customer recognises about their own situation, pain, or identity
+2. OPEN LOOP — use a question, "how to", a surprising statement, or incomplete information that forces the reader to continue
+3. CLEAR BENEFIT — what's in it for them must be obvious before they finish reading the hook
+
+Bad hook: "Improve your kitchen with Noctis cookware" (no curiosity, no avatar, generic)
+Good hook: "Why home cooks are ditching their old pans for this one set" (avatar, loop, benefit)
+
+Calibrate hook intensity to the awareness level:
+- unaware: pattern interrupt, no product mention, pure curiosity — the reader doesn't know they have a problem yet
+- problem-aware: lead with pain or frustration the ICP knows well — they know the problem, not the solution
+- solution-aware: focus on why this solution beats alternatives — they know solutions exist
+- product-aware: proof, specific results, social validation — they know the product, need convincing
+- most-aware: direct offer, urgency, concrete deal — they're ready to buy
 
 JSON Schema:
 {
@@ -40,6 +55,9 @@ JSON Schema:
 `;
 
 function brandDnaToText(dna: BrandDnaData): string {
+  const desires = (dna.customer_desires ?? []);
+  const hookExamples = (dna.hook_examples ?? []);
+
   return `
 BRAND: ${dna.name}
 Tagline: ${dna.tagline ?? "N/A"}
@@ -48,6 +66,11 @@ Target Audience: ${dna.target_audience ?? "N/A"}
 Brand Personality: ${dna.brand_personality ?? "N/A"}
 Voice: ${dna.voice_adjectives.join(", ")}
 Positioning: ${dna.positioning ?? "N/A"}
+
+COPY STRATEGY:
+Customer Desires (what the ICP deeply wants): ${desires.length > 0 ? desires.join(", ") : "N/A"}
+${hookExamples.length > 0 ? `Hook Examples — create VARIANTS of these (same angle, new phrasing):
+${hookExamples.map((h, i) => `${i + 1}. "${h}"`).join("\n")}` : "Hook Examples: none provided — generate original hooks from the framework"}
 
 VISUAL SYSTEM (font names MUST appear in background_prompt; colors must be described visually — NO hex codes in background_prompt):
 Primary Font: ${dna.primary_font ?? "N/A"} ← use this font name explicitly
@@ -66,7 +89,8 @@ export async function generatePrompts(
   numVariants: number = 2,
   hookIntent: string | null = null,
   backgroundIntent: string | null = null,
-  templateNumbers: number[] = []
+  templateNumbers: number[] = [],
+  awarenessLevel: string = "problem-aware"
 ): Promise<PromptsJson> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -100,6 +124,16 @@ Product Description: ${productDescription ?? "No description provided"}
 User Intent:
 Hook/Copy intent (what the headline & CTA should communicate): ${hookIntent ?? "Not specified — use brand positioning and product benefits"}
 Background/Scene intent (what the visual scene should look like): ${backgroundIntent ?? "Not specified — follow brand colors and typography exactly"}
+
+---
+
+Awareness Level: ${awarenessLevel}
+Calibrate hook intensity accordingly:
+- unaware: pattern interrupt, no product mention, pure curiosity
+- problem-aware: lead with pain/frustration the ICP knows well
+- solution-aware: focus on why this solution beats alternatives
+- product-aware: proof, specific results, social validation
+- most-aware: direct offer, urgency, concrete deal
 
 ---
 

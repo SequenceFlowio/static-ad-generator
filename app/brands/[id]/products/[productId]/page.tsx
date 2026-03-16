@@ -136,6 +136,7 @@ export default function ProductPage() {
   const [hookIntent, setHookIntent] = useState("");
   const [backgroundIntent, setBackgroundIntent] = useState("");
   const [numVariants, setNumVariants] = useState(2);
+  const [awarenessLevel, setAwarenessLevel] = useState("problem-aware");
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [promptError, setPromptError] = useState("");
   const [expandedTemplate, setExpandedTemplate] = useState<number | null>(null);
@@ -210,6 +211,7 @@ export default function ProductPage() {
         hook_intent: hookIntent.trim() || null,
         background_intent: backgroundIntent.trim() || null,
         template_numbers: selectedTemplates,
+        awareness_level: awarenessLevel,
       }),
     });
     const data = await res.json();
@@ -568,6 +570,30 @@ export default function ProductPage() {
                 className={`${inputBase} resize-none text-xs`}
               />
               <p className="mt-1 text-xs text-gray-400">What scene, surface, and props should the background use?</p>
+            </div>
+          </div>
+
+          {/* Awareness level */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600">Audience awareness level</label>
+            <p className="mb-2 text-xs text-gray-400">Who is this ad targeting? Calibrates hook tone and angle.</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: "unaware", label: "Unaware", desc: "Curiosity-first, no product" },
+                { value: "problem-aware", label: "Problem Aware", desc: "Lead with pain" },
+                { value: "solution-aware", label: "Solution Aware", desc: "Why this beats alternatives" },
+                { value: "product-aware", label: "Product Aware", desc: "Proof & validation" },
+                { value: "most-aware", label: "Most Aware", desc: "Direct offer, urgency" },
+              ].map((level) => (
+                <button
+                  key={level.value}
+                  onClick={() => setAwarenessLevel(level.value)}
+                  className={`rounded-lg border px-3 py-1.5 text-left transition-colors ${awarenessLevel === level.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                >
+                  <span className="block text-xs font-medium">{level.label}</span>
+                  <span className="block text-xs text-gray-400">{level.desc}</span>
+                </button>
+              ))}
             </div>
           </div>
 

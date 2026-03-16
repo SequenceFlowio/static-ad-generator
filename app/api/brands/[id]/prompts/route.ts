@@ -8,7 +8,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { product_id, num_variants = 2, hook_intent = null, background_intent = null, template_numbers = [] } = await req.json();
+  const { product_id, num_variants = 2, hook_intent = null, background_intent = null, template_numbers = [], awareness_level = "problem-aware" } = await req.json();
 
   if (!product_id) {
     return NextResponse.json({ error: "product_id is required" }, { status: 400 });
@@ -49,7 +49,8 @@ export async function POST(
       num_variants,
       hook_intent,
       background_intent,
-      template_numbers
+      template_numbers,
+      awareness_level
     );
 
     // Store prompts_original alongside prompts so user can reset edits

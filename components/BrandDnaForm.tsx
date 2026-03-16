@@ -207,6 +207,81 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
         </div>
       </section>
 
+      {/* Copy Strategy */}
+      <section>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Copy Strategy</p>
+        <p className="mb-3 text-xs text-gray-400">Used by AI to generate scroll-stopping hooks tailored to your audience.</p>
+        <div className="space-y-4">
+          {/* Customer Desires — tag input */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">Customer Desires</label>
+            <p className="mb-2 text-xs text-gray-400">What does your ideal customer deeply want? Press Enter to add.</p>
+            <div className="flex flex-wrap gap-1.5 mb-2">
+              {(d.customer_desires ?? []).map((desire, i) => (
+                <span key={i} className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
+                  {desire}
+                  <button
+                    type="button"
+                    onClick={() => set("customer_desires", (d.customer_desires ?? []).filter((_, j) => j !== i))}
+                    className="ml-0.5 text-gray-400 hover:text-gray-700"
+                  >×</button>
+                </span>
+              ))}
+            </div>
+            <input
+              type="text"
+              placeholder="e.g. effortless kitchen — press Enter"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  const val = (e.target as HTMLInputElement).value.trim();
+                  if (val) {
+                    set("customer_desires", [...(d.customer_desires ?? []), val]);
+                    (e.target as HTMLInputElement).value = "";
+                  }
+                }
+              }}
+            />
+          </div>
+
+          {/* Hook Examples — dynamic list */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-500">Hook Examples</label>
+            <p className="mb-2 text-xs text-gray-400">Add hooks that have worked or angles you want to test. AI creates variants of these.</p>
+            <div className="space-y-2">
+              {(d.hook_examples ?? []).map((hook, i) => (
+                <div key={i} className="flex gap-2 items-start">
+                  <input
+                    type="text"
+                    value={hook}
+                    onChange={(e) => {
+                      const updated = [...(d.hook_examples ?? [])];
+                      updated[i] = e.target.value;
+                      set("hook_examples", updated);
+                    }}
+                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+                    placeholder="e.g. How I made my kitchen look 10x more organized"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => set("hook_examples", (d.hook_examples ?? []).filter((_, j) => j !== i))}
+                    className="mt-2 text-gray-400 hover:text-red-500 text-sm"
+                  >×</button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => set("hook_examples", [...(d.hook_examples ?? []), ""])}
+              className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2"
+            >
+              + Add hook example
+            </button>
+          </div>
+        </div>
+      </section>
+
       {/* Visual System */}
       <section>
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Visual System</p>

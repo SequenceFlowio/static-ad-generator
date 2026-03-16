@@ -31,6 +31,7 @@ Return this exact JSON (use null for fields you genuinely cannot find — do not
   "voice_adjectives": ["adj1", "adj2", "adj3", "adj4", "adj5"],
   "positioning": "1-2 sentence positioning or null",
   "competitive_differentiation": "How this brand differs from competitors or null",
+  "customer_desires": ["3-5 short phrases describing what the ICP deeply wants — emotional/functional desires, not product features. e.g. 'effortless kitchen', 'look like a pro at home', 'save time on weeknights'"],
   "primary_font": "Font name if publicly documented or null",
   "secondary_font": "Secondary font name or null",
   "accent_color": "#hexcode for brand accent/CTA color or null",
@@ -72,6 +73,8 @@ export async function researchBrand(
   const aiData = JSON.parse(cleaned) as BrandDnaData;
 
   if (!Array.isArray(aiData.voice_adjectives)) aiData.voice_adjectives = [];
+  if (!Array.isArray(aiData.customer_desires)) aiData.customer_desires = [];
+  if (!Array.isArray(aiData.hook_examples)) aiData.hook_examples = [];
 
   // Manual overrides win — user knows their brand better than scraping
   if (manualOverrides) {

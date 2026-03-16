@@ -16,6 +16,9 @@ export interface BrandDnaData {
   voice_adjectives: string[];
   positioning: string | null;
   competitive_differentiation: string | null;
+  // Copy Strategy
+  customer_desires: string[];   // what the ICP deeply wants — feeds into hook generation
+  hook_examples: string[];      // proven hooks/angles — AI creates variants of these
   // Visual System
   primary_font: string | null;
   secondary_font: string | null;
