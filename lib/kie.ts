@@ -31,9 +31,9 @@ interface TaskStatusResponse {
   msg: string;
   data: {
     taskId: string;
-    status: "waiting" | "queuing" | "generating" | "success" | "fail";
-    images?: Array<{ url: string }>;
-    error?: string;
+    state: "waiting" | "queuing" | "generating" | "success" | "fail";
+    resultJson?: string; // JSON string: { resultUrls: string[] }
+    failMsg?: string | null;
   };
 }
 
@@ -76,12 +76,13 @@ async function pollTask(taskId: string): Promise<string[]> {
     const data: TaskStatusResponse = await res.json();
     const task = data.data;
 
-    if (task.status === "success") {
-      return (task.images ?? []).map((img) => img.url);
+    if (task.state === "success") {
+      const result = task.resultJson ? (JSON.parse(task.resultJson) as { resultUrls?: string[] }) : {};
+      return result.resultUrls ?? [];
     }
 
-    if (task.status === "fail") {
-      throw new Error(`kie.ai task failed: ${task.error ?? "unknown error"}`);
+    if (task.state === "fail") {
+      throw new Error(`kie.ai task failed: ${task.failMsg ?? "unknown error"}`);
     }
 
     // Still pending or processing — keep polling
