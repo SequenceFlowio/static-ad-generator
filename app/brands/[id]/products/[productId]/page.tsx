@@ -59,7 +59,6 @@ export default function ProductPage() {
   const [numImages, setNumImages] = useState(2);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<TemplateProgress[]>([]);
-  const [genComplete, setGenComplete] = useState(false);
   const [genError, setGenError] = useState("");
 
   // Image upload
