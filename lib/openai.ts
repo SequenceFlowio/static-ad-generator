@@ -58,7 +58,6 @@ export async function researchBrand(
     instructions: BRAND_RESEARCH_SYSTEM_PROMPT,
     input: `Research this brand:\n\nBrand Name: ${brandName}\nBrand URL: ${brandUrl}\n\nSearch extensively. Return the JSON only.`,
     tools: [{ type: "web_search_preview" }],
-    text: { format: { type: "json_object" } },
   });
 
   const text = response.output
@@ -75,7 +74,9 @@ export async function researchBrand(
 
   if (!text) throw new Error("No response from OpenAI.");
 
-  const aiData = JSON.parse(text) as BrandDnaData;
+  // Strip markdown code fences if model wrapped the JSON anyway
+  const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();
+  const aiData = JSON.parse(cleaned) as BrandDnaData;
 
   if (!Array.isArray(aiData.voice_adjectives)) aiData.voice_adjectives = [];
   if (!Array.isArray(aiData.background_colors)) aiData.background_colors = [];
