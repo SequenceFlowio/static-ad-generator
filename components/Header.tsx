@@ -3,11 +3,69 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
+
+function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={cn(
+        "h-9 w-9 rounded-full transition-all duration-300 active:scale-95 p-1.5",
+        isDark ? "bg-black text-white" : "bg-white text-black shadow-sm border border-gray-200"
+      )}
+      aria-label="Thema wisselen"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        aria-hidden="true"
+        fill="currentColor"
+        strokeLinecap="round"
+        viewBox="0 0 32 32"
+      >
+        <clipPath id="skiper-btn-2">
+          <motion.path
+            animate={{ y: isDark ? 10 : 0, x: isDark ? -12 : 0 }}
+            transition={{ ease: "easeInOut", duration: 0.35 }}
+            d="M0-5h30a1 1 0 0 0 9 13v24H0Z"
+          />
+        </clipPath>
+        <g clipPath="url(#skiper-btn-2)">
+          <motion.circle
+            animate={{ r: isDark ? 10 : 8 }}
+            transition={{ ease: "easeInOut", duration: 0.35 }}
+            cx="16"
+            cy="16"
+          />
+          <motion.g
+            animate={{
+              rotate: isDark ? -100 : 0,
+              scale: isDark ? 0.5 : 1,
+              opacity: isDark ? 0 : 1,
+            }}
+            transition={{ ease: "easeInOut", duration: 0.35 }}
+            stroke="currentColor"
+            strokeWidth="1.5"
+          >
+            <path d="M16 5.5v-4" />
+            <path d="M16 30.5v-4" />
+            <path d="M1.5 16h4" />
+            <path d="M26.5 16h4" />
+            <path d="m23.4 8.6 2.8-2.8" />
+            <path d="m5.7 26.3 2.9-2.9" />
+            <path d="m5.8 5.8 2.8 2.8" />
+            <path d="m23.4 23.4 2.9 2.9" />
+          </motion.g>
+        </g>
+      </svg>
+    </button>
+  );
+}
 
 export default function Header() {
   const [dark, setDark] = useState(false);
 
-  // Load saved preference
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
@@ -30,39 +88,13 @@ export default function Header() {
           <Image
             src={dark ? "/Logo wit.png" : "/Logo zwart.png"}
             alt="SequenceFlow"
-            width={160}
-            height={36}
-            className="h-8 w-auto"
+            width={480}
+            height={108}
+            className="h-24 w-auto"
             priority
           />
         </Link>
-
-        {/* Dark / Light toggle */}
-        <button
-          onClick={toggleTheme}
-          className="relative flex h-8 w-16 items-center rounded-full bg-gray-100 dark:bg-gray-800 p-1 transition-colors"
-          aria-label="Thema wisselen"
-        >
-          {/* sliding pill */}
-          <span
-            className={`absolute h-6 w-6 rounded-full bg-[#1a1a1a] dark:bg-white shadow transition-all duration-300 ${dark ? "left-9" : "left-1"}`}
-          />
-          {/* Sun */}
-          <svg
-            className={`relative z-10 h-4 w-4 ml-0.5 transition-colors ${!dark ? "text-white" : "text-gray-400"}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-          </svg>
-          {/* Moon */}
-          <svg
-            className={`relative z-10 h-4 w-4 ml-auto mr-0.5 transition-colors ${dark ? "text-[#1a1a1a]" : "text-gray-400"}`}
-            fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
-          >
-            <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
-          </svg>
-        </button>
+        <ThemeToggle isDark={dark} onToggle={toggleTheme} />
       </div>
     </header>
   );
