@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type { BrandDnaData } from "@/types";
 
 interface Props {
+  brandId: string;
   initialData: Partial<BrandDnaData>;
   onSave: (data: Partial<BrandDnaData>) => void;
   onCancel: (() => void) | null;
@@ -81,8 +82,25 @@ function ColorField({
   );
 }
 
-export default function BrandDnaForm({ initialData, onSave, onCancel, loading, saveLabel }: Props) {
+export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, loading, saveLabel }: Props) {
   const [d, setD] = useState<Partial<BrandDnaData>>({ ...initialData });
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const logoInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleLogoUpload(file: File) {
+    setUploadingLogo(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`/api/brands/${brandId}/logo`, { method: "POST", body: formData });
+    const data = await res.json();
+    setUploadingLogo(false);
+    if (res.ok) set("logo_url", data.url);
+  }
+
+  async function handleLogoRemove() {
+    await fetch(`/api/brands/${brandId}/logo`, { method: "DELETE" });
+    set("logo_url", null as unknown as never);
+  }
 
   function set<K extends keyof BrandDnaData>(key: K, value: BrandDnaData[K]) {
     setD((prev) => ({ ...prev, [key]: value }));
@@ -94,6 +112,44 @@ export default function BrandDnaForm({ initialData, onSave, onCancel, loading, s
 
   return (
     <div className="space-y-6">
+      {/* Brand Logo */}
+      <section>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Logo</p>
+        <div className="flex items-center gap-4">
+          {d.logo_url ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={d.logo_url} alt="Logo" className="h-12 max-w-[180px] object-contain rounded border border-gray-200 bg-gray-50 p-1" />
+              <button
+                type="button"
+                onClick={handleLogoRemove}
+                className="text-xs text-red-400 hover:text-red-600"
+              >
+                Remove
+              </button>
+            </>
+          ) : (
+            <p className="text-xs text-gray-400">No logo uploaded</p>
+          )}
+          <input
+            ref={logoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/svg+xml,image/webp"
+            className="hidden"
+            onChange={(e) => e.target.files?.[0] && handleLogoUpload(e.target.files[0])}
+          />
+          <button
+            type="button"
+            onClick={() => logoInputRef.current?.click()}
+            disabled={uploadingLogo}
+            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+          >
+            {uploadingLogo ? "Uploading…" : d.logo_url ? "Replace" : "Upload Logo"}
+          </button>
+        </div>
+        <p className="mt-1.5 text-xs text-gray-400">PNG or SVG with transparent background recommended. Used as reference in every generated ad.</p>
+      </section>
+
       {/* Brand Voice */}
       <section>
         <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Voice</p>

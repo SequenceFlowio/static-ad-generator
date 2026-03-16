@@ -29,6 +29,8 @@ export interface BrandDnaData {
   subject_matter: string | null;
   props_and_surfaces: string | null;
   mood: string | null;
+  // Brand logo (public URL in Supabase Storage)
+  logo_url: string | null;
   // Auto-generated style fingerprint prepended to every image prompt
   prompt_modifier: string;
 }

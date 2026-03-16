@@ -72,6 +72,17 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
         </div>
       </div>
 
+      {/* Logo */}
+      {data.logo_url && (
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Logo</p>
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={data.logo_url} alt="Brand logo" className="h-12 max-w-[180px] object-contain" />
+          </div>
+        </div>
+      )}
+
       {/* Visual System */}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Visual System</p>

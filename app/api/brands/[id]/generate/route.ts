@@ -15,11 +15,11 @@ export async function POST(
 
   const db = getServerSupabase();
 
-  const { data: brand, error: brandErr } = await db
-    .from("brands")
-    .select("*")
-    .eq("id", id)
-    .single();
+  const [{ data: brand, error: brandErr }, { data: brandDna }] = await Promise.all([
+    db.from("brands").select("*").eq("id", id).single(),
+    db.from("brand_dna").select("data").eq("brand_id", id)
+      .order("generated_at", { ascending: false }).limit(1).maybeSingle(),
+  ]);
 
   if (brandErr || !brand) {
     return new Response(JSON.stringify({ error: "Brand not found" }), {
@@ -27,6 +27,8 @@ export async function POST(
       headers: { "Content-Type": "application/json" },
     });
   }
+
+  const logoUrl: string | null = (brandDna?.data as { logo_url?: string | null })?.logo_url ?? null;
 
   const { data: promptSet, error: promptErr } = await db
     .from("prompt_sets")
@@ -105,17 +107,19 @@ export async function POST(
         );
 
         try {
-          const refImages =
-            promptItem.needs_product_images && productImageUrls.length > 0
-              ? productImageUrls
-              : undefined;
+          // Build reference image list: logo first (always), then product images when needed
+          const refImages: string[] = [];
+          if (logoUrl) refImages.push(logoUrl);
+          if (promptItem.needs_product_images && productImageUrls.length > 0) {
+            refImages.push(...productImageUrls);
+          }
 
           const kieImageUrls = await generateImages({
             prompt: promptItem.prompt,
             aspect_ratio: promptItem.aspect_ratio,
             resolution,
             num_images,
-            reference_image_urls: refImages,
+            reference_image_urls: refImages.length > 0 ? refImages : undefined,
           });
 
           const storedUrls: string[] = [];

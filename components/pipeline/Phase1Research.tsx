@@ -223,6 +223,7 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
                   These fields are hard for AI to find — add what you can, leave the rest blank. AI fills everything else.
                 </p>
                 <BrandDnaForm
+                  brandId={brandId}
                   initialData={{
                     voice_adjectives: [],
                     positioning: null,
@@ -255,6 +256,7 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
 
           {step === "done" && dna && showEdit && (
             <BrandDnaForm
+              brandId={brandId}
               initialData={dna.data}
               onSave={handleEditSave}
               onCancel={() => setShowEdit(false)}

@@ -22,7 +22,7 @@ interface CreateTaskPayload {
     num_images: number;
     output_format: "png" | "jpg";
     resolution: string;
-    image_urls?: string[];
+    image_input?: string[];
   };
 }
 
@@ -113,7 +113,7 @@ export async function generateImages({
       output_format: "png",
       resolution,
       ...(reference_image_urls && reference_image_urls.length > 0
-        ? { image_urls: reference_image_urls.slice(0, 14) }
+        ? { image_input: reference_image_urls.slice(0, 14) }
         : {}),
     },
   };

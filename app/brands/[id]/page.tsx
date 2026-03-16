@@ -154,6 +154,7 @@ export default function BrandPage() {
         {dna && dnaOpen && editingDna && (
           <div className="rounded-xl border border-gray-200 bg-white p-5">
             <BrandDnaForm
+              brandId={id}
               initialData={dna.data}
               onSave={handleSaveDna}
               onCancel={() => setEditingDna(false)}
