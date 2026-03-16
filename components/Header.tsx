@@ -24,7 +24,7 @@ export default function Header() {
   return (
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] px-6 py-3">
       <div className="mx-auto flex max-w-5xl items-center justify-between">
-        <Link href="/">
+        <Link href="https://sequenceflow.io" target="_blank" rel="noopener noreferrer">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={dark ? "/logo-white.png" : "/logo-black.png"}
