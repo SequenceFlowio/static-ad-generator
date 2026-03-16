@@ -11,7 +11,8 @@ Your job: For each ad template, generate TWO things:
 
 CRITICAL RULES:
 - The background_prompt MUST include the brand's font name(s) explicitly — e.g. "typography in Neue Haas Grotesk"
-- The background_prompt MUST include brand color hex values explicitly — e.g. "background color #F5F0EB", "accent elements in #2B2B2B"
+- The background_prompt MUST describe brand colors by their VISUAL APPEARANCE — e.g. "warm off-white background", "deep charcoal text", "bright lime green accent". NEVER write hex codes (#xxxxxx) in the background_prompt — image generators render hex strings as literal text on the image.
+- Use the provided hex codes only to determine the color's visual description (e.g. #C7F56F → "bright lime green", #1a1a1a → "near-black charcoal", #FFFFFF → "clean white").
 - The background_prompt MUST STRICTLY follow reference images — do NOT invent props, objects, or surfaces not present in the reference images
 - hook_variants must reflect the hookIntent provided — use it as the core theme/angle
 - background_prompt must reflect the backgroundIntent — use their described scene/props as the visual foundation
@@ -48,12 +49,12 @@ Brand Personality: ${dna.brand_personality ?? "N/A"}
 Voice: ${dna.voice_adjectives.join(", ")}
 Positioning: ${dna.positioning ?? "N/A"}
 
-VISUAL SYSTEM (MUST appear verbatim in background_prompt):
-Primary Font: ${dna.primary_font ?? "N/A"} ← use this font name explicitly in background_prompt
+VISUAL SYSTEM (font names MUST appear in background_prompt; colors must be described visually — NO hex codes in background_prompt):
+Primary Font: ${dna.primary_font ?? "N/A"} ← use this font name explicitly
 Secondary Font: ${dna.secondary_font ?? "N/A"}
-Accent Color: ${dna.accent_color ?? "N/A"} ← use this hex in background_prompt
-Lettertype Color: ${dna.lettertype_color ?? "N/A"} ← use this hex in background_prompt
-Background Color: ${dna.background_color ?? "N/A"} ← use this hex in background_prompt
+Accent Color: ${dna.accent_color ?? "N/A"} ← describe visually (e.g. "bright lime green"), never write the hex
+Lettertype Color: ${dna.lettertype_color ?? "N/A"} ← describe visually
+Background Color: ${dna.background_color ?? "N/A"} ← describe visually
 `.trim();
 }
 
@@ -111,7 +112,7 @@ ${templatesText}
 
 ---
 
-Generate the prompts JSON for all ${selectedTemplates.length} templates. Each template needs exactly ${numVariants} hook_variants. Remember: background_prompt MUST include explicit font names and color hex values from the brand data. Output ONLY the JSON object with a "prompts" array.`;
+Generate the prompts JSON for all ${selectedTemplates.length} templates. Each template needs exactly ${numVariants} hook_variants. Remember: background_prompt MUST include font names explicitly AND describe brand colors visually — do NOT write any hex codes (#xxxxxx) in background_prompt. Output ONLY the JSON object with a "prompts" array.`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",

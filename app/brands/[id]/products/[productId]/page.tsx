@@ -659,7 +659,6 @@ export default function ProductPage() {
                         {String(p.template_number).padStart(2, "0")}
                       </span>
                       <span className="font-medium capitalize">{p.template_name.replace(/-/g, " ")}</span>
-                      <span className="text-xs text-gray-400">{p.aspect_ratio}</span>
                       {p.needs_product_images && (
                         <span className="text-xs bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">product ref</span>
                       )}

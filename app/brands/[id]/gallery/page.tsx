@@ -5,12 +5,6 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import type { GenerationJob, GenerationDetail } from "@/types";
 
-interface GroupedJobs {
-  template_number: number;
-  template_name: string;
-  jobs: GenerationJob[];
-}
-
 interface DetailSelection {
   job: GenerationJob;
   imageIndex: number;
@@ -21,7 +15,7 @@ export default function GalleryPage() {
   const id = params.id as string;
 
   const [brandName, setBrandName] = useState("");
-  const [groups, setGroups] = useState<GroupedJobs[]>([]);
+  const [jobs, setJobs] = useState<GenerationJob[]>([]);
   const [loading, setLoading] = useState(true);
   const [detail, setDetail] = useState<DetailSelection | null>(null);
 
@@ -38,30 +32,9 @@ export default function GalleryPage() {
       }
 
       if (jobsRes.ok) {
-        const jobs: GenerationJob[] = await jobsRes.json();
-        const doneJobs = jobs.filter(
-          (j) => j.status === "done" && j.image_urls && j.image_urls.length > 0
-        );
-
-        // Group by template
-        const map = new Map<number, GroupedJobs>();
-        for (const job of doneJobs) {
-          const key = job.template_number;
-          if (!map.has(key)) {
-            map.set(key, {
-              template_number: key,
-              template_name: job.template_name,
-              jobs: [],
-            });
-          }
-          map.get(key)!.jobs.push(job);
-        }
-
-        setGroups(
-          Array.from(map.values()).sort(
-            (a, b) => a.template_number - b.template_number
-          )
-        );
+        const all: GenerationJob[] = await jobsRes.json();
+        // Only show completed jobs with images, newest first (API returns newest first already)
+        setJobs(all.filter((j) => j.status === "done" && j.image_urls && j.image_urls.length > 0));
       }
 
       setLoading(false);
@@ -84,7 +57,7 @@ export default function GalleryPage() {
     }
   }
 
-  function exportJobJson(job: GenerationJob, brandName: string) {
+  function exportJobJson(job: GenerationJob) {
     const payload = {
       exported_at: new Date().toISOString(),
       brand: brandName,
@@ -126,7 +99,7 @@ export default function GalleryPage() {
         <div className="mb-4 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold">{brandName} — Ad Gallery</h1>
-            <p className="mt-1 text-sm text-gray-400">All generated ads, grouped by template. Click an image for details.</p>
+            <p className="mt-1 text-sm text-gray-400">All generated ads, newest first. Click an image for details.</p>
           </div>
           <Link
             href={`/brands/${id}`}
@@ -146,7 +119,7 @@ export default function GalleryPage() {
 
         {loading && <p className="text-sm text-gray-400">Loading gallery…</p>}
 
-        {!loading && groups.length === 0 && (
+        {!loading && jobs.length === 0 && (
           <div className="rounded-xl border border-dashed border-gray-300 p-12 text-center">
             <p className="text-gray-400 text-sm">No generated ads yet.</p>
             <Link
@@ -158,69 +131,57 @@ export default function GalleryPage() {
           </div>
         )}
 
-        <div className="space-y-12">
-          {groups.map((group) => (
-            <section key={group.template_number}>
-              <div className="mb-4 flex items-center gap-3">
-                <h2 className="text-lg font-semibold capitalize">
-                  Template {String(group.template_number).padStart(2, "0")} —{" "}
-                  {group.template_name.replace(/-/g, " ")}
-                </h2>
-                <span className="h-px flex-1 bg-[#C7F56F]" />
+        <div className="space-y-8">
+          {jobs.map((job) => (
+            <div key={job.id}>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-xs text-gray-400">
+                  {new Date(job.created_at).toLocaleString()} · {job.resolution}
+                  {job.generation_detail?.model && (
+                    <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-500">
+                      {job.generation_detail.model}
+                    </span>
+                  )}
+                </p>
+                <button
+                  onClick={() => exportJobJson(job)}
+                  className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+                >
+                  Export JSON
+                </button>
               </div>
-
-              {group.jobs.map((job) => (
-                <div key={job.id} className="mb-6">
-                  <div className="mb-2 flex items-center justify-between">
-                    <p className="text-xs text-gray-400">
-                      Generated {new Date(job.created_at).toLocaleString()} · {job.resolution}
-                      {job.generation_detail?.model && (
-                        <span className="ml-2 rounded bg-gray-100 px-1.5 py-0.5 font-mono text-gray-500">
-                          {job.generation_detail.model}
-                        </span>
-                      )}
-                    </p>
-                    <button
-                      onClick={() => exportJobJson(job, brandName)}
-                      className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2"
+              <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                {(job.image_urls ?? []).map((url, i) => {
+                  const isActive = detail?.job.id === job.id && detail?.imageIndex === i;
+                  return (
+                    <div
+                      key={i}
+                      className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${isActive ? "border-[#C7F56F]" : "border-transparent"}`}
+                      onClick={() => setDetail(isActive ? null : { job, imageIndex: i })}
                     >
-                      Export JSON
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                    {(job.image_urls ?? []).map((url, i) => {
-                      const isActive = detail?.job.id === job.id && detail?.imageIndex === i;
-                      return (
-                        <div
-                          key={i}
-                          className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${isActive ? "border-[#C7F56F]" : "border-transparent"}`}
-                          onClick={() => setDetail(isActive ? null : { job, imageIndex: i })}
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`${job.template_name} v${i + 1}`}
+                        className="w-full rounded-[10px] border border-gray-200 object-cover"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 flex items-end justify-between rounded-[10px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity p-2 gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); downloadImage(url, `${brandName}-${job.template_name}-v${i + 1}.png`); }}
+                          className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-gray-100"
                         >
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={url}
-                            alt={`${group.template_name} v${i + 1}`}
-                            className="w-full rounded-[10px] border border-gray-200 object-cover"
-                            loading="lazy"
-                          />
-                          <div className="absolute inset-0 flex items-end justify-between rounded-[10px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity p-2 gap-2">
-                            <button
-                              onClick={(e) => { e.stopPropagation(); downloadImage(url, `${brandName}-${group.template_name}-v${i + 1}.png`); }}
-                              className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-gray-100"
-                            >
-                              Download
-                            </button>
-                            <span className="rounded-lg bg-black/60 px-2 py-1.5 text-xs text-white">
-                              {isActive ? "Close" : "Details"}
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </section>
+                          Download
+                        </button>
+                        <span className="rounded-lg bg-black/60 px-2 py-1.5 text-xs text-white">
+                          {isActive ? "Close" : "Details"}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -300,7 +261,7 @@ export default function GalleryPage() {
                   Download
                 </button>
                 <button
-                  onClick={() => exportJobJson(detailJob, brandName)}
+                  onClick={() => exportJobJson(detailJob)}
                   className="rounded-lg border border-gray-200 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-50"
                 >
                   Export JSON
