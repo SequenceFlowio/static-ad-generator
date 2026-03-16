@@ -169,7 +169,11 @@ export default function ProductPage() {
       const productData = await productRes.json();
       setBrand(brandData.brand);
       setProduct(productData.product);
-      setBrandDna(brandData.brand_dna?.data ?? null);
+      const dna: BrandDnaData | null = brandData.brand_dna?.data ?? null;
+      setBrandDna(dna);
+      if (dna && (dna.customer_desires ?? []).length > 0) {
+        setSelectedDesire(dna.customer_desires[0]);
+      }
       setLoading(false);
     }
     load();
@@ -581,12 +585,12 @@ export default function ProductPage() {
           {brandDna && (brandDna.customer_desires ?? []).length > 0 && (
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">Customer desire</label>
-              <p className="mb-2 text-xs text-gray-400">Every hook will be built around this one desire. Leave unselected to let AI decide.</p>
+              <p className="mb-2 text-xs text-gray-400">Every hook will be built around the selected desire.</p>
               <div className="flex flex-wrap gap-2">
                 {(brandDna.customer_desires ?? []).map((desire) => (
                   <button
                     key={desire}
-                    onClick={() => setSelectedDesire(selectedDesire === desire ? null : desire)}
+                    onClick={() => setSelectedDesire(desire)}
                     className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${selectedDesire === desire ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
                   >
                     {desire}
