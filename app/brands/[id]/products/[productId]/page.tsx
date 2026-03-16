@@ -230,7 +230,6 @@ export default function ProductPage() {
           } else if (event.type === "error") {
             setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "error", error: event.error } : p));
           } else if (event.type === "complete") {
-            setGenComplete(true);
             setGenerating(false);
           }
         } catch { /* ignore */ }
