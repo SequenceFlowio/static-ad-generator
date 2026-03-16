@@ -526,7 +526,7 @@ export default function ProductPage() {
                     )}
                     className={`relative rounded-xl border-2 overflow-hidden transition-all ${isSelected ? "border-[#C7F56F]" : "border-gray-200 opacity-60 hover:opacity-80"}`}
                   >
-                    <div className="relative w-full aspect-square bg-gray-100">
+                    <div className="relative w-full aspect-[3/4] bg-gray-100">
                       <Image src={t.thumb} alt={t.label} fill className="object-cover" unoptimized />
                       {isSelected && (
                         <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[#C7F56F] flex items-center justify-center">
