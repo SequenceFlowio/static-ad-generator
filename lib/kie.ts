@@ -17,16 +17,10 @@ function getHeaders() {
   };
 }
 
-interface CreateTaskPayload {
-  model: KieModel;
-  input: {
-    prompt: string;
-    aspect_ratio: string;
-    num_images: number;
-    output_format: "png" | "jpg";
-    resolution: string;
-    image_input?: string[];
-  };
+// Seedream 4.5 uses "quality" instead of "resolution"
+// "basic" = 2K, "high" = 4K
+function resolutionToQuality(resolution: string): "basic" | "high" {
+  return resolution === "4K" ? "high" : "basic";
 }
 
 interface TaskStatusResponse {
@@ -40,7 +34,7 @@ interface TaskStatusResponse {
   };
 }
 
-async function createTask(payload: CreateTaskPayload): Promise<string> {
+async function createTask(payload: Record<string, unknown>): Promise<string> {
   const res = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
     method: "POST",
     headers: getHeaders(),
@@ -94,7 +88,7 @@ export async function generateImages({
   prompt,
   aspect_ratio,
   resolution,
-  num_images = 4,
+  num_images = 1,
   reference_image_urls,
   model = "nano-banana-2",
 }: {
@@ -105,19 +99,39 @@ export async function generateImages({
   reference_image_urls?: string[];
   model?: KieModel;
 }): Promise<string[]> {
-  const payload: CreateTaskPayload = {
-    model,
-    input: {
-      prompt,
-      aspect_ratio,
-      num_images,
-      output_format: "png",
-      resolution,
-      ...(reference_image_urls && reference_image_urls.length > 0
-        ? { image_input: reference_image_urls.slice(0, 14) }
-        : {}),
-    },
-  };
+  const refs = reference_image_urls && reference_image_urls.length > 0
+    ? reference_image_urls.slice(0, 14)
+    : undefined;
+
+  let payload: Record<string, unknown>;
+
+  if (model === "seedream/4.5-edit") {
+    // Seedream 4.5 uses different field names:
+    // - quality ("basic"=2K, "high"=4K) instead of resolution
+    // - image_urls instead of image_input
+    payload = {
+      model,
+      input: {
+        prompt,
+        aspect_ratio,
+        quality: resolutionToQuality(resolution),
+        ...(refs ? { image_urls: refs } : {}),
+      },
+    };
+  } else {
+    // Nano Banana 2
+    payload = {
+      model,
+      input: {
+        prompt,
+        aspect_ratio,
+        num_images,
+        output_format: "png",
+        resolution,
+        ...(refs ? { image_input: refs } : {}),
+      },
+    };
+  }
 
   const taskId = await createTask(payload);
   return await pollTask(taskId);
