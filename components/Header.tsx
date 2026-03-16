@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
 
 export default function Header() {
@@ -26,13 +25,11 @@ export default function Header() {
     <header className="border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111] px-6 py-3">
       <div className="mx-auto flex max-w-5xl items-center justify-between">
         <Link href="/">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src={dark ? "/logo-white.png" : "/logo-black.png"}
             alt="SequenceFlow"
-            width={480}
-            height={108}
             className="h-24 w-auto"
-            priority
           />
         </Link>
 
