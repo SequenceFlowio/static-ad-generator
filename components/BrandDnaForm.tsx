@@ -150,32 +150,59 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
         <p className="mt-1.5 text-xs text-gray-400">PNG or SVG with transparent background recommended. Used as reference in every generated ad.</p>
       </section>
 
-      {/* Brand Voice */}
+      {/* Brand Overview */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Voice</p>
-        <div className="grid gap-3 sm:grid-cols-2">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Overview</p>
+        <div className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field
+              label="Tagline"
+              value={d.tagline ?? ""}
+              onChange={setStr("tagline")}
+              placeholder="Your brand tagline"
+            />
+            <Field
+              label="Voice Adjectives (comma-separated)"
+              value={(d.voice_adjectives ?? []).join(", ")}
+              onChange={(v) =>
+                set("voice_adjectives", v.split(",").map((s) => s.trim()).filter(Boolean))
+              }
+              placeholder="Elegant, Minimal, Modern, Clean, Premium"
+            />
+          </div>
           <Field
-            label="Tagline"
-            value={d.tagline ?? ""}
-            onChange={setStr("tagline")}
-            placeholder="Your brand tagline"
+            label="Brand Story"
+            value={d.brand_story ?? ""}
+            onChange={setStr("brand_story")}
+            textarea
+            placeholder="1–2 sentences about the brand's origin or mission"
           />
           <Field
-            label="Voice Adjectives (comma-separated)"
-            value={(d.voice_adjectives ?? []).join(", ")}
-            onChange={(v) =>
-              set("voice_adjectives", v.split(",").map((s) => s.trim()).filter(Boolean))
-            }
-            placeholder="Elegant, Minimal, Modern, Clean, Premium"
+            label="Target Audience"
+            value={d.target_audience ?? ""}
+            onChange={setStr("target_audience")}
+            textarea
+            placeholder="Who the brand is for — demographics, lifestyle, needs"
           />
-        </div>
-        <div className="mt-3">
+          <Field
+            label="Brand Personality"
+            value={d.brand_personality ?? ""}
+            onChange={setStr("brand_personality")}
+            textarea
+            placeholder="How the brand acts, speaks, and feels — e.g. Premium but approachable"
+          />
           <Field
             label="Positioning"
             value={d.positioning ?? ""}
             onChange={setStr("positioning")}
             textarea
             placeholder="1–2 sentences describing what makes this brand unique"
+          />
+          <Field
+            label="Competitive Differentiation"
+            value={d.competitive_differentiation ?? ""}
+            onChange={setStr("competitive_differentiation")}
+            placeholder="How this brand differs from competitors"
           />
         </div>
       </section>
@@ -197,47 +224,20 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             placeholder="Garamond"
           />
           <ColorField
-            label="Primary Color"
-            value={d.primary_color ?? ""}
-            onChange={(v) => set("primary_color", v || null)}
-          />
-          <ColorField
-            label="Secondary Color"
-            value={d.secondary_color ?? ""}
-            onChange={(v) => set("secondary_color", v || null)}
-          />
-          <ColorField
             label="Accent Color"
             value={d.accent_color ?? ""}
             onChange={(v) => set("accent_color", v || null)}
           />
-          <Field
-            label="Background Colors (comma-separated hex)"
-            value={(d.background_colors ?? []).join(", ")}
-            onChange={(v) =>
-              set("background_colors", v.split(",").map((s) => s.trim()).filter(Boolean))
-            }
-            placeholder="#FFFFFF, #F5F0EB"
+          <ColorField
+            label="Lettertype Color"
+            value={d.lettertype_color ?? ""}
+            onChange={(v) => set("lettertype_color", v || null)}
           />
-          <Field
-            label="CTA Color & Style"
-            value={d.cta_color_style ?? ""}
-            onChange={setStr("cta_color_style")}
-            placeholder="Solid black pill, white text"
+          <ColorField
+            label="Background Color"
+            value={d.background_color ?? ""}
+            onChange={(v) => set("background_color", v || null)}
           />
-        </div>
-      </section>
-
-      {/* Photography Direction */}
-      <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Photography Direction</p>
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Field label="Lighting" value={d.lighting ?? ""} onChange={setStr("lighting")} placeholder="Soft natural window light" />
-          <Field label="Color Grading" value={d.color_grading ?? ""} onChange={setStr("color_grading")} placeholder="Warm golden tones" />
-          <Field label="Composition" value={d.composition ?? ""} onChange={setStr("composition")} placeholder="Clean minimalist, product centered" />
-          <Field label="Subject Matter" value={d.subject_matter ?? ""} onChange={setStr("subject_matter")} placeholder="Product in use in kitchen" />
-          <Field label="Props & Surfaces" value={d.props_and_surfaces ?? ""} onChange={setStr("props_and_surfaces")} placeholder="Marble countertop, wooden board" />
-          <Field label="Mood" value={d.mood ?? ""} onChange={setStr("mood")} placeholder="Serene, inviting, premium" />
         </div>
       </section>
 

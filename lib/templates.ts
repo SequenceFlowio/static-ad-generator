@@ -13,7 +13,7 @@ export const TEMPLATES: Template[] = [
   {
     template_number: 1,
     template_name: "headline",
-    aspect_ratio: "4:5",
+    aspect_ratio: "3:4",
     needs_product_images: true,
     prompt_template: `Clean product hero shot static ad. [PRODUCT_NAME] centered in frame against a solid
 [PRIMARY_BACKGROUND_COLOR] background. Bold [PRIMARY_FONT] headline at top reads:
@@ -28,7 +28,7 @@ Professional commercial photography aesthetic. 2K resolution.`,
   {
     template_number: 2,
     template_name: "offer-promotion",
-    aspect_ratio: "4:5",
+    aspect_ratio: "3:4",
     needs_product_images: true,
     prompt_template: `Bold promotional static ad for [BRAND_NAME]. Split layout: left 60% shows [PRODUCT_NAME]
 photographed at [CAMERA_ANGLE] with [LIGHTING_STYLE]. Right 40% is solid [ACCENT_COLOR]
@@ -57,7 +57,7 @@ no product image, no busy background. Clean, editorial, trustworthy aesthetic.
   {
     template_number: 4,
     template_name: "vs-them",
-    aspect_ratio: "4:5",
+    aspect_ratio: "3:4",
     needs_product_images: true,
     prompt_template: `Us-vs-them comparison static ad. Two-column layout divided by a thin vertical line.
 Left column header: "[COMPETITOR_LABEL: e.g. Other Brands / The Old Way / Before]" in

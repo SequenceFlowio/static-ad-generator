@@ -19,10 +19,17 @@ export async function POST(
   const files = formData.getAll("files") as File[];
   if (!files.length) return NextResponse.json({ error: "No files provided" }, { status: 400 });
 
+  const MAX_IMAGES = 6;
   const existingUrls: string[] = (product.image_urls as string[]) ?? [];
-  const newUrls: string[] = [];
+  const slotsRemaining = Math.max(0, MAX_IMAGES - existingUrls.length);
+  const filesToUpload = files.slice(0, slotsRemaining);
 
-  for (const file of files.slice(0, 14)) {
+  if (!filesToUpload.length) {
+    return NextResponse.json({ urls: existingUrls, error: "Maximum 6 images reached" }, { status: 400 });
+  }
+
+  const newUrls: string[] = [];
+  for (const file of filesToUpload) {
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "png";
     const path = `${brand.slug}/products/${productId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
     const buffer = Buffer.from(await file.arrayBuffer());

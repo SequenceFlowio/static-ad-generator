@@ -21,6 +21,7 @@ export default function BrandPage() {
   const [editingDna, setEditingDna] = useState(false);
   const [savingDna, setSavingDna] = useState(false);
   const [reSearching, setReSearching] = useState(false);
+  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -52,6 +53,13 @@ export default function BrandPage() {
     if (!res.ok) return;
     setDna(data.brand_dna);
     setEditingDna(false);
+  }
+
+  async function handleDeleteProduct(productId: string) {
+    setDeletingProductId(productId);
+    await fetch(`/api/brands/${id}/products/${productId}`, { method: "DELETE" });
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+    setDeletingProductId(null);
   }
 
   async function handleReResearch() {
@@ -119,7 +127,7 @@ export default function BrandPage() {
         {dna && !dnaOpen && (
           <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
             <div className="flex gap-1.5">
-              {[dna.data.primary_color, dna.data.secondary_color, dna.data.accent_color]
+              {[dna.data.accent_color, dna.data.lettertype_color, dna.data.background_color]
                 .filter(Boolean)
                 .map((c, i) => (
                   <div key={i} className="h-5 w-5 rounded-full border border-black/10 flex-shrink-0"
@@ -179,20 +187,28 @@ export default function BrandPage() {
 
         <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${!dna ? "opacity-50 pointer-events-none" : ""}`}>
           {products.map((product) => (
-            <Link
-              key={product.id}
-              href={`/brands/${id}/products/${product.id}`}
-              className="group rounded-xl border border-gray-200 bg-white p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
-            >
-              <p className="font-semibold text-sm">{product.name}</p>
-              {product.description && (
-                <p className="mt-1 text-xs text-gray-400 line-clamp-2">{product.description}</p>
-              )}
-              {product.url && (
-                <p className="mt-1 text-xs text-gray-300 truncate">{product.url}</p>
-              )}
-              <p className="mt-3 text-xs text-[#C7F56F] font-medium">Generate ads →</p>
-            </Link>
+            <div key={product.id} className="group relative">
+              <Link
+                href={`/brands/${id}/products/${product.id}`}
+                className="block rounded-xl border border-gray-200 bg-white p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
+              >
+                <p className="font-semibold text-sm">{product.name}</p>
+                {product.description && (
+                  <p className="mt-1 text-xs text-gray-400 line-clamp-2">{product.description}</p>
+                )}
+                {product.url && (
+                  <p className="mt-1 text-xs text-gray-300 truncate">{product.url}</p>
+                )}
+                <p className="mt-3 text-xs text-[#C7F56F] font-medium">Generate ads →</p>
+              </Link>
+              <button
+                onClick={(e) => { e.preventDefault(); handleDeleteProduct(product.id); }}
+                disabled={deletingProductId === product.id}
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg bg-red-50 px-2 py-1 text-xs text-red-500 hover:bg-red-100 disabled:opacity-50"
+              >
+                {deletingProductId === product.id ? "…" : "Delete"}
+              </button>
+            </div>
           ))}
 
           <Link

@@ -27,20 +27,25 @@ async function runGeneration(
         refImages.push(...productImageUrls);
       }
 
-      // Generate one image per hook variant
-      const allUrls: string[] = [];
-      for (const hookVariant of promptItem.hook_variants) {
-        const combinedPrompt = `${promptItem.background_prompt}\n\nText in the ad: ${hookVariant}`;
-        const urls = await generateImages({
-          prompt: combinedPrompt,
-          aspect_ratio: promptItem.aspect_ratio,
-          resolution,
-          num_images: 1,
-          reference_image_urls: refImages.length > 0 ? refImages : undefined,
-          model,
-        });
-        allUrls.push(...urls);
-      }
+      // Generate all hook variants in parallel — each fires a separate kie.ai task simultaneously
+      const variantResults = await Promise.all(
+        promptItem.hook_variants.map(async (hookVariant) => {
+          try {
+            const combinedPrompt = `${promptItem.background_prompt}\n\nText in the ad: ${hookVariant}`;
+            return await generateImages({
+              prompt: combinedPrompt,
+              aspect_ratio: promptItem.aspect_ratio,
+              resolution,
+              num_images: 1,
+              reference_image_urls: refImages.length > 0 ? refImages : undefined,
+              model,
+            });
+          } catch {
+            return []; // one failed variant doesn't kill the whole job
+          }
+        })
+      );
+      const allUrls = variantResults.flat();
 
       await db
         .from("generation_jobs")

@@ -8,14 +8,17 @@ import type { Brand, Product, PromptSet, PromptItem, Resolution, KieModel } from
 import { MODEL_CONFIGS } from "@/types";
 
 const TEMPLATES = [
-  { number: 1, name: "headline", label: "01 Headline", aspect: "4:5" },
-  { number: 2, name: "offer-promotion", label: "02 Offer / Promotion", aspect: "4:5" },
+  { number: 1, name: "headline", label: "01 Headline", aspect: "3:4" },
+  { number: 2, name: "offer-promotion", label: "02 Offer / Promo", aspect: "3:4" },
   { number: 3, name: "testimonial", label: "03 Testimonial", aspect: "1:1" },
-  { number: 4, name: "vs-them", label: "04 Us vs Them", aspect: "4:5" },
+  { number: 4, name: "vs-them", label: "04 Us vs Them", aspect: "3:4" },
   { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle", aspect: "9:16" },
 ];
 
-const AVG_GEN_SECONDS = 40; // slightly longer since we make N sequential calls
+const MAX_IMAGES = 6;
+const AVG_GEN_SECONDS = 35;
+const AVG_PROMPT_SECONDS = 30;
+const POLL_TIMEOUT_MS = 8 * 60 * 1000; // 8 minutes
 
 interface TemplateProgress {
   template_number: number;
@@ -73,40 +76,69 @@ function ProgressBar({ p }: { p: TemplateProgress }) {
   );
 }
 
+function PromptGenProgressBar({ active }: { active: boolean }) {
+  const [elapsed, setElapsed] = useState(0);
+  const startRef = useRef(Date.now());
+
+  useEffect(() => {
+    if (!active) { setElapsed(0); startRef.current = Date.now(); return; }
+    startRef.current = Date.now();
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startRef.current) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [active]);
+
+  if (!active) return null;
+
+  const fillPct = Math.min(90, Math.round((elapsed / AVG_PROMPT_SECONDS) * 90));
+
+  return (
+    <div className="mt-3">
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-xs text-gray-400">Generating prompts…</span>
+        <span className="text-xs text-gray-400 tabular-nums">{fillPct}%</span>
+      </div>
+      <div className="h-1.5 w-full rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className="h-full rounded-full bg-[#C7F56F]/70 transition-all duration-1000"
+          style={{ width: `${fillPct}%` }}
+        />
+      </div>
+    </div>
+  );
+}
+
 export default function ProductPage() {
   const params = useParams();
   const router = useRouter();
   const brandId = params.id as string;
   const productId = params.productId as string;
 
-  // Data
   const [brand, setBrand] = useState<Brand | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [promptSet, setPromptSet] = useState<PromptSet | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Product editing
   const [editingProduct, setEditingProduct] = useState(false);
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editUrl, setEditUrl] = useState("");
   const [savingProduct, setSavingProduct] = useState(false);
 
-  // Prompts
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
   const [expandedTemplate, setExpandedTemplate] = useState<number | null>(null);
-  // editedPrompts: { [templateNumber]: { background_prompt?, hook_variants? } }
   const [editedPrompts, setEditedPrompts] = useState<Record<number, Partial<PromptItem>>>({});
   const [savingPrompts, setSavingPrompts] = useState(false);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [promptError, setPromptError] = useState("");
 
-  // Intent fields (shown before generating prompts)
+  // Intent fields
   const [hookIntent, setHookIntent] = useState("");
   const [backgroundIntent, setBackgroundIntent] = useState("");
   const [numVariants, setNumVariants] = useState(2);
 
-  // Image generation
+  // Template + model selection (shared between prompt gen and image gen)
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
   const [model, setModel] = useState<KieModel>("nano-banana-2");
   const [resolution, setResolution] = useState<Resolution>("2K");
@@ -114,7 +146,6 @@ export default function ProductPage() {
   const [progress, setProgress] = useState<TemplateProgress[]>([]);
   const [genError, setGenError] = useState("");
 
-  // Image upload
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -132,7 +163,6 @@ export default function ProductPage() {
       setPromptSet(productData.prompt_set);
       if (productData.prompt_set?.prompts_json?.prompts) {
         setPrompts(productData.prompt_set.prompts_json.prompts);
-        // Restore intent fields from saved prompt set
         const pj = productData.prompt_set.prompts_json;
         if (pj.hook_intent) setHookIntent(pj.hook_intent);
         if (pj.background_intent) setBackgroundIntent(pj.background_intent);
@@ -179,6 +209,7 @@ export default function ProductPage() {
         num_variants: numVariants,
         hook_intent: hookIntent.trim() || null,
         background_intent: backgroundIntent.trim() || null,
+        template_numbers: selectedTemplates,
       }),
     });
     const data = await res.json();
@@ -250,9 +281,12 @@ export default function ProductPage() {
   const hasUnsavedPrompts = Object.keys(editedPrompts).length > 0;
 
   async function handleUploadImages(files: FileList) {
+    const currentCount = product?.image_urls.length ?? 0;
+    if (currentCount >= MAX_IMAGES) return;
     setUploading(true);
     const formData = new FormData();
-    Array.from(files).forEach((f) => formData.append("files", f));
+    // Only send as many files as we have slots for
+    Array.from(files).slice(0, MAX_IMAGES - currentCount).forEach((f) => formData.append("files", f));
     const res = await fetch(`/api/brands/${brandId}/products/${productId}/images`, {
       method: "POST",
       body: formData,
@@ -270,6 +304,7 @@ export default function ProductPage() {
   }
 
   const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollStartRef = useRef<number>(0);
 
   function stopPolling() {
     if (pollIntervalRef.current) {
@@ -280,16 +315,22 @@ export default function ProductPage() {
 
   const handleGenerate = useCallback(async () => {
     if (!promptSet || selectedTemplates.length === 0) return;
+    // Only generate for templates that have prompts
+    const templatesWithPrompts = selectedTemplates.filter((n) =>
+      prompts.some((p) => p.template_number === n)
+    );
+    if (templatesWithPrompts.length === 0) return;
+
     stopPolling();
     setGenerating(true);
     setGenError("");
-    setProgress(selectedTemplates.map((n) => ({ template_number: n, status: "idle" })));
+    setProgress(templatesWithPrompts.map((n) => ({ template_number: n, status: "idle" })));
 
     const res = await fetch(`/api/brands/${brandId}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        template_numbers: selectedTemplates,
+        template_numbers: templatesWithPrompts,
         resolution,
         prompt_set_id: promptSet.id,
         model,
@@ -304,10 +345,21 @@ export default function ProductPage() {
     }
 
     const { prompt_set_id } = data as { job_ids: string[]; prompt_set_id: string };
+    pollStartRef.current = Date.now();
 
-    setProgress(selectedTemplates.map((n) => ({ template_number: n, status: "running", startedAt: Date.now() })));
+    setProgress(templatesWithPrompts.map((n) => ({ template_number: n, status: "running", startedAt: Date.now() })));
 
     pollIntervalRef.current = setInterval(async () => {
+      // Timeout check
+      if (Date.now() - pollStartRef.current > POLL_TIMEOUT_MS) {
+        stopPolling();
+        setGenerating(false);
+        setProgress((prev) =>
+          prev.map((p) => p.status === "running" ? { ...p, status: "error", error: "Timed out — please retry" } : p)
+        );
+        return;
+      }
+
       const jobsRes = await fetch(`/api/brands/${brandId}/jobs?prompt_set_id=${prompt_set_id}`);
       if (!jobsRes.ok) return;
       const jobs: Array<{ template_number: number; status: string; image_urls: string[] | null; error: string | null }> = await jobsRes.json();
@@ -324,21 +376,23 @@ export default function ProductPage() {
       );
 
       const settled = jobs.filter((j) =>
-        selectedTemplates.includes(j.template_number) && (j.status === "done" || j.status === "failed")
+        templatesWithPrompts.includes(j.template_number) && (j.status === "done" || j.status === "failed")
       );
-      if (settled.length === selectedTemplates.length) {
+      if (settled.length === templatesWithPrompts.length) {
         stopPolling();
         setGenerating(false);
       }
     }, 3000);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandId, promptSet, selectedTemplates, resolution, model]);
+  }, [brandId, promptSet, selectedTemplates, prompts, resolution, model]);
 
   const modelConfig = MODEL_CONFIGS[model];
   const numVariantsFromSet = promptSet?.prompts_json?.num_variants ?? numVariants;
-  const estimatedCost = selectedTemplates.length * numVariantsFromSet * (modelConfig.costPerImage[resolution] ?? 0.06);
+  const templatesWithPrompts = selectedTemplates.filter((n) => prompts.some((p) => p.template_number === n));
+  const estimatedCost = templatesWithPrompts.length * numVariantsFromSet * (modelConfig.costPerImage[resolution] ?? 0.06);
   const inputBase = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
   const textareaBase = `${inputBase} resize-y font-mono text-xs leading-relaxed text-gray-700`;
+  const imageCount = product?.image_urls.length ?? 0;
 
   if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
   if (!product || !brand) return null;
@@ -381,7 +435,7 @@ export default function ProductPage() {
                 )}
               </div>
             </div>
-            <div className="flex gap-2 flex-shrink-0">
+            <div className="flex gap-2 flex-shrink-0 items-center">
               <input
                 ref={fileInputRef}
                 type="file"
@@ -392,10 +446,10 @@ export default function ProductPage() {
               />
               <button
                 onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                disabled={uploading || imageCount >= MAX_IMAGES}
+                className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {uploading ? "Uploading…" : "+ Images"}
+                {uploading ? "Uploading…" : `+ Images (${imageCount} / ${MAX_IMAGES})`}
               </button>
               <button
                 onClick={startEditProduct}
@@ -438,27 +492,64 @@ export default function ProductPage() {
             <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Ad Prompts</h2>
             <p className="mt-0.5 text-xs text-gray-400">Each product gets its own unique prompts per template.</p>
           </div>
-          {prompts.length > 0 && (
-            <div className="flex gap-2">
-              {hasUnsavedPrompts && (
-                <button
-                  onClick={handleSavePrompts}
-                  disabled={savingPrompts}
-                  className="rounded-lg bg-[#C7F56F] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
-                >
-                  {savingPrompts ? "Saving…" : "Save Edits"}
-                </button>
-              )}
-            </div>
+          {hasUnsavedPrompts && (
+            <button
+              onClick={handleSavePrompts}
+              disabled={savingPrompts}
+              className="rounded-lg bg-[#C7F56F] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
+            >
+              {savingPrompts ? "Saving…" : "Save Edits"}
+            </button>
           )}
         </div>
 
         {promptError && <p className="mb-3 rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{promptError}</p>}
 
-        {/* Intent fields + variant count — always visible */}
+        {/* Intent + template selection panel */}
         <div className="mb-4 rounded-xl border border-gray-200 bg-white p-4 space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Generation intent</p>
+          <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Templates &amp; Intent</p>
 
+          {/* Template visual cards */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-gray-600">Select templates to generate</p>
+            <div className="grid grid-cols-5 gap-2">
+              {TEMPLATES.map((t) => {
+                const isSelected = selectedTemplates.includes(t.number);
+                return (
+                  <button
+                    key={t.number}
+                    onClick={() => setSelectedTemplates((prev) =>
+                      prev.includes(t.number) ? prev.filter((n) => n !== t.number) : [...prev, t.number]
+                    )}
+                    className={`relative rounded-xl border-2 overflow-hidden transition-all ${isSelected ? "border-[#C7F56F]" : "border-gray-200 opacity-60 hover:opacity-80"}`}
+                  >
+                    <div className="relative w-full aspect-square bg-gray-100">
+                      <Image
+                        src={`/templates/template-${t.number}.svg`}
+                        alt={t.label}
+                        fill
+                        className="object-cover"
+                        unoptimized
+                      />
+                      {isSelected && (
+                        <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[#C7F56F] flex items-center justify-center">
+                          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
+                            <path d="M2 6l3 3 5-5" stroke="#1a1a1a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+                    <div className="px-1.5 py-1 text-left">
+                      <p className="text-xs font-medium truncate leading-tight">{t.label}</p>
+                      <p className="text-xs text-gray-400">{t.aspect}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Intent fields */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="mb-1 block text-xs font-medium text-gray-600">
@@ -488,6 +579,7 @@ export default function ProductPage() {
             </div>
           </div>
 
+          {/* Variant count */}
           <div>
             <label className="mb-2 block text-xs font-medium text-gray-600">Variants per template</label>
             <div className="flex gap-2">
@@ -504,14 +596,20 @@ export default function ProductPage() {
             </div>
           </div>
 
-          <div className="flex gap-2 flex-wrap">
+          {/* Generate prompts button + progress bar */}
+          <div>
             <button
               onClick={handleGeneratePrompts}
-              disabled={generatingPrompts}
+              disabled={generatingPrompts || selectedTemplates.length === 0}
               className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
             >
-              {generatingPrompts ? "Generating… (~30s)" : prompts.length > 0 ? "Regenerate All" : "Generate Prompts ▶"}
+              {generatingPrompts
+                ? "Generating…"
+                : prompts.length > 0
+                  ? "Regenerate Prompts"
+                  : "Generate Prompts ▶"}
             </button>
+            <PromptGenProgressBar active={generatingPrompts} />
           </div>
         </div>
 
@@ -551,7 +649,6 @@ export default function ProductPage() {
 
                   {expandedTemplate === p.template_number && (
                     <div className="border-t border-gray-100 bg-gray-50 px-4 py-3 space-y-4">
-                      {/* Background prompt */}
                       <div>
                         <label className="mb-1 block text-xs font-semibold text-gray-500 uppercase tracking-wide">Background / Scene Prompt</label>
                         <textarea
@@ -561,8 +658,6 @@ export default function ProductPage() {
                           className={`w-full rounded-lg border border-gray-200 bg-white px-3 py-2 ${textareaBase}`}
                         />
                       </div>
-
-                      {/* Hook variants */}
                       <div>
                         <label className="mb-2 block text-xs font-semibold text-gray-500 uppercase tracking-wide">Hook Variants ({currentHooks.length})</label>
                         <div className="space-y-2">
@@ -579,7 +674,6 @@ export default function ProductPage() {
                           ))}
                         </div>
                       </div>
-
                       {hasOriginals && isEdited && (
                         <button
                           onClick={() => resetPrompt(p.template_number)}
@@ -602,46 +696,6 @@ export default function ProductPage() {
         <div className="rounded-xl border border-gray-200 bg-white p-5 space-y-5">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Generate Images</h2>
 
-          {/* Template visual cards */}
-          <div>
-            <p className="mb-3 text-sm font-medium">Select templates</p>
-            <div className="grid grid-cols-5 gap-3">
-              {TEMPLATES.map((t) => {
-                const isSelected = selectedTemplates.includes(t.number);
-                return (
-                  <button
-                    key={t.number}
-                    onClick={() => setSelectedTemplates((prev) =>
-                      prev.includes(t.number) ? prev.filter((n) => n !== t.number) : [...prev, t.number]
-                    )}
-                    className={`relative rounded-xl border-2 overflow-hidden transition-all ${isSelected ? "border-[#C7F56F]" : "border-gray-200 opacity-60 hover:opacity-80"}`}
-                  >
-                    <div className="relative w-full aspect-square bg-gray-100">
-                      <Image
-                        src={`/templates/template-${t.number}.svg`}
-                        alt={t.label}
-                        fill
-                        className="object-cover"
-                        unoptimized
-                      />
-                      {isSelected && (
-                        <div className="absolute top-1.5 right-1.5 h-5 w-5 rounded-full bg-[#C7F56F] flex items-center justify-center">
-                          <svg className="h-3 w-3" viewBox="0 0 12 12" fill="none">
-                            <path d="M2 6l3 3 5-5" stroke="#1a1a1a" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                          </svg>
-                        </div>
-                      )}
-                    </div>
-                    <div className="px-2 py-1.5 text-left">
-                      <p className="text-xs font-medium truncate">{t.label}</p>
-                      <p className="text-xs text-gray-400">{t.aspect}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Model + Resolution */}
           <div>
             <p className="mb-2 text-sm font-medium">Model &amp; Resolution</p>
@@ -656,9 +710,7 @@ export default function ProductPage() {
                     <button
                       onClick={() => {
                         setModel(id);
-                        if (!cfg.resolutions.includes(resolution)) {
-                          setResolution(cfg.resolutions[0]);
-                        }
+                        if (!cfg.resolutions.includes(resolution)) setResolution(cfg.resolutions[0]);
                       }}
                       className="flex w-full items-center justify-between px-4 py-3 text-left"
                     >
@@ -678,7 +730,7 @@ export default function ProductPage() {
                           </button>
                         ))}
                         <span className="text-xs text-gray-400 ml-1">
-                          ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numVariantsFromSet} image{selectedTemplates.length * numVariantsFromSet !== 1 ? "s" : ""}
+                          ~${estimatedCost.toFixed(2)} · {templatesWithPrompts.length * numVariantsFromSet} image{templatesWithPrompts.length * numVariantsFromSet !== 1 ? "s" : ""}
                         </span>
                       </div>
                     )}
@@ -699,11 +751,11 @@ export default function ProductPage() {
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={handleGenerate}
-              disabled={generating || selectedTemplates.length === 0}
+              disabled={generating || templatesWithPrompts.length === 0}
               className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
             >
               {generating
-                ? `Generating… (${progress.filter((p) => p.status === "done").length}/${selectedTemplates.length} done)`
+                ? `Generating… (${progress.filter((p) => p.status === "done").length}/${templatesWithPrompts.length} done)`
                 : "Generate Ads ▶"}
             </button>
             <Link href={`/brands/${brandId}/gallery`}

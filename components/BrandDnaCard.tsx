@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import type { BrandDnaData } from "@/types";
 
 function ColorSwatch({ hex, label }: { hex: string | null; label: string }) {
@@ -42,20 +41,18 @@ interface Props {
 }
 
 export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Props) {
-  const [showModifier, setShowModifier] = useState(false);
-
   return (
     <div className="space-y-5">
       {/* Brand Overview */}
       <div>
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Overview</p>
-        <div className="rounded-xl bg-gray-50 px-4 py-3">
-          <div className="mb-2 flex items-baseline gap-3">
+        <div className="rounded-xl bg-gray-50 px-4 py-3 space-y-2">
+          <div className="flex items-baseline gap-3">
             <span className="text-base font-bold">{data.name}</span>
             {data.tagline && <span className="text-sm italic text-gray-500">{data.tagline}</span>}
           </div>
           {data.voice_adjectives.length > 0 && (
-            <div className="mb-2 flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-1">
               {data.voice_adjectives.map((adj) => (
                 <span
                   key={adj}
@@ -66,8 +63,32 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
               ))}
             </div>
           )}
+          {data.brand_story && (
+            <p className="text-xs text-gray-600 leading-relaxed">{data.brand_story}</p>
+          )}
+          {data.target_audience && (
+            <div className="flex gap-3 pt-1">
+              <span className="text-xs text-gray-400 w-36 flex-shrink-0">Target Audience</span>
+              <span className="text-xs text-gray-700">{data.target_audience}</span>
+            </div>
+          )}
+          {data.brand_personality && (
+            <div className="flex gap-3">
+              <span className="text-xs text-gray-400 w-36 flex-shrink-0">Personality</span>
+              <span className="text-xs text-gray-700">{data.brand_personality}</span>
+            </div>
+          )}
           {data.positioning && (
-            <p className="text-xs text-gray-600 leading-relaxed">{data.positioning}</p>
+            <div className="flex gap-3">
+              <span className="text-xs text-gray-400 w-36 flex-shrink-0">Positioning</span>
+              <span className="text-xs text-gray-700 leading-relaxed">{data.positioning}</span>
+            </div>
+          )}
+          {data.competitive_differentiation && (
+            <div className="flex gap-3">
+              <span className="text-xs text-gray-400 w-36 flex-shrink-0">Differentiation</span>
+              <span className="text-xs text-gray-700 leading-relaxed">{data.competitive_differentiation}</span>
+            </div>
           )}
         </div>
       </div>
@@ -88,47 +109,13 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
         <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Visual System</p>
         <div className="rounded-xl bg-gray-50 px-4 py-3 space-y-2">
           <div className="grid grid-cols-2 gap-2 mb-3">
-            <ColorSwatch hex={data.primary_color} label="Primary" />
-            <ColorSwatch hex={data.secondary_color} label="Secondary" />
             <ColorSwatch hex={data.accent_color} label="Accent" />
-            {data.background_colors.map((c, i) => (
-              <ColorSwatch key={i} hex={c} label={`Background ${i + 1}`} />
-            ))}
+            <ColorSwatch hex={data.lettertype_color} label="Lettertype" />
+            <ColorSwatch hex={data.background_color} label="Background" />
           </div>
           <Row label="Primary Font" value={data.primary_font} />
           <Row label="Secondary Font" value={data.secondary_font} />
-          <Row label="CTA Style" value={data.cta_color_style} />
         </div>
-      </div>
-
-      {/* Photography Direction */}
-      <div>
-        <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400">Photography Direction</p>
-        <div className="rounded-xl bg-gray-50 px-4 py-3">
-          <Row label="Lighting" value={data.lighting} />
-          <Row label="Color Grading" value={data.color_grading} />
-          <Row label="Composition" value={data.composition} />
-          <Row label="Subject Matter" value={data.subject_matter} />
-          <Row label="Props & Surfaces" value={data.props_and_surfaces} />
-          <Row label="Mood" value={data.mood} />
-        </div>
-      </div>
-
-      {/* Style Fingerprint (collapsed by default) */}
-      <div>
-        <button
-          onClick={() => setShowModifier((s) => !s)}
-          className="flex items-center gap-2 text-xs text-gray-400 hover:text-gray-600"
-        >
-          <span>{showModifier ? "▲" : "▼"}</span>
-          <span>Auto-generated style fingerprint</span>
-          <span className="text-gray-300">· used for image prompts</span>
-        </button>
-        {showModifier && (
-          <div className="mt-2 rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/40 px-4 py-3">
-            <p className="text-xs leading-relaxed text-gray-700">{data.prompt_modifier}</p>
-          </div>
-        )}
       </div>
 
       {/* Actions */}

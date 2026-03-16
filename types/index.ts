@@ -10,29 +10,20 @@ export interface BrandDnaData {
   // Brand Overview
   name: string;
   tagline: string | null;
-  design_agency: string | null;
+  brand_story: string | null;
+  target_audience: string | null;
+  brand_personality: string | null;
   voice_adjectives: string[];
   positioning: string | null;
   competitive_differentiation: string | null;
-  // Visual System (hard to scrape — filled manually)
+  // Visual System
   primary_font: string | null;
   secondary_font: string | null;
-  primary_color: string | null;
-  secondary_color: string | null;
-  accent_color: string | null;
-  background_colors: string[];
-  cta_color_style: string | null;
-  // Photography Direction (scraped from website/ads)
-  lighting: string | null;
-  color_grading: string | null;
-  composition: string | null;
-  subject_matter: string | null;
-  props_and_surfaces: string | null;
-  mood: string | null;
+  accent_color: string | null;      // brand accent / CTA color hex
+  lettertype_color: string | null;  // primary text/font color hex
+  background_color: string | null;  // primary background color hex
   // Brand logo (public URL in Supabase Storage)
   logo_url: string | null;
-  // Auto-generated style fingerprint prepended to every image prompt
-  prompt_modifier: string;
 }
 
 export interface BrandDna {

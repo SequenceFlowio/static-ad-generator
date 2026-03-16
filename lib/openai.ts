@@ -11,13 +11,13 @@ export function getOpenAIClient() {
 const BRAND_RESEARCH_SYSTEM_PROMPT = `
 You are a Senior Brand Strategist. Reverse-engineer a brand's visual and verbal identity by searching the web and analyzing their website.
 
-Focus on what you can actually observe: photography style, ad creative approach, positioning, color palette (from visual inspection), and typography if publicly documented.
+Focus on what you can actually observe: brand story, target audience, positioning, color palette (from visual inspection), and typography if publicly documented.
 
 OUTPUT: Return ONLY valid JSON. No markdown, no code blocks.
 
 RESEARCH STEPS:
-1. Search: "[Brand] brand colors palette", "[Brand] font typeface", "[Brand] brand guidelines", "[Brand] Meta Ad Library", "[Brand] photography style", "[Brand] brand story"
-2. Fetch and analyze the brand URL — note the visual style, copy tone, photography, colors visible on screen
+1. Search: "[Brand] brand story", "[Brand] brand colors palette", "[Brand] font typeface", "[Brand] brand guidelines", "[Brand] target audience", "[Brand] about us"
+2. Fetch and analyze the brand URL — note the visual style, copy tone, colors visible on screen, who they seem to be speaking to
 3. Search 2–3 competitors to understand positioning
 
 Return this exact JSON (use null for fields you genuinely cannot find — do not guess):
@@ -25,24 +25,17 @@ Return this exact JSON (use null for fields you genuinely cannot find — do not
 {
   "name": "Brand name",
   "tagline": "Brand tagline or null",
-  "design_agency": "Agency if publicly known or null",
+  "brand_story": "1-2 sentence brand origin or mission story, or null",
+  "target_audience": "Who the brand is for — demographics, lifestyle, needs. e.g. 'Health-conscious women 25-40 who value clean ingredients' or null",
+  "brand_personality": "Brand personality in 1-2 sentences — how it acts, speaks, feels. e.g. 'Premium but approachable, speaks to aspirational simplicity' or null",
   "voice_adjectives": ["adj1", "adj2", "adj3", "adj4", "adj5"],
   "positioning": "1-2 sentence positioning or null",
-  "competitive_differentiation": "How brand differs from competitors visually/verbally or null",
+  "competitive_differentiation": "How this brand differs from competitors or null",
   "primary_font": "Font name if publicly documented or null",
-  "secondary_font": "Font name if publicly documented or null",
-  "primary_color": "#hexcode if clearly identifiable or null",
-  "secondary_color": "#hexcode or null",
-  "accent_color": "#hexcode or null",
-  "background_colors": ["#hex1"],
-  "cta_color_style": "e.g. Solid black pill, white text or null",
-  "lighting": "e.g. Soft natural window light or null",
-  "color_grading": "e.g. Warm golden tones, neutral or null",
-  "composition": "e.g. Clean minimalist, product centered or null",
-  "subject_matter": "e.g. Product in use in kitchen or null",
-  "props_and_surfaces": "e.g. Marble countertop, wooden board or null",
-  "mood": "e.g. Serene, inviting, premium or null",
-  "prompt_modifier": "Write 50-75 words combining the above into a visual style guide for an AI image model. Include any hex colors you found, describe the font style (even if approximate), describe the photography mood and lighting. This will be prepended to every ad prompt to maintain brand consistency."
+  "secondary_font": "Secondary font name or null",
+  "accent_color": "#hexcode for brand accent/CTA color or null",
+  "lettertype_color": "#hexcode for primary text/font color or null",
+  "background_color": "#hexcode for primary background color or null"
 }
 `;
 
@@ -79,7 +72,6 @@ export async function researchBrand(
   const aiData = JSON.parse(cleaned) as BrandDnaData;
 
   if (!Array.isArray(aiData.voice_adjectives)) aiData.voice_adjectives = [];
-  if (!Array.isArray(aiData.background_colors)) aiData.background_colors = [];
 
   // Manual overrides win — user knows their brand better than scraping
   if (manualOverrides) {

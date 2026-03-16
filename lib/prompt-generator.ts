@@ -6,17 +6,18 @@ const PROMPT_GENERATION_INSTRUCTIONS = `
 You are a prompt engineer specializing in AI image generation for DTC brands.
 
 Your job: For each ad template, generate TWO things:
-1. background_prompt — the full visual/scene/product-placement prompt for the image generator. This describes the background, scene, product placement, lighting, colors, and brand aesthetic. Does NOT include any text overlay copy.
-2. hook_variants — an array of N short text overlay copy strings. Each hook variant contains the headline, optional subtitle, and CTA text that will appear as overlay text in the ad. Each must be meaningfully different in angle, tone, or message — not just synonym swaps.
+1. background_prompt — the full visual/scene/product-placement prompt for the image generator. Describes the background, scene, product placement, lighting, colors, and brand aesthetic. Does NOT include any text overlay copy.
+2. hook_variants — an array of N short text overlay copy strings. Each hook variant contains the headline, optional subtitle, and CTA text that will appear as overlay text in the ad. Each must be meaningfully different in angle, tone, or message.
 
-Critical rules:
-- The background_prompt must STRICTLY follow the reference image(s) provided. Do NOT invent props, objects, or surfaces not present in the reference images. If reference images show a specific product, describe ONLY that product exactly.
-- hook_variants must reflect the hookIntent provided by the user — use it as the core theme/angle.
-- background_prompt must reflect the backgroundIntent provided by the user — use their described scene/props/surfaces as the visual foundation.
-- Replace every [BRACKETED PLACEHOLDER] in the template with brand-specific details from the brand data.
-- Prepend the brand's prompt_modifier to the START of every background_prompt.
-- Keep template_number and template_name exactly as provided.
-- Output ONLY valid JSON — no markdown, no code blocks.
+CRITICAL RULES:
+- The background_prompt MUST include the brand's font name(s) explicitly — e.g. "typography in Neue Haas Grotesk"
+- The background_prompt MUST include brand color hex values explicitly — e.g. "background color #F5F0EB", "accent elements in #2B2B2B"
+- The background_prompt MUST STRICTLY follow reference images — do NOT invent props, objects, or surfaces not present in the reference images
+- hook_variants must reflect the hookIntent provided — use it as the core theme/angle
+- background_prompt must reflect the backgroundIntent — use their described scene/props as the visual foundation
+- Replace every [BRACKETED PLACEHOLDER] with brand-specific details
+- Keep template_number and template_name exactly as provided
+- Output ONLY valid JSON — no markdown, no code blocks
 
 JSON Schema:
 {
@@ -24,10 +25,10 @@ JSON Schema:
     {
       "template_number": 1,
       "template_name": "headline",
-      "aspect_ratio": "4:5",
+      "aspect_ratio": "3:4",
       "needs_product_images": true,
       "notes": "Any notes",
-      "background_prompt": "Full visual scene prompt starting with prompt_modifier...",
+      "background_prompt": "Full visual prompt with explicit font names and color hex values...",
       "hook_variants": [
         "Headline: [text] | Subtitle: [text] | CTA: [text]",
         "Headline: [different text] | Subtitle: [different text] | CTA: [text]"
@@ -41,28 +42,18 @@ function brandDnaToText(dna: BrandDnaData): string {
   return `
 BRAND: ${dna.name}
 Tagline: ${dna.tagline ?? "N/A"}
+Brand Story: ${dna.brand_story ?? "N/A"}
+Target Audience: ${dna.target_audience ?? "N/A"}
+Brand Personality: ${dna.brand_personality ?? "N/A"}
 Voice: ${dna.voice_adjectives.join(", ")}
 Positioning: ${dna.positioning ?? "N/A"}
 
-VISUAL SYSTEM:
-Primary Font: ${dna.primary_font ?? "N/A"}
+VISUAL SYSTEM (MUST appear verbatim in background_prompt):
+Primary Font: ${dna.primary_font ?? "N/A"} ← use this font name explicitly in background_prompt
 Secondary Font: ${dna.secondary_font ?? "N/A"}
-Primary Color: ${dna.primary_color ?? "N/A"}
-Secondary Color: ${dna.secondary_color ?? "N/A"}
-Accent Color: ${dna.accent_color ?? "N/A"}
-Background Colors: ${dna.background_colors.join(", ") || "N/A"}
-CTA Color/Style: ${dna.cta_color_style ?? "N/A"}
-
-PHOTOGRAPHY:
-Lighting: ${dna.lighting ?? "N/A"}
-Color Grading: ${dna.color_grading ?? "N/A"}
-Composition: ${dna.composition ?? "N/A"}
-Subject Matter: ${dna.subject_matter ?? "N/A"}
-Props & Surfaces: ${dna.props_and_surfaces ?? "N/A"}
-Mood: ${dna.mood ?? "N/A"}
-
-PROMPT MODIFIER (prepend to every background_prompt):
-${dna.prompt_modifier}
+Accent Color: ${dna.accent_color ?? "N/A"} ← use this hex in background_prompt
+Lettertype Color: ${dna.lettertype_color ?? "N/A"} ← use this hex in background_prompt
+Background Color: ${dna.background_color ?? "N/A"} ← use this hex in background_prompt
 `.trim();
 }
 
@@ -73,14 +64,20 @@ export async function generatePrompts(
   brandName: string,
   numVariants: number = 2,
   hookIntent: string | null = null,
-  backgroundIntent: string | null = null
+  backgroundIntent: string | null = null,
+  templateNumbers: number[] = []
 ): Promise<PromptsJson> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
 
   const client = new OpenAI({ apiKey });
 
-  const templatesText = TEMPLATES.map(
+  // Filter to only selected templates; default to all if none specified
+  const selectedTemplates = templateNumbers.length > 0
+    ? TEMPLATES.filter((t) => templateNumbers.includes(t.template_number))
+    : TEMPLATES;
+
+  const templatesText = selectedTemplates.map(
     (t) =>
       `Template ${t.template_number} — ${t.template_name}
 aspect_ratio: ${t.aspect_ratio}
@@ -101,7 +98,7 @@ Product Description: ${productDescription ?? "No description provided"}
 
 User Intent:
 Hook/Copy intent (what the headline & CTA should communicate): ${hookIntent ?? "Not specified — use brand positioning and product benefits"}
-Background/Scene intent (what the visual scene should look like): ${backgroundIntent ?? "Not specified — use brand photography direction and product imagery"}
+Background/Scene intent (what the visual scene should look like): ${backgroundIntent ?? "Not specified — follow brand colors and typography exactly"}
 
 ---
 
@@ -114,7 +111,7 @@ ${templatesText}
 
 ---
 
-Generate the prompts JSON for all ${TEMPLATES.length} templates. Each template needs exactly ${numVariants} hook_variants. Output ONLY the JSON object with a "prompts" array.`;
+Generate the prompts JSON for all ${selectedTemplates.length} templates. Each template needs exactly ${numVariants} hook_variants. Remember: background_prompt MUST include explicit font names and color hex values from the brand data. Output ONLY the JSON object with a "prompts" array.`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",

@@ -229,11 +229,9 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
                     positioning: null,
                     primary_font: null,
                     secondary_font: null,
-                    primary_color: null,
-                    secondary_color: null,
                     accent_color: null,
-                    background_colors: [],
-                    cta_color_style: null,
+                    lettertype_color: null,
+                    background_color: null,
                   }}
                   onSave={handleResearchSave}
                   onCancel={null}
