@@ -642,7 +642,6 @@ export default function ProductPage() {
         {prompts.length > 0 && (
           <div className="space-y-2">
             {prompts.map((p) => {
-              const tpl = TEMPLATES.find((t) => t.number === p.template_number);
               const edits = editedPrompts[p.template_number];
               const currentBg = edits?.background_prompt ?? p.background_prompt;
               const currentHooks = edits?.hook_variants ?? p.hook_variants;
