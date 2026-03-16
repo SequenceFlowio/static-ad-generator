@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => void }) {
@@ -19,34 +18,38 @@ function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => vo
     >
       <svg
         xmlns="http://www.w3.org/2000/svg"
-        aria-hidden="true"
         fill="currentColor"
         strokeLinecap="round"
         viewBox="0 0 32 32"
+        style={{ overflow: "hidden" }}
       >
-        <clipPath id="skiper-btn-2">
-          <motion.path
-            animate={{ y: isDark ? 10 : 0, x: isDark ? -12 : 0 }}
-            transition={{ ease: "easeInOut", duration: 0.35 }}
+        <clipPath id="theme-clip">
+          <path
             d="M0-5h30a1 1 0 0 0 9 13v24H0Z"
+            style={{
+              transform: isDark ? "translate(-12px, 10px)" : "translate(0, 0)",
+              transition: "transform 0.35s ease-in-out",
+            }}
           />
         </clipPath>
-        <g clipPath="url(#skiper-btn-2)">
-          <motion.circle
-            animate={{ r: isDark ? 10 : 8 }}
-            transition={{ ease: "easeInOut", duration: 0.35 }}
+        <g clipPath="url(#theme-clip)">
+          <circle
             cx="16"
             cy="16"
+            style={{
+              r: isDark ? "10" : "8",
+              transition: "r 0.35s ease-in-out",
+            } as React.CSSProperties}
           />
-          <motion.g
-            animate={{
-              rotate: isDark ? -100 : 0,
-              scale: isDark ? 0.5 : 1,
-              opacity: isDark ? 0 : 1,
-            }}
-            transition={{ ease: "easeInOut", duration: 0.35 }}
+          <g
             stroke="currentColor"
             strokeWidth="1.5"
+            style={{
+              transform: isDark ? "rotate(-100deg) scale(0.5)" : "rotate(0deg) scale(1)",
+              opacity: isDark ? 0 : 1,
+              transformOrigin: "16px 16px",
+              transition: "transform 0.35s ease-in-out, opacity 0.35s ease-in-out",
+            }}
           >
             <path d="M16 5.5v-4" />
             <path d="M16 30.5v-4" />
@@ -56,7 +59,7 @@ function ThemeToggle({ isDark, onToggle }: { isDark: boolean; onToggle: () => vo
             <path d="m5.7 26.3 2.9-2.9" />
             <path d="m5.8 5.8 2.8 2.8" />
             <path d="m23.4 23.4 2.9 2.9" />
-          </motion.g>
+          </g>
         </g>
       </svg>
     </button>
