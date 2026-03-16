@@ -1,9 +1,12 @@
-// kie.ai API wrapper for Nano Banana 2 image generation
-// Docs: https://docs.kie.ai/market/google/nanobanana2
+// kie.ai API wrapper
+// Nano Banana 2: https://docs.kie.ai/market/google/nanobanana2
+// Seedream 4.5:  https://kie.ai/seedream-4-5
 
 const KIE_BASE = "https://api.kie.ai";
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 300_000; // 5 minutes
+
+export type KieModel = "nano-banana-2" | "seedream/4.5-edit";
 
 function getHeaders() {
   const key = process.env.KIE_API_KEY;
@@ -15,7 +18,7 @@ function getHeaders() {
 }
 
 interface CreateTaskPayload {
-  model: "nano-banana-2";
+  model: KieModel;
   input: {
     prompt: string;
     aspect_ratio: string;
@@ -37,7 +40,6 @@ interface TaskStatusResponse {
   };
 }
 
-// Submit a generation task and return the taskId
 async function createTask(payload: CreateTaskPayload): Promise<string> {
   const res = await fetch(`${KIE_BASE}/api/v1/jobs/createTask`, {
     method: "POST",
@@ -58,7 +60,6 @@ async function createTask(payload: CreateTaskPayload): Promise<string> {
   return data.data.taskId as string;
 }
 
-// Poll until the task is complete or failed; return image URLs
 async function pollTask(taskId: string): Promise<string[]> {
   const deadline = Date.now() + POLL_TIMEOUT_MS;
 
@@ -84,29 +85,28 @@ async function pollTask(taskId: string): Promise<string[]> {
     if (task.state === "fail") {
       throw new Error(`kie.ai task failed: ${task.failMsg ?? "unknown error"}`);
     }
-
-    // Still pending or processing — keep polling
   }
 
   throw new Error(`kie.ai task ${taskId} timed out after ${POLL_TIMEOUT_MS / 1000}s`);
 }
 
-// High-level: generate images for a prompt, return image URLs from kie.ai
 export async function generateImages({
   prompt,
   aspect_ratio,
   resolution,
   num_images = 4,
   reference_image_urls,
+  model = "nano-banana-2",
 }: {
   prompt: string;
   aspect_ratio: string;
   resolution: string;
   num_images?: number;
   reference_image_urls?: string[];
+  model?: KieModel;
 }): Promise<string[]> {
   const payload: CreateTaskPayload = {
-    model: "nano-banana-2",
+    model,
     input: {
       prompt,
       aspect_ratio,

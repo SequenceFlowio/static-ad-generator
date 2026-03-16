@@ -93,12 +93,34 @@ export interface GenerationJob {
 }
 
 export type Resolution = "1K" | "2K" | "4K";
+export type KieModel = "nano-banana-2" | "seedream/4.5-edit";
+
+export const MODEL_CONFIGS: Record<KieModel, {
+  label: string;
+  description: string;
+  resolutions: Resolution[];
+  costPerImage: Record<string, number>;
+}> = {
+  "nano-banana-2": {
+    label: "Nano Banana 2",
+    description: "Fast · Structured commercial design",
+    resolutions: ["1K", "2K", "4K"],
+    costPerImage: { "1K": 0.04, "2K": 0.06, "4K": 0.09 },
+  },
+  "seedream/4.5-edit": {
+    label: "Seedream 4.5",
+    description: "Premium · Superior text & spatial accuracy",
+    resolutions: ["2K", "4K"],
+    costPerImage: { "2K": 0.0325, "4K": 0.0325 },
+  },
+};
 
 export interface GenerateRequest {
   template_numbers: number[];
   resolution: Resolution;
   num_images: number;
   prompt_set_id: string;
+  model: KieModel;
 }
 
 export interface SseEvent {

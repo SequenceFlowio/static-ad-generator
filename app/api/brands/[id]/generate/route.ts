@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { generateImages } from "@/lib/kie";
-import type { GenerateRequest, PromptItem } from "@/types";
+import type { GenerateRequest, PromptItem, KieModel } from "@/types";
 
 export const maxDuration = 300;
 
@@ -12,7 +12,8 @@ async function runGeneration(
   logoUrl: string | null,
   productImageUrls: string[],
   resolution: string,
-  num_images: number
+  num_images: number,
+  model: KieModel
 ) {
   const db = getServerSupabase();
   for (const promptItem of prompts) {
@@ -33,6 +34,7 @@ async function runGeneration(
         resolution,
         num_images,
         reference_image_urls: refImages.length > 0 ? refImages : undefined,
+        model,
       });
 
       await db
@@ -58,7 +60,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, num_images = 4, prompt_set_id } = body;
+  const { template_numbers, resolution, num_images = 4, prompt_set_id, model = "nano-banana-2" } = body;
 
   const db = getServerSupabase();
 
@@ -120,7 +122,7 @@ export async function POST(
   }
 
   // Fire off generation in the background — response returns immediately
-  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, num_images).catch(
+  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, num_images, model).catch(
     (err) => console.error("runGeneration error:", err)
   );
 

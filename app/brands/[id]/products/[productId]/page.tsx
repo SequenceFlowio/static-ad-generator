@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import type { Brand, Product, PromptSet, PromptItem, Resolution } from "@/types";
+import type { Brand, Product, PromptSet, PromptItem, Resolution, KieModel } from "@/types";
+import { MODEL_CONFIGS } from "@/types";
 
 const TEMPLATES = [
   { number: 1, name: "headline", label: "01 Headline", aspect: "4:5" },
@@ -13,11 +14,6 @@ const TEMPLATES = [
   { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle", aspect: "9:16" },
 ];
 
-const COST_PER_IMAGE: Record<Resolution, number> = {
-  "1K": 0.04,
-  "2K": 0.06,
-  "4K": 0.09,
-};
 
 const AVG_GEN_SECONDS = 30;
 
@@ -106,6 +102,7 @@ export default function ProductPage() {
 
   // Image generation
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [model, setModel] = useState<KieModel>("nano-banana-2");
   const [resolution, setResolution] = useState<Resolution>("2K");
   const [numImages, setNumImages] = useState(2);
   const [generating, setGenerating] = useState(false);
@@ -258,6 +255,7 @@ export default function ProductPage() {
         resolution,
         num_images: numImages,
         prompt_set_id: promptSet.id,
+        model,
       }),
     });
 
@@ -301,7 +299,8 @@ export default function ProductPage() {
     }, 3000);
   }, [brandId, promptSet, selectedTemplates, resolution, numImages]);
 
-  const estimatedCost = selectedTemplates.length * numImages * (COST_PER_IMAGE[resolution] ?? 0.06);
+  const modelConfig = MODEL_CONFIGS[model];
+  const estimatedCost = selectedTemplates.length * numImages * (modelConfig.costPerImage[resolution] ?? 0.06);
   const inputBase = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
 
   if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
@@ -533,19 +532,52 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Resolution */}
+          {/* Model + Resolution */}
           <div>
-            <p className="mb-2 text-sm font-medium">Resolution</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {(["1K", "2K", "4K"] as Resolution[]).map((r) => (
-                <button key={r} onClick={() => setResolution(r)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
-                  {r}
-                </button>
-              ))}
-              <span className="text-xs text-gray-400">
-                ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numImages} images
-              </span>
+            <p className="mb-2 text-sm font-medium">Model &amp; Resolution</p>
+            <div className="space-y-2">
+              {(Object.entries(MODEL_CONFIGS) as [KieModel, typeof MODEL_CONFIGS[KieModel]][]).map(([id, cfg]) => {
+                const isSelected = model === id;
+                return (
+                  <div
+                    key={id}
+                    className={`rounded-xl border transition-colors ${isSelected ? "border-[#C7F56F] bg-[#C7F56F]/5" : "border-gray-200 bg-white opacity-60"}`}
+                  >
+                    {/* Model button */}
+                    <button
+                      onClick={() => {
+                        setModel(id);
+                        // Reset resolution if current not available in new model
+                        if (!cfg.resolutions.includes(resolution)) {
+                          setResolution(cfg.resolutions[0]);
+                        }
+                      }}
+                      className="flex w-full items-center justify-between px-4 py-3 text-left"
+                    >
+                      <div>
+                        <span className="text-sm font-semibold">{cfg.label}</span>
+                        <span className="ml-2 text-xs text-gray-400">{cfg.description}</span>
+                      </div>
+                      <div className={`h-4 w-4 rounded-full border-2 flex-shrink-0 ${isSelected ? "border-[#C7F56F] bg-[#C7F56F]" : "border-gray-300"}`} />
+                    </button>
+
+                    {/* Resolution pills — only when selected */}
+                    {isSelected && (
+                      <div className="flex flex-wrap items-center gap-2 border-t border-[#C7F56F]/20 px-4 py-3">
+                        {cfg.resolutions.map((r) => (
+                          <button key={r} onClick={() => setResolution(r)}
+                            className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}>
+                            {r}
+                          </button>
+                        ))}
+                        <span className="text-xs text-gray-400 ml-1">
+                          ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numImages} images
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
