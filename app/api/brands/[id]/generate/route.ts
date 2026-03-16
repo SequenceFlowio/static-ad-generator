@@ -12,7 +12,8 @@ async function runGeneration(
   logoUrl: string | null,
   productImageUrls: string[],
   resolution: string,
-  model: KieModel
+  model: KieModel,
+  aspectRatioOverride?: string
 ) {
   const db = getServerSupabase();
   for (const promptItem of prompts) {
@@ -27,6 +28,8 @@ async function runGeneration(
         refImages.push(...productImageUrls);
       }
 
+      const aspectRatio = aspectRatioOverride ?? promptItem.aspect_ratio;
+
       // Generate all hook variants in parallel — each fires a separate kie.ai task simultaneously
       const variantResults = await Promise.all(
         promptItem.hook_variants.map(async (hookVariant) => {
@@ -34,7 +37,7 @@ async function runGeneration(
             const combinedPrompt = `${promptItem.background_prompt}\n\nText in the ad: ${hookVariant}`;
             return await generateImages({
               prompt: combinedPrompt,
-              aspect_ratio: promptItem.aspect_ratio,
+              aspect_ratio: aspectRatio,
               resolution,
               num_images: 1,
               reference_image_urls: refImages.length > 0 ? refImages : undefined,
@@ -70,7 +73,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2" } = body;
+  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio } = body;
 
   const db = getServerSupabase();
 
@@ -123,6 +126,11 @@ export async function POST(
         resolution,
         num_images: p.hook_variants.length,
         status: "pending",
+        generation_detail: {
+          model,
+          background_prompt: p.background_prompt,
+          hook_variants: p.hook_variants,
+        },
       }))
     )
     .select();
@@ -132,7 +140,7 @@ export async function POST(
   }
 
   // Fire off generation in the background — response returns immediately
-  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model).catch(
+  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model, aspect_ratio).catch(
     (err) => console.error("runGeneration error:", err)
   );
 

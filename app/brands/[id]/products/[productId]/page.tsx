@@ -8,12 +8,14 @@ import type { Brand, Product, PromptSet, PromptItem, Resolution, KieModel } from
 import { MODEL_CONFIGS } from "@/types";
 
 const TEMPLATES = [
-  { number: 1, name: "headline", label: "01 Headline", aspect: "3:4" },
-  { number: 2, name: "offer-promotion", label: "02 Offer / Promo", aspect: "3:4" },
-  { number: 3, name: "testimonial", label: "03 Testimonial", aspect: "1:1" },
-  { number: 4, name: "vs-them", label: "04 Us vs Them", aspect: "3:4" },
-  { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle", aspect: "9:16" },
+  { number: 1, name: "headline", label: "01 Headline" },
+  { number: 2, name: "offer-promotion", label: "02 Offer / Promo" },
+  { number: 3, name: "testimonial", label: "03 Testimonial" },
+  { number: 4, name: "vs-them", label: "04 Us vs Them" },
+  { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle" },
 ];
+
+const ASPECT_RATIOS = ["1:1", "3:4", "9:16"];
 
 const MAX_IMAGES = 6;
 const AVG_GEN_SECONDS = 35;
@@ -26,11 +28,13 @@ interface TemplateProgress {
   image_urls?: string[];
   error?: string;
   startedAt?: number;
+  aspect_ratio: string;
 }
 
 function ProgressBar({ p }: { p: TemplateProgress }) {
   const tpl = TEMPLATES.find((t) => t.number === p.template_number);
   const [elapsed, setElapsed] = useState(0);
+  // tpl used for label only; aspect_ratio comes from p (the actual ratio used for generation)
 
   useEffect(() => {
     if (p.status !== "running") return;
@@ -57,7 +61,7 @@ function ProgressBar({ p }: { p: TemplateProgress }) {
       <div className="mb-2 flex items-center justify-between text-sm">
         <div className="flex items-center gap-2">
           <span className="font-medium">{tpl?.label ?? `Template ${p.template_number}`}</span>
-          <span className="text-xs text-gray-400">{tpl?.aspect}</span>
+          <span className="text-xs text-gray-400">{p.aspect_ratio}</span>
         </div>
         <span className="text-xs text-gray-400">
           {p.status === "done" && <span className="text-[#4a7c20] font-medium">✓ Done · {p.image_urls?.length} images</span>}
@@ -140,6 +144,7 @@ export default function ProductPage() {
 
   // Template + model selection (shared between prompt gen and image gen)
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [aspectRatio, setAspectRatio] = useState("3:4");
   const [model, setModel] = useState<KieModel>("nano-banana-2");
   const [resolution, setResolution] = useState<Resolution>("2K");
   const [generating, setGenerating] = useState(false);
@@ -324,7 +329,7 @@ export default function ProductPage() {
     stopPolling();
     setGenerating(true);
     setGenError("");
-    setProgress(templatesWithPrompts.map((n) => ({ template_number: n, status: "idle" })));
+    setProgress(templatesWithPrompts.map((n) => ({ template_number: n, status: "idle", aspect_ratio: aspectRatio })));
 
     const res = await fetch(`/api/brands/${brandId}/generate`, {
       method: "POST",
@@ -334,6 +339,7 @@ export default function ProductPage() {
         resolution,
         prompt_set_id: promptSet.id,
         model,
+        aspect_ratio: aspectRatio,
       }),
     });
 
@@ -347,7 +353,7 @@ export default function ProductPage() {
     const { prompt_set_id } = data as { job_ids: string[]; prompt_set_id: string };
     pollStartRef.current = Date.now();
 
-    setProgress(templatesWithPrompts.map((n) => ({ template_number: n, status: "running", startedAt: Date.now() })));
+    setProgress(templatesWithPrompts.map((n) => ({ template_number: n, status: "running", startedAt: Date.now(), aspect_ratio: aspectRatio })));
 
     pollIntervalRef.current = setInterval(async () => {
       // Timeout check
@@ -370,7 +376,7 @@ export default function ProductPage() {
           if (!job) return p;
           if (job.status === "done") return { ...p, status: "done", image_urls: job.image_urls ?? [] };
           if (job.status === "failed") return { ...p, status: "error", error: job.error ?? "Failed" };
-          if (job.status === "running" && p.status === "idle") return { ...p, status: "running", startedAt: Date.now() };
+          if (job.status === "running" && p.status === "idle") return { ...p, status: "running", startedAt: Date.now(), aspect_ratio: p.aspect_ratio };
           return p;
         })
       );
@@ -381,10 +387,14 @@ export default function ProductPage() {
       if (settled.length === templatesWithPrompts.length) {
         stopPolling();
         setGenerating(false);
+        // Reset UI state after generation completes — deselect templates and clear progress
+        setSelectedTemplates([]);
+        setExpandedTemplate(null);
+        setEditedPrompts({});
       }
     }, 3000);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [brandId, promptSet, selectedTemplates, prompts, resolution, model]);
+  }, [brandId, promptSet, selectedTemplates, prompts, resolution, model, aspectRatio]);
 
   const modelConfig = MODEL_CONFIGS[model];
   const numVariantsFromSet = promptSet?.prompts_json?.num_variants ?? numVariants;
@@ -541,11 +551,26 @@ export default function ProductPage() {
                     </div>
                     <div className="px-1.5 py-1 text-left">
                       <p className="text-xs font-medium truncate leading-tight">{t.label}</p>
-                      <p className="text-xs text-gray-400">{t.aspect}</p>
                     </div>
                   </button>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Aspect ratio selector */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-gray-600">Aspect ratio <span className="font-normal text-gray-400">(applies to all selected templates)</span></p>
+            <div className="flex flex-wrap gap-2">
+              {ASPECT_RATIOS.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setAspectRatio(r)}
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${aspectRatio === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                >
+                  {r}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -635,7 +660,7 @@ export default function ProductPage() {
                         {String(p.template_number).padStart(2, "0")}
                       </span>
                       <span className="font-medium capitalize">{p.template_name.replace(/-/g, " ")}</span>
-                      <span className="text-xs text-gray-400">{tpl?.aspect ?? p.aspect_ratio}</span>
+                      <span className="text-xs text-gray-400">{p.aspect_ratio}</span>
                       {p.needs_product_images && (
                         <span className="text-xs bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">product ref</span>
                       )}

@@ -73,6 +73,12 @@ export interface PromptItem {
   hook_variants: string[];    // N unique headline+subtitle+CTA texts, one per variant
 }
 
+export interface GenerationDetail {
+  model: string;
+  background_prompt: string;
+  hook_variants: string[];
+}
+
 export interface GenerationJob {
   id: string;
   brand_id: string;
@@ -85,6 +91,7 @@ export interface GenerationJob {
   image_urls: string[] | null;
   error: string | null;
   created_at: string;
+  generation_detail: GenerationDetail | null;
 }
 
 export type Resolution = "1K" | "2K" | "4K";
@@ -115,6 +122,7 @@ export interface GenerateRequest {
   resolution: Resolution;
   prompt_set_id: string;
   model: KieModel;
+  aspect_ratio?: string; // global override — applied to all selected templates
 }
 
 export interface SseEvent {
