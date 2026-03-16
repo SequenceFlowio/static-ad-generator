@@ -108,14 +108,14 @@ export async function generateImages({
   if (model === "seedream/4.5-edit") {
     // Seedream 4.5 uses different field names:
     // - quality ("basic"=2K, "high"=4K) instead of resolution
-    // - image_urls instead of image_input
+    // - image_urls instead of image_input (required field — must always be present)
     payload = {
       model,
       input: {
         prompt,
         aspect_ratio,
         quality: resolutionToQuality(resolution),
-        ...(refs ? { image_urls: refs } : {}),
+        image_urls: refs ?? [],
       },
     };
   } else {
