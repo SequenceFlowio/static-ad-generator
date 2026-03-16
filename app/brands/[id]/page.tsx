@@ -4,7 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Phase1Research from "@/components/pipeline/Phase1Research";
-import type { Brand, BrandDna, Product } from "@/types";
+import BrandDnaCard from "@/components/BrandDnaCard";
+import BrandDnaForm from "@/components/BrandDnaForm";
+import type { Brand, BrandDna, BrandDnaData, Product } from "@/types";
 
 export default function BrandPage() {
   const params = useParams();
@@ -16,6 +18,9 @@ export default function BrandPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [dnaOpen, setDnaOpen] = useState(false);
+  const [editingDna, setEditingDna] = useState(false);
+  const [savingDna, setSavingDna] = useState(false);
+  const [reSearching, setReSearching] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -34,6 +39,34 @@ export default function BrandPage() {
     }
     load();
   }, [id, router]);
+
+  async function handleSaveDna(formData: Partial<BrandDnaData>) {
+    setSavingDna(true);
+    const res = await fetch(`/api/brands/${id}/research`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(formData),
+    });
+    const data = await res.json();
+    setSavingDna(false);
+    if (!res.ok) return;
+    setDna(data.brand_dna);
+    setEditingDna(false);
+  }
+
+  async function handleReResearch() {
+    setReSearching(true);
+    const res = await fetch(`/api/brands/${id}/research`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ manual: {} }),
+    });
+    const data = await res.json();
+    setReSearching(false);
+    if (!res.ok) return;
+    setDna(data.brand_dna);
+    setEditingDna(false);
+  }
 
   if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
   if (!brand) return null;
@@ -62,7 +95,7 @@ export default function BrandPage() {
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Brand DNA</h2>
-          {dna && (
+          {dna && !editingDna && (
             <button
               onClick={() => setDnaOpen((o) => !o)}
               className="text-xs text-gray-400 hover:text-gray-600"
@@ -72,13 +105,13 @@ export default function BrandPage() {
           )}
         </div>
 
-        {/* No DNA yet */}
+        {/* No DNA yet — show research flow */}
         {!dna && (
           <Phase1Research
             brandId={id}
             brandUrl={brand.url ?? ""}
             initialDna={null}
-            onComplete={(newDna) => { setDna(newDna); setDnaOpen(false); }}
+            onComplete={(newDna) => { setDna(newDna); setDnaOpen(true); }}
           />
         )}
 
@@ -105,14 +138,29 @@ export default function BrandPage() {
           </div>
         )}
 
-        {/* DNA exists — expanded */}
-        {dna && dnaOpen && (
-          <Phase1Research
-            brandId={id}
-            brandUrl={brand.url ?? ""}
-            initialDna={dna}
-            onComplete={(newDna) => setDna(newDna)}
-          />
+        {/* DNA exists — expanded view */}
+        {dna && dnaOpen && !editingDna && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <BrandDnaCard
+              data={dna.data}
+              onEdit={() => setEditingDna(true)}
+              onReResearch={handleReResearch}
+              loading={reSearching}
+            />
+          </div>
+        )}
+
+        {/* DNA exists — edit form */}
+        {dna && dnaOpen && editingDna && (
+          <div className="rounded-xl border border-gray-200 bg-white p-5">
+            <BrandDnaForm
+              initialData={dna.data}
+              onSave={handleSaveDna}
+              onCancel={() => setEditingDna(false)}
+              loading={savingDna}
+              saveLabel="Save Changes"
+            />
+          </div>
         )}
       </section>
 

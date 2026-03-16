@@ -172,6 +172,19 @@ export default function BrandDnaForm({ initialData, onSave, onCancel, loading, s
         </div>
       </section>
 
+      {/* Photography Direction */}
+      <section>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Photography Direction</p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Lighting" value={d.lighting ?? ""} onChange={setStr("lighting")} placeholder="Soft natural window light" />
+          <Field label="Color Grading" value={d.color_grading ?? ""} onChange={setStr("color_grading")} placeholder="Warm golden tones" />
+          <Field label="Composition" value={d.composition ?? ""} onChange={setStr("composition")} placeholder="Clean minimalist, product centered" />
+          <Field label="Subject Matter" value={d.subject_matter ?? ""} onChange={setStr("subject_matter")} placeholder="Product in use in kitchen" />
+          <Field label="Props & Surfaces" value={d.props_and_surfaces ?? ""} onChange={setStr("props_and_surfaces")} placeholder="Marble countertop, wooden board" />
+          <Field label="Mood" value={d.mood ?? ""} onChange={setStr("mood")} placeholder="Serene, inviting, premium" />
+        </div>
+      </section>
+
       <div className="flex gap-3 pt-2">
         <button
           onClick={() => onSave(d)}
