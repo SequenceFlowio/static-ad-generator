@@ -19,11 +19,64 @@ const COST_PER_IMAGE: Record<Resolution, number> = {
   "4K": 0.09,
 };
 
+const AVG_GEN_SECONDS = 30;
+
 interface TemplateProgress {
   template_number: number;
   status: "idle" | "running" | "done" | "error";
   image_urls?: string[];
   error?: string;
+  startedAt?: number; // ms timestamp
+}
+
+function ProgressBar({ p }: { p: TemplateProgress }) {
+  const tpl = TEMPLATES.find((t) => t.number === p.template_number);
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    if (p.status !== "running") return;
+    const interval = setInterval(() => {
+      setElapsed(p.startedAt ? Math.floor((Date.now() - p.startedAt) / 1000) : 0);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [p.status, p.startedAt]);
+
+  const fillPct =
+    p.status === "done" ? 100
+    : p.status === "error" ? 100
+    : p.status === "running"
+      ? Math.min(92, Math.round((elapsed / AVG_GEN_SECONDS) * 92))
+    : 0;
+
+  const barColor =
+    p.status === "done" ? "bg-[#C7F56F]"
+    : p.status === "error" ? "bg-red-400"
+    : "bg-[#C7F56F]/60";
+
+  const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+
+  return (
+    <div className="rounded-xl border border-gray-100 bg-white p-4">
+      <div className="mb-2 flex items-center justify-between text-sm">
+        <div className="flex items-center gap-2">
+          <span className="font-medium">{tpl?.label ?? `Template ${p.template_number}`}</span>
+          <span className="text-xs text-gray-400">{tpl?.aspect}</span>
+        </div>
+        <span className="text-xs text-gray-400">
+          {p.status === "done" && <span className="text-[#4a7c20] font-medium">✓ Done · {p.image_urls?.length} images</span>}
+          {p.status === "error" && <span className="text-red-500 truncate max-w-[180px]">{p.error}</span>}
+          {p.status === "running" && <span className="tabular-nums">{fmt(elapsed)} / ~{AVG_GEN_SECONDS}s</span>}
+          {p.status === "idle" && <span className="text-gray-300">Waiting…</span>}
+        </span>
+      </div>
+      <div className="h-2 w-full rounded-full bg-gray-100 overflow-hidden">
+        <div
+          className={`h-full rounded-full transition-all duration-1000 ${barColor}`}
+          style={{ width: `${fillPct}%` }}
+        />
+      </div>
+    </div>
+  );
 }
 
 export default function ProductPage() {
@@ -224,7 +277,7 @@ export default function ProductPage() {
         try {
           const event: SseEvent = JSON.parse(raw);
           if (event.type === "start") {
-            setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "running" } : p));
+            setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "running", startedAt: Date.now() } : p));
           } else if (event.type === "done") {
             setProgress((prev) => prev.map((p) => p.template_number === event.template_number ? { ...p, status: "done", image_urls: event.image_urls } : p));
           } else if (event.type === "error") {
@@ -491,19 +544,7 @@ export default function ProductPage() {
           {/* Progress */}
           {progress.length > 0 && (
             <div className="space-y-2">
-              {progress.map((p) => {
-                const tpl = TEMPLATES.find((t) => t.number === p.template_number);
-                return (
-                  <div key={p.template_number} className="flex items-center gap-3 text-sm">
-                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${p.status === "done" ? "bg-[#C7F56F] text-[#1a1a1a]" : p.status === "error" ? "bg-red-100 text-red-500" : p.status === "running" ? "bg-blue-100 text-blue-600 animate-pulse" : "bg-gray-100 text-gray-400"}`}>
-                      {p.status === "done" ? "✓" : p.status === "error" ? "✗" : p.status === "running" ? "…" : "○"}
-                    </span>
-                    <span className="text-gray-600">{tpl?.label ?? `Template ${p.template_number}`}</span>
-                    {p.status === "error" && <span className="text-xs text-red-400 truncate max-w-[200px]">{p.error}</span>}
-                    {p.status === "done" && p.image_urls && <span className="text-xs text-gray-400">{p.image_urls.length} images</span>}
-                  </div>
-                );
-              })}
+              {progress.map((p) => <ProgressBar key={p.template_number} p={p} />)}
             </div>
           )}
 

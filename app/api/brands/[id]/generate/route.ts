@@ -171,7 +171,8 @@ export async function POST(
     headers: {
       "Content-Type": "text/event-stream",
       "Cache-Control": "no-cache",
-      Connection: "keep-alive",
+      "Connection": "keep-alive",
+      "X-Accel-Buffering": "no", // disable nginx proxy buffering so SSE events flush immediately
     },
   });
 }
