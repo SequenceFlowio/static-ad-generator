@@ -21,12 +21,14 @@ CRITICAL RULES — VISUAL:
 
 CRITICAL RULES — COPY (hook_variants):
 Every hook_variant MUST satisfy all three elements:
-1. AVATAR MATCH — say something specific the ideal customer recognises about their own situation, pain, or identity
-2. OPEN LOOP — use a question, "how to", a surprising statement, or incomplete information that forces the reader to continue
-3. CLEAR BENEFIT — what's in it for them must be obvious before they finish reading the hook
+1. AVATAR MATCH — name the specific situation, frustration, or identity the customer desire describes. The reader must feel "that's me."
+2. OPEN LOOP — use a question, "how to", a surprising fact, or a statement that is incomplete without reading further. No closed statements.
+3. CLEAR BENEFIT — what's in it for them must be obvious before they finish reading the hook. Do not bury the payoff.
+
+DESIRE RULE: When a customer desire is provided, every hook_variant MUST be built around that desire and nothing else. The desire is the emotional core — the hook should make the reader feel that desire more acutely, then position the product as the answer. Do not blend in other desires or generic brand messaging.
 
 Bad hook: "Improve your kitchen with Noctis cookware" (no curiosity, no avatar, generic)
-Good hook: "Why home cooks are ditching their old pans for this one set" (avatar, loop, benefit)
+Good hook (desire = "look like a pro at home"): "Why home cooks are quietly ditching their old knives for this one set" (avatar = home cook wanting pro results, loop = "quietly" + why, benefit = implied upgrade)
 
 Calibrate hook intensity to the awareness level:
 - unaware: pattern interrupt, no product mention, pure curiosity — the reader doesn't know they have a problem yet
@@ -34,6 +36,8 @@ Calibrate hook intensity to the awareness level:
 - solution-aware: focus on why this solution beats alternatives — they know solutions exist
 - product-aware: proof, specific results, social validation — they know the product, need convincing
 - most-aware: direct offer, urgency, concrete deal — they're ready to buy
+
+Each hook_variant must be a meaningfully different angle — different sentence structure, different emotional trigger, different way into the same desire. Never rephrase the same idea twice.
 
 JSON Schema:
 {
@@ -54,8 +58,7 @@ JSON Schema:
 }
 `;
 
-function brandDnaToText(dna: BrandDnaData): string {
-  const desires = (dna.customer_desires ?? []);
+function brandDnaToText(dna: BrandDnaData, selectedDesire: string | null): string {
   const hookExamples = (dna.hook_examples ?? []);
 
   return `
@@ -68,7 +71,7 @@ Voice: ${dna.voice_adjectives.join(", ")}
 Positioning: ${dna.positioning ?? "N/A"}
 
 COPY STRATEGY:
-Customer Desires (what the ICP deeply wants): ${desires.length > 0 ? desires.join(", ") : "N/A"}
+Customer Desire for this generation: ${selectedDesire ?? "None selected — use brand positioning and product benefits to infer the strongest desire"}
 ${hookExamples.length > 0 ? `Hook Examples — create VARIANTS of these (same angle, new phrasing):
 ${hookExamples.map((h, i) => `${i + 1}. "${h}"`).join("\n")}` : "Hook Examples: none provided — generate original hooks from the framework"}
 
@@ -90,7 +93,8 @@ export async function generatePrompts(
   hookIntent: string | null = null,
   backgroundIntent: string | null = null,
   templateNumbers: number[] = [],
-  awarenessLevel: string = "problem-aware"
+  awarenessLevel: string = "problem-aware",
+  selectedDesire: string | null = null
 ): Promise<PromptsJson> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -112,7 +116,7 @@ ${t.prompt_template}`
   ).join("\n\n---\n\n");
 
   const userMessage = `Brand Data:
-${brandDnaToText(brandDna)}
+${brandDnaToText(brandDna, selectedDesire)}
 
 ---
 

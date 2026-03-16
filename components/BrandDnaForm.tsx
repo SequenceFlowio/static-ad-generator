@@ -214,8 +214,8 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
         <div className="space-y-4">
           {/* Customer Desires — tag input */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Customer Desires</label>
-            <p className="mb-2 text-xs text-gray-400">What does your ideal customer deeply want? Press Enter to add.</p>
+            <label className="mb-1 block text-xs font-medium text-gray-500">Customer Desires <span className="text-gray-400 font-normal">({(d.customer_desires ?? []).length}/6)</span></label>
+            <p className="mb-2 text-xs text-gray-400">What does your ideal customer deeply want? Press Enter to add. Max 6.</p>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {(d.customer_desires ?? []).map((desire, i) => (
                 <span key={i} className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
@@ -228,21 +228,23 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
                 </span>
               ))}
             </div>
-            <input
-              type="text"
-              placeholder="e.g. effortless kitchen — press Enter"
-              className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  const val = (e.target as HTMLInputElement).value.trim();
-                  if (val) {
-                    set("customer_desires", [...(d.customer_desires ?? []), val]);
-                    (e.target as HTMLInputElement).value = "";
+            {(d.customer_desires ?? []).length < 6 && (
+              <input
+                type="text"
+                placeholder="e.g. effortless kitchen — press Enter"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val && (d.customer_desires ?? []).length < 6) {
+                      set("customer_desires", [...(d.customer_desires ?? []), val]);
+                      (e.target as HTMLInputElement).value = "";
+                    }
                   }
-                }
-              }}
-            />
+                }}
+              />
+            )}
           </div>
 
           {/* Hook Examples — dynamic list */}

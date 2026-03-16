@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import type { Brand, Product, PromptSet, PromptItem, Resolution, KieModel } from "@/types";
+import type { Brand, BrandDnaData, Product, PromptSet, PromptItem, Resolution, KieModel } from "@/types";
 import { MODEL_CONFIGS } from "@/types";
 
 const TEMPLATES = [
@@ -120,6 +120,7 @@ export default function ProductPage() {
 
   const [brand, setBrand] = useState<Brand | null>(null);
   const [product, setProduct] = useState<Product | null>(null);
+  const [brandDna, setBrandDna] = useState<BrandDnaData | null>(null);
   const [loading, setLoading] = useState(true);
 
   // Product edit
@@ -137,6 +138,7 @@ export default function ProductPage() {
   const [backgroundIntent, setBackgroundIntent] = useState("");
   const [numVariants, setNumVariants] = useState(2);
   const [awarenessLevel, setAwarenessLevel] = useState("problem-aware");
+  const [selectedDesire, setSelectedDesire] = useState<string | null>(null);
   const [generatingPrompts, setGeneratingPrompts] = useState(false);
   const [promptError, setPromptError] = useState("");
   const [expandedTemplate, setExpandedTemplate] = useState<number | null>(null);
@@ -155,7 +157,7 @@ export default function ProductPage() {
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Load brand + product only (no prompt preloading — always start fresh)
+  // Load brand + product + brand DNA (no prompt preloading — always start fresh)
   useEffect(() => {
     async function load() {
       const [brandRes, productRes] = await Promise.all([
@@ -167,6 +169,7 @@ export default function ProductPage() {
       const productData = await productRes.json();
       setBrand(brandData.brand);
       setProduct(productData.product);
+      setBrandDna(brandData.brand_dna?.data ?? null);
       setLoading(false);
     }
     load();
@@ -212,6 +215,7 @@ export default function ProductPage() {
         background_intent: backgroundIntent.trim() || null,
         template_numbers: selectedTemplates,
         awareness_level: awarenessLevel,
+        selected_desire: selectedDesire,
       }),
     });
     const data = await res.json();
@@ -572,6 +576,25 @@ export default function ProductPage() {
               <p className="mt-1 text-xs text-gray-400">What scene, surface, and props should the background use?</p>
             </div>
           </div>
+
+          {/* Customer desire selector */}
+          {brandDna && (brandDna.customer_desires ?? []).length > 0 && (
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Customer desire</label>
+              <p className="mb-2 text-xs text-gray-400">Every hook will be built around this one desire. Leave unselected to let AI decide.</p>
+              <div className="flex flex-wrap gap-2">
+                {(brandDna.customer_desires ?? []).map((desire) => (
+                  <button
+                    key={desire}
+                    onClick={() => setSelectedDesire(selectedDesire === desire ? null : desire)}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${selectedDesire === desire ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-600 hover:border-gray-300"}`}
+                  >
+                    {desire}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Awareness level */}
           <div>
