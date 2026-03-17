@@ -31,7 +31,7 @@ export default function LoginPage() {
         {/* Left — image panel */}
         <div className="relative w-[44%] flex-shrink-0">
           <Image
-            src="/Generate ads that actually convert.jpg"
+            src="/login image no text.jpg"
             alt="Ad example"
             fill
             className="object-cover object-center"
@@ -39,13 +39,13 @@ export default function LoginPage() {
             unoptimized
           />
           {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-b from-black/65 via-black/25 to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
           {/* Headline */}
-          <div className="absolute top-8 left-8 right-8">
-            <p className="text-white text-2xl font-bold leading-snug">
+          <div className="absolute top-7 left-7 right-7">
+            <p className="text-white text-3xl font-bold leading-[1.1]">
               Stop settling<br />for generic ads
             </p>
-            <p className="mt-2 text-white/70 text-sm leading-relaxed">
+            <p className="mt-1.5 text-white/75 text-lg italic leading-[1.15]">
               Generate ads that<br />actually convert
             </p>
           </div>
@@ -56,9 +56,9 @@ export default function LoginPage() {
           {/* Logo */}
           <div className="mb-7">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-black.png" alt="SequenceFlow" className="h-10 w-auto dark:hidden" />
+            <img src="/logo-black.png" alt="SequenceFlow" className="h-28 w-auto dark:hidden" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-white.png" alt="SequenceFlow" className="h-10 w-auto hidden dark:block" />
+            <img src="/logo-white.png" alt="SequenceFlow" className="h-28 w-auto hidden dark:block" />
           </div>
 
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
