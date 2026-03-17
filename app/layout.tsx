@@ -8,13 +8,13 @@ export const metadata: Metadata = {
   openGraph: {
     title: "SequenceFlow Ads Generator - On-brand quality ads in minutes",
     description: "Turn any brand into production-ready static ad creatives that convert. AI-powered. No designer needed. Your brand deserves better ads.",
-    images: [{ url: "/opengraph.jpg", width: 2962, height: 1714 }],
+    images: [{ url: "https://ads.sequenceflow.io/opengraph.jpg", width: 2962, height: 1714 }],
   },
   twitter: {
     card: "summary_large_image",
     title: "SequenceFlow Ads Generator - On-brand quality ads in minutes",
     description: "Turn any brand into production-ready static ad creatives that convert. AI-powered. No designer needed. Your brand deserves better ads.",
-    images: ["/opengraph.jpg"],
+    images: ["https://ads.sequenceflow.io/opengraph.jpg"],
   },
 };
 
