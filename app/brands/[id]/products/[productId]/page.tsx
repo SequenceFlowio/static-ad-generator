@@ -134,7 +134,6 @@ export default function ProductPage() {
   const [promptSet, setPromptSet] = useState<PromptSet | null>(null);
   const [prompts, setPrompts] = useState<PromptItem[]>([]);
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [hookIntent, setHookIntent] = useState("");
   const [backgroundIntent, setBackgroundIntent] = useState("");
   const [numVariants, setNumVariants] = useState(2);
   const [awarenessLevel, setAwarenessLevel] = useState("problem-aware");
@@ -215,7 +214,7 @@ export default function ProductPage() {
       body: JSON.stringify({
         product_id: productId,
         num_variants: numVariants,
-        hook_intent: hookIntent.trim() || null,
+        hook_intent: null,
         background_intent: backgroundIntent.trim() || null,
         template_numbers: selectedTemplates,
         awareness_level: awarenessLevel,
@@ -555,30 +554,17 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Intent fields */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Hook &amp; copy intent</label>
-              <textarea
-                value={hookIntent}
-                onChange={(e) => setHookIntent(e.target.value)}
-                rows={2}
-                placeholder="e.g. visual harmony with the kitchen, premium quality, confidence"
-                className={`${inputBase} resize-none text-xs`}
-              />
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">What should the headline &amp; CTA communicate?</p>
-            </div>
-            <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Background &amp; scene intent</label>
-              <textarea
-                value={backgroundIntent}
-                onChange={(e) => setBackgroundIntent(e.target.value)}
-                rows={2}
-                placeholder="e.g. dark brown marble counter, minimal props, no extra objects"
-                className={`${inputBase} resize-none text-xs`}
-              />
-              <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">What scene, surface, and props should the background use?</p>
-            </div>
+          {/* Background intent */}
+          <div>
+            <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-300">Background &amp; scene intent</label>
+            <textarea
+              value={backgroundIntent}
+              onChange={(e) => setBackgroundIntent(e.target.value)}
+              rows={2}
+              placeholder="e.g. dark brown marble counter, minimal props, no extra objects"
+              className={`${inputBase} resize-none text-xs`}
+            />
+            <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">What scene, surface, and props should the background use?</p>
           </div>
 
           {/* Customer desire selector */}
