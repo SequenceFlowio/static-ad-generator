@@ -7,6 +7,7 @@ import { getBrowserSupabase } from "@/lib/supabase";
 
 export default function Header() {
   const [dark, setDark] = useState(false);
+  const [userName, setUserName] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -15,6 +16,11 @@ export default function Header() {
     const isDark = saved ? saved === "dark" : prefersDark;
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
+
+    getBrowserSupabase().auth.getUser().then(({ data: { user } }) => {
+      const name = user?.user_metadata?.full_name ?? user?.email ?? null;
+      setUserName(name ? name.split(" ")[0] : null);
+    });
   }, []);
 
   async function handleSignOut() {
@@ -42,7 +48,7 @@ export default function Header() {
           />
         </Link>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
         <button
           onClick={toggleTheme}
           className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -64,6 +70,9 @@ export default function Header() {
             </>
           )}
         </button>
+        {userName && (
+          <span className="text-xs text-gray-500 dark:text-gray-400">Hi, {userName}</span>
+        )}
         <button
           onClick={handleSignOut}
           className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
