@@ -52,13 +52,15 @@ export default function LoginPage() {
         </div>
 
         {/* Right — form */}
-        <div className="flex-1 flex flex-col justify-center px-10 py-10">
-          {/* Logo + heading block */}
+        <div className="relative flex-1 flex flex-col justify-center px-10 py-10">
+          {/* Logo — top-right corner */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-black.png" alt="SequenceFlow" className="absolute top-6 right-8 h-20 w-auto dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo-white.png" alt="SequenceFlow" className="absolute top-6 right-8 h-20 w-auto hidden dark:block" />
+
+          {/* Heading block */}
           <div className="mb-7">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-black.png" alt="SequenceFlow" className="h-28 w-auto dark:hidden mb-3" />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-white.png" alt="SequenceFlow" className="h-28 w-auto hidden dark:block mb-3" />
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
               Create Your Account
             </h1>
