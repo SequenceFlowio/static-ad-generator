@@ -9,16 +9,20 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const supabase = getBrowserSupabase();
-    // getSession() automatically detects and exchanges both:
-    // - PKCE flow: code param in URL
-    // - Implicit flow: access_token in URL hash
-    supabase.auth.getSession().then(({ data: { session } }) => {
+
+    // onAuthStateChange fires as soon as the client processes the hash tokens
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session) {
         router.replace("/");
-      } else {
-        router.replace("/login?error=auth_failed");
       }
     });
+
+    // Also check immediately in case the event already fired
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace("/");
+    });
+
+    return () => subscription.unsubscribe();
   }, [router]);
 
   return (

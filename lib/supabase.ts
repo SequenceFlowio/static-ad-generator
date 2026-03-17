@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { createBrowserClient } from "@supabase/ssr";
 
 function requireEnv(name: string): string {
   const val = process.env[name];
@@ -15,10 +16,10 @@ export function getServerSupabase() {
   );
 }
 
-// Browser client (anon key). Call only in client components.
-// Must use static string access — Next.js only inlines NEXT_PUBLIC_ vars when accessed literally.
+// Browser client — uses @supabase/ssr's createBrowserClient so the session is
+// stored in cookies (not localStorage), making it readable by the middleware.
 export function getBrowserSupabase() {
-  return createClient(
+  return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
