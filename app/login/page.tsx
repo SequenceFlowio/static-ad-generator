@@ -30,7 +30,9 @@ export default function LoginPage() {
       <div className="flex flex-col justify-center w-1/2 px-16 py-12 bg-white dark:bg-gray-900">
         {/* Logo */}
         <div className="mb-12">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-black.png" alt="SequenceFlow" className="h-32 w-auto dark:hidden" />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-white.png" alt="SequenceFlow" className="h-32 w-auto hidden dark:block" />
         </div>
 

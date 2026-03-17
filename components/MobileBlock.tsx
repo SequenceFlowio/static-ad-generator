@@ -17,7 +17,7 @@ export default function MobileBlock() {
       </h1>
       <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed max-w-xs">
         This tool is built for proper screens. Grab your laptop, make a coffee,
-        and let's build some ads that actually convert.
+        and let&apos;s build some ads that actually convert.
       </p>
 
       <p className="mt-8 text-xs text-gray-300 dark:text-gray-600">
