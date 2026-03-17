@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import BrandDnaCard from "@/components/BrandDnaCard";
 import BrandDnaForm from "@/components/BrandDnaForm";
 import type { BrandDna, BrandDnaData } from "@/types";
@@ -12,72 +12,58 @@ interface Props {
   onComplete: (dna: BrandDna) => void;
 }
 
-type Step = "idle" | "filling" | "saving" | "done";
-type AiStatus = "idle" | "running" | "complete" | "error";
+type Step = "idle" | "searching" | "review" | "saving" | "done";
 
 export default function Phase1Research({ brandId, brandUrl, initialDna, onComplete }: Props) {
   const [dna, setDna] = useState<BrandDna | null>(initialDna);
   const [step, setStep] = useState<Step>(initialDna ? "done" : "idle");
-  const [aiStatus, setAiStatus] = useState<AiStatus>("idle");
+  const [prefill, setPrefill] = useState<Partial<BrandDnaData> | null>(null);
   const [error, setError] = useState("");
   const [open, setOpen] = useState(!initialDna);
   const [showEdit, setShowEdit] = useState(false);
   const [reSearching, setReSearching] = useState(false);
 
-  // Holds the in-flight AI research promise so we can await it before PATCH
-  const aiPromiseRef = useRef<Promise<BrandDna | null> | null>(null);
-
-  function startResearch() {
-    setStep("filling");
-    setAiStatus("running");
+  async function handleWebSearch() {
     setError("");
+    setStep("searching");
 
-    const promise = fetch(`/api/brands/${brandId}/research`, {
+    const res = await fetch(`/api/brands/${brandId}/research`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ manual: {} }),
-    })
-      .then(async (res) => {
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Research failed");
-        setAiStatus("complete");
-        return data.brand_dna as BrandDna;
-      })
-      .catch((err: Error) => {
-        setAiStatus("error");
-        setError(err.message);
-        return null;
-      });
+    });
+    const data = await res.json();
 
-    aiPromiseRef.current = promise;
+    if (!res.ok) {
+      setError(data.error ?? "Research failed");
+      setStep("idle");
+      return;
+    }
+
+    // Pre-fill the review form with AI results
+    setPrefill((data.brand_dna as BrandDna).data);
+    setStep("review");
   }
 
-  // Called when user clicks "Save Brand DNA" from the manual form
-  async function handleResearchSave(formData: Partial<BrandDnaData>) {
+  function handleManual() {
+    setPrefill(null);
+    setStep("review");
+  }
+
+  async function handleSave(formData: Partial<BrandDnaData>) {
     setStep("saving");
     setError("");
-
-    // Wait for AI to finish — ensures POST saves its result before our PATCH
-    await aiPromiseRef.current;
-
-    // Filter out blank values so we don't overwrite AI data with empty strings
-    const filtered: Partial<BrandDnaData> = {};
-    for (const [k, v] of Object.entries(formData)) {
-      if (v !== null && v !== undefined && v !== "" && !(Array.isArray(v) && v.length === 0)) {
-        (filtered as Record<string, unknown>)[k] = v;
-      }
-    }
 
     const res = await fetch(`/api/brands/${brandId}/research`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(filtered),
+      body: JSON.stringify(formData),
     });
     const data = await res.json();
 
     if (!res.ok) {
       setError(data.error ?? "Save failed");
-      setStep("filling");
+      setStep("review");
       return;
     }
 
@@ -86,7 +72,6 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
     setStep("done");
   }
 
-  // Called when user saves edits to existing DNA
   async function handleEditSave(formData: Partial<BrandDnaData>) {
     setError("");
     const res = await fetch(`/api/brands/${brandId}/research`, {
@@ -116,15 +101,6 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
     onComplete(data.brand_dna);
   }
 
-  const savingLabel =
-    step === "saving"
-      ? aiStatus === "running"
-        ? "Waiting for AI…"
-        : "Saving…"
-      : aiStatus === "complete"
-      ? "Save Brand DNA ▶"
-      : "Save Brand DNA ▶";
-
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <button
@@ -144,9 +120,11 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
             <p className="text-xs text-gray-400 dark:text-gray-500">
               {dna
                 ? `Brand DNA saved · ${new Date(dna.generated_at).toLocaleDateString()}`
-                : step === "filling" || step === "saving"
-                ? "Building brand identity…"
-                : "Research & build your brand identity"}
+                : step === "searching"
+                ? "Researching your brand…"
+                : step === "review" || step === "saving"
+                ? "Review and save your brand identity"
+                : "Build your brand identity"}
             </p>
           </div>
         </div>
@@ -159,90 +137,79 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
             <p className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
 
-          {/* Step 1 — Start */}
+          {/* Idle — choose path */}
           {step === "idle" && (
-            <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-5 space-y-3">
+            <div className="space-y-3">
               <div>
-                <p className="text-sm font-medium mb-1">Auto-Research your Brand</p>
+                <p className="text-sm font-medium mb-1">How do you want to set up your Brand DNA?</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">
-                  We&apos;ll search the web and analyze your website to extract colors, fonts, photography style, and positioning automatically.
+                  Web search finds colors, fonts, positioning and audience automatically. You can review and adjust everything before saving.
                 </p>
               </div>
-              {brandUrl ? (
-                <p className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{brandUrl}</p>
-              ) : (
-                <p className="text-xs text-amber-500">No website URL set — results may be limited.</p>
+
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  onClick={handleWebSearch}
+                  disabled={!brandUrl}
+                  className="flex flex-col items-start gap-1.5 rounded-xl border-2 border-[#C7F56F] bg-[#C7F56F]/5 px-4 py-4 text-left hover:bg-[#C7F56F]/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <span className="text-lg">🔍</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Web Search</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">AI researches your website and fills everything in. You review and adjust.</span>
+                </button>
+
+                <button
+                  onClick={handleManual}
+                  className="flex flex-col items-start gap-1.5 rounded-xl border-2 border-gray-200 dark:border-gray-700 px-4 py-4 text-left hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
+                >
+                  <span className="text-lg">✏️</span>
+                  <span className="text-sm font-semibold text-gray-900 dark:text-white">Fill Manually</span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">Enter your brand details yourself — full control over every field.</span>
+                </button>
+              </div>
+
+              {!brandUrl && (
+                <p className="text-xs text-amber-500">No website URL set — web search is disabled. Add a URL to the brand to enable it.</p>
               )}
-              <button
-                onClick={startResearch}
-                className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
-              >
-                Start Research ▶
-              </button>
             </div>
           )}
 
-          {/* Step 2 — AI running in background, manual form visible */}
-          {(step === "filling" || step === "saving") && (
-            <div className="space-y-5">
-              {/* AI status banner */}
-              <div
-                className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
-                  aiStatus === "running"
-                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-                    : aiStatus === "complete"
-                    ? "bg-[#C7F56F]/10 text-[#1a1a1a]"
-                    : aiStatus === "error"
-                    ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
-                    : ""
-                }`}
-              >
-                {aiStatus === "running" && (
-                  <>
-                    <span className="inline-block h-2 w-2 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
-                    <span>AI is researching your brand in the background (~60s)… fill in what you know below.</span>
-                  </>
-                )}
-                {aiStatus === "complete" && (
-                  <>
-                    <span className="flex-shrink-0">✓</span>
-                    <span>AI research complete — click &quot;Save Brand DNA&quot; to combine everything.</span>
-                  </>
-                )}
-                {aiStatus === "error" && (
-                  <>
-                    <span className="flex-shrink-0">⚠</span>
-                    <span>AI research failed — your manual entries will still be saved.</span>
-                  </>
-                )}
-              </div>
-
+          {/* Searching — loading */}
+          {step === "searching" && (
+            <div className="flex items-center gap-3 rounded-xl bg-blue-50 dark:bg-blue-900/20 px-4 py-5">
+              <span className="inline-block h-3 w-3 rounded-full bg-blue-500 animate-pulse flex-shrink-0" />
               <div>
-                <p className="mb-1 text-sm font-medium">Fill in what you know</p>
-                <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
-                  These fields are hard for AI to find — add what you can, leave the rest blank. AI fills everything else.
-                </p>
-                <BrandDnaForm
-                  brandId={brandId}
-                  initialData={{
-                    voice_adjectives: [],
-                    positioning: null,
-                    primary_font: null,
-                    secondary_font: null,
-                    accent_color: null,
-                    lettertype_color: null,
-                    background_color: null,
-                  }}
-                  onSave={handleResearchSave}
-                  onCancel={null}
-                  loading={step === "saving"}
-                  saveLabel={savingLabel}
-                />
+                <p className="text-sm font-medium text-blue-700 dark:text-blue-300">Researching your brand…</p>
+                <p className="text-xs text-blue-500 dark:text-blue-400 mt-0.5">Searching the web and analyzing your website. This takes ~30–60 seconds.</p>
               </div>
             </div>
           )}
 
-          {/* Step 3 — Done — show card or edit form */}
+          {/* Review — pre-filled (web search) or empty (manual) */}
+          {(step === "review" || step === "saving") && (
+            <div className="space-y-4">
+              {prefill && (
+                <div className="flex items-center gap-2 rounded-lg bg-[#C7F56F]/10 px-3 py-2 text-xs text-gray-700 dark:text-gray-300">
+                  <span>✓</span>
+                  <span>AI filled in what it found — review everything, fill any blanks, then save.</span>
+                </div>
+              )}
+              <BrandDnaForm
+                brandId={brandId}
+                initialData={prefill ?? {
+                  voice_adjectives: [],
+                  customer_desires: [],
+                  hook_examples: [],
+                }}
+                onSave={handleSave}
+                onCancel={() => setStep("idle")}
+                loading={step === "saving"}
+                saveLabel="Save Brand DNA ▶"
+              />
+            </div>
+          )}
+
+          {/* Done — show card or edit form */}
           {step === "done" && dna && !showEdit && (
             <BrandDnaCard
               data={dna.data}
