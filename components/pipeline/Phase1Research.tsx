@@ -126,22 +126,22 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
       : "Save Brand DNA ▶";
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
         <div className="flex items-center gap-3">
           <span
             className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
-              dna ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 text-gray-500"
+              dna ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"
             }`}
           >
             {dna ? "✓" : "1"}
           </span>
           <div>
             <p className="font-semibold text-sm">Phase 1 — Brand DNA</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {dna
                 ? `Brand DNA saved · ${new Date(dna.generated_at).toLocaleDateString()}`
                 : step === "filling" || step === "saving"
@@ -150,26 +150,26 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
             </p>
           </div>
         </div>
-        <span className="text-gray-300 text-sm">{open ? "▲" : "▼"}</span>
+        <span className="text-gray-300 dark:text-gray-600 text-sm">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && (
-        <div className="border-t border-gray-100 px-6 py-5 space-y-5">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-6 py-5 space-y-5">
           {error && (
-            <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>
+            <p className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>
           )}
 
           {/* Step 1 — Start */}
           {step === "idle" && (
-            <div className="rounded-xl border border-gray-100 bg-gray-50 p-5 space-y-3">
+            <div className="rounded-xl border border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-5 space-y-3">
               <div>
                 <p className="text-sm font-medium mb-1">Auto-Research your Brand</p>
-                <p className="text-xs text-gray-400">
+                <p className="text-xs text-gray-400 dark:text-gray-500">
                   We&apos;ll search the web and analyze your website to extract colors, fonts, photography style, and positioning automatically.
                 </p>
               </div>
               {brandUrl ? (
-                <p className="text-xs font-mono text-gray-500 truncate">{brandUrl}</p>
+                <p className="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{brandUrl}</p>
               ) : (
                 <p className="text-xs text-amber-500">No website URL set — results may be limited.</p>
               )}
@@ -189,11 +189,11 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
               <div
                 className={`flex items-center gap-2 rounded-lg px-3 py-2 text-xs ${
                   aiStatus === "running"
-                    ? "bg-blue-50 text-blue-600"
+                    ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
                     : aiStatus === "complete"
                     ? "bg-[#C7F56F]/10 text-[#1a1a1a]"
                     : aiStatus === "error"
-                    ? "bg-red-50 text-red-600"
+                    ? "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
                     : ""
                 }`}
               >
@@ -219,7 +219,7 @@ export default function Phase1Research({ brandId, brandUrl, initialDna, onComple
 
               <div>
                 <p className="mb-1 text-sm font-medium">Fill in what you know</p>
-                <p className="mb-4 text-xs text-gray-400">
+                <p className="mb-4 text-xs text-gray-400 dark:text-gray-500">
                   These fields are hard for AI to find — add what you can, leave the rest blank. AI fills everything else.
                 </p>
                 <BrandDnaForm

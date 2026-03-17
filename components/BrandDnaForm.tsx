@@ -26,10 +26,10 @@ function Field({
   textarea?: boolean;
 }) {
   const base =
-    "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
+    "w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
       {textarea ? (
         <textarea
           value={value}
@@ -62,20 +62,20 @@ function ColorField({
 }) {
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-500">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
       <div className="flex items-center gap-2">
         <input
           type="color"
           value={value || "#ffffff"}
           onChange={(e) => onChange(e.target.value)}
-          className="h-8 w-10 cursor-pointer rounded border border-gray-200 p-0.5"
+          className="h-8 w-10 cursor-pointer rounded border border-gray-200 dark:border-gray-700 p-0.5"
         />
         <input
           type="text"
           value={value}
           onChange={(e) => onChange(e.target.value)}
           placeholder="#000000"
-          className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm font-mono outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm font-mono outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
         />
       </div>
     </div>
@@ -114,12 +114,12 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
     <div className="space-y-6">
       {/* Brand Logo */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Logo</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Brand Logo</p>
         <div className="flex items-center gap-4">
           {d.logo_url ? (
             <>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={d.logo_url} alt="Logo" className="h-12 max-w-[180px] object-contain rounded border border-gray-200 bg-gray-50 p-1" />
+              <img src={d.logo_url} alt="Logo" className="h-12 max-w-[180px] object-contain rounded border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-1" />
               <button
                 type="button"
                 onClick={handleLogoRemove}
@@ -129,7 +129,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
               </button>
             </>
           ) : (
-            <p className="text-xs text-gray-400">No logo uploaded</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">No logo uploaded</p>
           )}
           <input
             ref={logoInputRef}
@@ -142,23 +142,23 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             type="button"
             onClick={() => logoInputRef.current?.click()}
             disabled={uploadingLogo}
-            className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs text-gray-600 hover:bg-gray-50 disabled:opacity-50"
+            className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
           >
             {uploadingLogo ? "Uploading…" : d.logo_url ? "Replace" : "Upload Logo"}
           </button>
         </div>
-        <p className="mt-1.5 text-xs text-gray-400">PNG or SVG with transparent background recommended. Used as reference in every generated ad.</p>
+        <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">PNG or SVG with transparent background recommended. Used as reference in every generated ad.</p>
       </section>
 
       {/* Language */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Ad Copy Language</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Ad Copy Language</p>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500">Language</label>
+          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Language</label>
           <select
             value={d.language ?? "English"}
             onChange={(e) => set("language", e.target.value as never)}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 bg-white"
+            className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
           >
             <option value="English">English</option>
             <option value="Dutch">Dutch</option>
@@ -167,13 +167,13 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             <option value="German">German</option>
             <option value="Portuguese">Portuguese</option>
           </select>
-          <p className="mt-1.5 text-xs text-gray-400">All generated hook copy will be written in this language. Visual prompts always stay in English.</p>
+          <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">All generated hook copy will be written in this language. Visual prompts always stay in English.</p>
         </div>
       </section>
 
       {/* Brand Overview */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Brand Overview</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Brand Overview</p>
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
@@ -230,21 +230,21 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
 
       {/* Copy Strategy */}
       <section>
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400">Copy Strategy</p>
-        <p className="mb-3 text-xs text-gray-400">Used by AI to generate scroll-stopping hooks tailored to your audience.</p>
+        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Copy Strategy</p>
+        <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">Used by AI to generate scroll-stopping hooks tailored to your audience.</p>
         <div className="space-y-4">
           {/* Customer Desires — tag input */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Customer Desires <span className="text-gray-400 font-normal">({(d.customer_desires ?? []).length}/6)</span></label>
-            <p className="mb-2 text-xs text-gray-400">What does your ideal customer deeply want? Press Enter to add. Max 6.</p>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Customer Desires <span className="text-gray-400 dark:text-gray-500 font-normal">({(d.customer_desires ?? []).length}/6)</span></label>
+            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">What does your ideal customer deeply want? Press Enter to add. Max 6.</p>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {(d.customer_desires ?? []).map((desire, i) => (
-                <span key={i} className="flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs text-gray-700">
+                <span key={i} className="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200">
                   {desire}
                   <button
                     type="button"
                     onClick={() => set("customer_desires", (d.customer_desires ?? []).filter((_, j) => j !== i))}
-                    className="ml-0.5 text-gray-400 hover:text-gray-700"
+                    className="ml-0.5 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-200"
                   >×</button>
                 </span>
               ))}
@@ -253,7 +253,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
               <input
                 type="text"
                 placeholder="e.g. effortless kitchen — press Enter"
-                className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -270,8 +270,8 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
 
           {/* Hook Examples — dynamic list */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Hook Examples</label>
-            <p className="mb-2 text-xs text-gray-400">Add hooks that have worked or angles you want to test. AI creates variants of these.</p>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Hook Examples</label>
+            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">Add hooks that have worked or angles you want to test. AI creates variants of these.</p>
             <div className="space-y-2">
               {(d.hook_examples ?? []).map((hook, i) => (
                 <div key={i} className="flex gap-2 items-start">
@@ -283,13 +283,13 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
                       updated[i] = e.target.value;
                       set("hook_examples", updated);
                     }}
-                    className="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+                    className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
                     placeholder="e.g. How I made my kitchen look 10x more organized"
                   />
                   <button
                     type="button"
                     onClick={() => set("hook_examples", (d.hook_examples ?? []).filter((_, j) => j !== i))}
-                    className="mt-2 text-gray-400 hover:text-red-500 text-sm"
+                    className="mt-2 text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 text-sm"
                   >×</button>
                 </div>
               ))}
@@ -297,7 +297,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             <button
               type="button"
               onClick={() => set("hook_examples", [...(d.hook_examples ?? []), ""])}
-              className="mt-2 text-xs text-gray-500 hover:text-gray-700 underline underline-offset-2"
+              className="mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline underline-offset-2"
             >
               + Add hook example
             </button>
@@ -307,7 +307,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
 
       {/* Visual System */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400">Visual System</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Visual System</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field
             label="Primary Font"
@@ -350,7 +350,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
         {onCancel && (
           <button
             onClick={onCancel}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             Cancel
           </button>

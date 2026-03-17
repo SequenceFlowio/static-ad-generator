@@ -76,16 +76,16 @@ export default function BrandPage() {
     setEditingDna(false);
   }
 
-  if (loading) return <p className="text-sm text-gray-400">Loading…</p>;
+  if (loading) return <p className="text-sm text-gray-400 dark:text-gray-500">Loading…</p>;
   if (!brand) return null;
 
   return (
     <div>
       {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-400">
-        <Link href="/" className="hover:text-gray-700">Brands</Link>
+      <div className="mb-6 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+        <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Brands</Link>
         <span>/</span>
-        <span className="text-gray-700 font-medium">{brand.name}</span>
+        <span className="text-gray-700 dark:text-gray-200 font-medium">{brand.name}</span>
       </div>
 
       {/* Brand header */}
@@ -93,7 +93,7 @@ export default function BrandPage() {
         <h1 className="text-2xl font-bold">{brand.name}</h1>
         {brand.url && (
           <a href={brand.url} target="_blank" rel="noopener noreferrer"
-            className="mt-1 text-xs text-gray-400 hover:underline">
+            className="mt-1 text-xs text-gray-400 dark:text-gray-500 hover:underline">
             {brand.url}
           </a>
         )}
@@ -102,11 +102,11 @@ export default function BrandPage() {
       {/* Brand DNA */}
       <section className="mb-10">
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Brand DNA</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Brand DNA</h2>
           {dna && !editingDna && (
             <button
               onClick={() => setDnaOpen((o) => !o)}
-              className="text-xs text-gray-400 hover:text-gray-600"
+              className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300"
             >
               {dnaOpen ? "Collapse ▲" : "View / Edit ▼"}
             </button>
@@ -125,7 +125,7 @@ export default function BrandPage() {
 
         {/* DNA exists — collapsed summary */}
         {dna && !dnaOpen && (
-          <div className="flex items-center gap-4 rounded-xl border border-gray-200 bg-white px-4 py-3">
+          <div className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
             <div className="flex gap-1.5">
               {[dna.data.accent_color, dna.data.lettertype_color, dna.data.background_color]
                 .filter(Boolean)
@@ -137,10 +137,10 @@ export default function BrandPage() {
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium truncate">{dna.data.name}</p>
               {dna.data.positioning && (
-                <p className="text-xs text-gray-400 truncate">{dna.data.positioning}</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{dna.data.positioning}</p>
               )}
             </div>
-            <span className="text-xs text-gray-300 flex-shrink-0">
+            <span className="text-xs text-gray-300 dark:text-gray-600 flex-shrink-0">
               {new Date(dna.generated_at).toLocaleDateString()}
             </span>
           </div>
@@ -148,7 +148,7 @@ export default function BrandPage() {
 
         {/* DNA exists — expanded view */}
         {dna && dnaOpen && !editingDna && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
             <BrandDnaCard
               data={dna.data}
               onEdit={() => setEditingDna(true)}
@@ -160,7 +160,7 @@ export default function BrandPage() {
 
         {/* DNA exists — edit form */}
         {dna && dnaOpen && editingDna && (
-          <div className="rounded-xl border border-gray-200 bg-white p-5">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
             <BrandDnaForm
               brandId={id}
               initialData={dna.data}
@@ -176,13 +176,13 @@ export default function BrandPage() {
       {/* Products */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400">Products</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Products</h2>
           <Link href={`/brands/${id}/gallery`} className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-xs font-semibold text-[#C7F56F] hover:bg-black transition-colors">
             View Gallery →
           </Link>
         </div>
         {!dna && (
-          <p className="mb-3 text-xs text-gray-400">Complete Brand DNA first to enable product generation.</p>
+          <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">Complete Brand DNA first to enable product generation.</p>
         )}
 
         <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${!dna ? "opacity-50 pointer-events-none" : ""}`}>
@@ -190,21 +190,21 @@ export default function BrandPage() {
             <div key={product.id} className="group relative">
               <Link
                 href={`/brands/${id}/products/${product.id}`}
-                className="block rounded-xl border border-gray-200 bg-white p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
+                className="block rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
               >
                 <p className="font-semibold text-sm">{product.name}</p>
                 {product.description && (
-                  <p className="mt-1 text-xs text-gray-400 line-clamp-2">{product.description}</p>
+                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{product.description}</p>
                 )}
                 {product.url && (
-                  <p className="mt-1 text-xs text-gray-300 truncate">{product.url}</p>
+                  <p className="mt-1 text-xs text-gray-300 dark:text-gray-600 truncate">{product.url}</p>
                 )}
                 <p className="mt-3 text-xs text-[#C7F56F] font-medium">Generate ads →</p>
               </Link>
               <button
                 onClick={(e) => { e.preventDefault(); handleDeleteProduct(product.id); }}
                 disabled={deletingProductId === product.id}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg bg-red-50 px-2 py-1 text-xs text-red-500 hover:bg-red-100 disabled:opacity-50"
+                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50"
               >
                 {deletingProductId === product.id ? "…" : "Delete"}
               </button>
@@ -213,7 +213,7 @@ export default function BrandPage() {
 
           <Link
             href={`/brands/${id}/products/new`}
-            className="rounded-xl border border-dashed border-gray-300 bg-white p-5 hover:border-[#C7F56F] transition-all flex flex-col items-center justify-center gap-1 text-gray-400 hover:text-gray-600 min-h-[100px]"
+            className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 p-5 hover:border-[#C7F56F] transition-all flex flex-col items-center justify-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 min-h-[100px]"
           >
             <span className="text-2xl font-light">+</span>
             <span className="text-sm font-medium">Add Product</span>

@@ -110,42 +110,42 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
   }, [brandId, promptSet, selectedTemplates, resolution, numImages]);
 
   return (
-    <div className={`rounded-xl border bg-white overflow-hidden ${!hasPromptSet ? "opacity-50 pointer-events-none" : "border-gray-200"}`}>
+    <div className={`rounded-xl border bg-white dark:bg-gray-900 overflow-hidden ${!hasPromptSet ? "opacity-50 pointer-events-none" : "border-gray-200 dark:border-gray-700"}`}>
       <button
         onClick={() => hasPromptSet && setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${complete ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 text-gray-500"}`}>
+          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${complete ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}>
             {complete ? "✓" : "3"}
           </span>
           <div>
             <p className="font-semibold text-sm">Phase 3 — Image Generation</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {hasPromptSet ? complete ? "Generation complete" : "Generate ads via kie.ai" : "Complete Phase 2 first"}
             </p>
           </div>
         </div>
-        <span className="text-gray-300 text-sm">{open ? "▲" : "▼"}</span>
+        <span className="text-gray-300 dark:text-gray-600 text-sm">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && hasPromptSet && (
-        <div className="border-t border-gray-100 px-6 py-5 space-y-5">
+        <div className="border-t border-gray-100 dark:border-gray-700 px-6 py-5 space-y-5">
 
           {/* Template selection */}
           <div>
             <p className="mb-2 text-sm font-medium">Templates</p>
             <div className="space-y-0.5">
               {TEMPLATES.map((t) => (
-                <label key={t.number} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50">
+                <label key={t.number} className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <input
                     type="checkbox"
                     checked={selectedTemplates.includes(t.number)}
                     onChange={() => toggleTemplate(t.number)}
-                    className="rounded border-gray-300 accent-[#C7F56F]"
+                    className="rounded border-gray-300 dark:border-gray-600 accent-[#C7F56F]"
                   />
                   <span className="text-sm">{t.label}</span>
-                  <span className="text-xs text-gray-400">{t.aspect}</span>
+                  <span className="text-xs text-gray-400 dark:text-gray-500">{t.aspect}</span>
                 </label>
               ))}
             </div>
@@ -159,7 +159,7 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
                 <button
                   key={n}
                   onClick={() => setNumImages(n)}
-                  className={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${numImages === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                  className={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${numImages === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
                 >
                   {n}
                 </button>
@@ -175,18 +175,18 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
                 <button
                   key={r}
                   onClick={() => setResolution(r)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 text-gray-500 hover:border-gray-300"}`}
+                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
                 >
                   {r}
                 </button>
               ))}
-              <span className="text-xs text-gray-400">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numImages} images
               </span>
             </div>
           </div>
 
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+          {error && <p className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {/* Progress */}
           {progress.length > 0 && (
@@ -195,12 +195,12 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
                 const tpl = TEMPLATES.find((t) => t.number === p.template_number);
                 return (
                   <div key={p.template_number} className="flex items-center gap-3 text-sm">
-                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${p.status === "done" ? "bg-[#C7F56F] text-[#1a1a1a]" : p.status === "error" ? "bg-red-100 text-red-500" : p.status === "running" ? "bg-blue-100 text-blue-600 animate-pulse" : "bg-gray-100 text-gray-400"}`}>
+                    <span className={`inline-flex h-5 w-5 items-center justify-center rounded-full text-xs ${p.status === "done" ? "bg-[#C7F56F] text-[#1a1a1a]" : p.status === "error" ? "bg-red-100 dark:bg-red-900/20 text-red-500 dark:text-red-400" : p.status === "running" ? "bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 animate-pulse" : "bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500"}`}>
                       {p.status === "done" ? "✓" : p.status === "error" ? "✗" : p.status === "running" ? "…" : "○"}
                     </span>
-                    <span className="text-gray-600">{tpl?.label ?? `Template ${p.template_number}`}</span>
-                    {p.status === "error" && <span className="text-xs text-red-400 truncate max-w-[200px]">{p.error}</span>}
-                    {p.status === "done" && p.image_urls && <span className="text-xs text-gray-400">{p.image_urls.length} images</span>}
+                    <span className="text-gray-600 dark:text-gray-300">{tpl?.label ?? `Template ${p.template_number}`}</span>
+                    {p.status === "error" && <span className="text-xs text-red-400 dark:text-red-500 truncate max-w-[200px]">{p.error}</span>}
+                    {p.status === "done" && p.image_urls && <span className="text-xs text-gray-400 dark:text-gray-500">{p.image_urls.length} images</span>}
                   </div>
                 );
               })}

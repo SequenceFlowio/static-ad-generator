@@ -93,18 +93,18 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
   const prompts = promptSet?.prompts_json?.prompts ?? [];
 
   return (
-    <div className={`rounded-xl border bg-white overflow-hidden ${!hasDna ? "opacity-50 pointer-events-none" : "border-gray-200"}`}>
+    <div className={`rounded-xl border bg-white dark:bg-gray-900 overflow-hidden ${!hasDna ? "opacity-50 pointer-events-none" : "border-gray-200 dark:border-gray-700"}`}>
       <button
         onClick={() => hasDna && setOpen((o) => !o)}
-        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 transition-colors"
+        className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
       >
         <div className="flex items-center gap-3">
-          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${promptSet ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 text-gray-500"}`}>
+          <span className={`inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${promptSet ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400"}`}>
             {promptSet ? "✓" : "2"}
           </span>
           <div>
             <p className="font-semibold text-sm">Phase 2 — Product & Prompts</p>
-            <p className="text-xs text-gray-400">
+            <p className="text-xs text-gray-400 dark:text-gray-500">
               {promptSet
                 ? `Prompts generated for "${promptSet.product_name}"`
                 : hasDna ? "Select or create a product, then generate prompts"
@@ -112,12 +112,12 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
             </p>
           </div>
         </div>
-        <span className="text-gray-300 text-sm">{open ? "▲" : "▼"}</span>
+        <span className="text-gray-300 dark:text-gray-600 text-sm">{open ? "▲" : "▼"}</span>
       </button>
 
       {open && hasDna && (
-        <div className="border-t border-gray-100 px-6 py-5 space-y-5">
-          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        <div className="border-t border-gray-100 dark:border-gray-700 px-6 py-5 space-y-5">
+          {error && <p className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
           {/* Product list */}
           <div>
@@ -133,20 +133,20 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
 
             {/* New product form */}
             {showNewProduct && (
-              <div className="mb-3 rounded-xl border border-dashed border-gray-300 p-4 space-y-2">
+              <div className="mb-3 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-4 space-y-2">
                 <input
                   type="text"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder="Product name (e.g. Cast Iron Skillet)"
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
                 />
                 <textarea
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   placeholder="Short product description (optional) — helps the AI write better copy"
                   rows={2}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 resize-none"
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30 resize-none"
                 />
                 <div className="flex gap-2">
                   <button
@@ -156,7 +156,7 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
                   >
                     Save Product
                   </button>
-                  <button onClick={() => setShowNewProduct(false)} className="text-xs text-gray-400 hover:text-gray-600">
+                  <button onClick={() => setShowNewProduct(false)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">
                     Cancel
                   </button>
                 </div>
@@ -164,24 +164,24 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
             )}
 
             {products.length === 0 && !showNewProduct && (
-              <p className="text-xs text-gray-400">No products yet. Create one above.</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">No products yet. Create one above.</p>
             )}
 
             <div className="space-y-2">
               {products.map((p) => (
                 <div
                   key={p.id}
-                  className={`rounded-xl border p-4 cursor-pointer transition-colors ${selectedProduct?.id === p.id ? "border-[#C7F56F] bg-[#C7F56F]/5" : "border-gray-200 hover:border-gray-300"}`}
+                  className={`rounded-xl border p-4 cursor-pointer transition-colors ${selectedProduct?.id === p.id ? "border-[#C7F56F] bg-[#C7F56F]/5" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}
                   onClick={() => setSelectedProduct(p)}
                 >
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="text-sm font-medium">{p.name}</p>
-                      {p.description && <p className="mt-0.5 text-xs text-gray-400">{p.description}</p>}
+                      {p.description && <p className="mt-0.5 text-xs text-gray-400 dark:text-gray-500">{p.description}</p>}
                     </div>
                     <div className="flex items-center gap-1">
                       {p.image_urls.length > 0 && (
-                        <span className="text-xs text-gray-400">{p.image_urls.length} img</span>
+                        <span className="text-xs text-gray-400 dark:text-gray-500">{p.image_urls.length} img</span>
                       )}
                       {selectedProduct?.id === p.id && (
                         <span className="ml-1 text-xs text-[#1a1a1a] font-medium">Selected</span>
@@ -191,12 +191,12 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
 
                   {/* Product images section (only for selected) */}
                   {selectedProduct?.id === p.id && (
-                    <div className="mt-3 border-t border-gray-100 pt-3" onClick={(e) => e.stopPropagation()}>
-                      <p className="mb-2 text-xs font-medium text-gray-500">Reference Images</p>
+                    <div className="mt-3 border-t border-gray-100 dark:border-gray-700 pt-3" onClick={(e) => e.stopPropagation()}>
+                      <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Reference Images</p>
                       {p.image_urls.length > 0 && (
                         <div className="mb-2 flex flex-wrap gap-2">
                           {p.image_urls.map((url, i) => (
-                            <img key={i} src={url} alt="" className="h-14 w-14 rounded-lg object-cover border border-gray-200" />
+                            <img key={i} src={url} alt="" className="h-14 w-14 rounded-lg object-cover border border-gray-200 dark:border-gray-700" />
                           ))}
                           <button
                             onClick={() => handleDeleteImages(p.id)}
@@ -217,7 +217,7 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
                       <button
                         onClick={() => fileInputRef.current?.click()}
                         disabled={uploading}
-                        className="rounded-lg border border-dashed border-gray-300 px-3 py-1.5 text-xs text-gray-500 hover:border-gray-400 disabled:opacity-50"
+                        className="rounded-lg border border-dashed border-gray-300 dark:border-gray-600 px-3 py-1.5 text-xs text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-50"
                       >
                         {uploading ? "Uploading…" : "+ Upload product images"}
                       </button>
@@ -244,32 +244,32 @@ export default function Phase2Prompts({ brandId, hasDna, initialPromptSet, onCom
           {/* Prompt previews */}
           {prompts.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400">Generated Prompts</p>
+              <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Generated Prompts</p>
               {prompts.map((p) => (
-                <div key={p.template_number} className="rounded-lg border border-gray-100 overflow-hidden">
+                <div key={p.template_number} className="rounded-lg border border-gray-100 dark:border-gray-700 overflow-hidden">
                   <button
                     onClick={() => setExpandedTemplate((t) => t === p.template_number ? null : p.template_number)}
-                    className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 text-sm"
+                    className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 dark:hover:bg-gray-800 text-sm"
                   >
                     <div className="flex items-center gap-3">
-                      <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-gray-100 text-xs font-mono font-semibold">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded bg-gray-100 dark:bg-gray-700 text-xs font-mono font-semibold">
                         {String(p.template_number).padStart(2, "0")}
                       </span>
                       <span className="font-medium capitalize">{p.template_name.replace(/-/g, " ")}</span>
-                      <span className="text-gray-400 text-xs">{p.aspect_ratio}</span>
+                      <span className="text-gray-400 dark:text-gray-500 text-xs">{p.aspect_ratio}</span>
                       {p.needs_product_images && (
-                        <span className="text-xs bg-blue-50 text-blue-600 rounded px-1.5 py-0.5">product ref</span>
+                        <span className="text-xs bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded px-1.5 py-0.5">product ref</span>
                       )}
                     </div>
-                    <span className="text-gray-300">{expandedTemplate === p.template_number ? "▲" : "▼"}</span>
+                    <span className="text-gray-300 dark:text-gray-600">{expandedTemplate === p.template_number ? "▲" : "▼"}</span>
                   </button>
                   {expandedTemplate === p.template_number && (
-                    <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                      <p className="text-xs leading-relaxed text-gray-600 whitespace-pre-wrap">{p.background_prompt}</p>
+                    <div className="border-t border-gray-100 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3">
+                      <p className="text-xs leading-relaxed text-gray-600 dark:text-gray-300 whitespace-pre-wrap">{p.background_prompt}</p>
                       {p.hook_variants?.length > 0 && (
                         <div className="mt-2 space-y-1">
                           {p.hook_variants.map((h, i) => (
-                            <p key={i} className="text-xs text-gray-500 pl-3 border-l-2 border-[#C7F56F]">{h}</p>
+                            <p key={i} className="text-xs text-gray-500 dark:text-gray-400 pl-3 border-l-2 border-[#C7F56F]">{h}</p>
                           ))}
                         </div>
                       )}

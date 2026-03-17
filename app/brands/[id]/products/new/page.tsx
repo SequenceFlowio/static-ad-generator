@@ -52,17 +52,17 @@ export default function NewProductPage() {
     router.push(`/brands/${brandId}/products/${data.id}`);
   }
 
-  const base = "w-full rounded-lg border border-gray-200 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
+  const base = "w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
 
   return (
     <div className="max-w-lg">
       {/* Breadcrumb */}
-      <div className="mb-6 flex items-center gap-2 text-sm text-gray-400">
-        <Link href="/" className="hover:text-gray-700">Brands</Link>
+      <div className="mb-6 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+        <Link href="/" className="hover:text-gray-700 dark:hover:text-gray-200">Brands</Link>
         <span>/</span>
-        <Link href={`/brands/${brandId}`} className="hover:text-gray-700">Brand</Link>
+        <Link href={`/brands/${brandId}`} className="hover:text-gray-700 dark:hover:text-gray-200">Brand</Link>
         <span>/</span>
-        <span className="text-gray-700 font-medium">New Product</span>
+        <span className="text-gray-700 dark:text-gray-200 font-medium">New Product</span>
       </div>
 
       <h1 className="mb-6 text-xl font-bold">Add Product</h1>
@@ -70,7 +70,7 @@ export default function NewProductPage() {
       <div className="space-y-5">
         {/* URL field with scrape */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Product URL</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Product URL</label>
           <div className="flex gap-2">
             <input
               type="url"
@@ -82,18 +82,18 @@ export default function NewProductPage() {
             <button
               onClick={handleScrape}
               disabled={scraping || !url.trim()}
-              className="rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-600 hover:bg-gray-200 disabled:opacity-50 whitespace-nowrap"
+              className="rounded-lg bg-gray-100 dark:bg-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 disabled:opacity-50 whitespace-nowrap"
             >
               {scraping ? "Scraping…" : "Auto-fill ▶"}
             </button>
           </div>
           {scrapeError && <p className="mt-1 text-xs text-red-500">{scrapeError}</p>}
-          <p className="mt-1 text-xs text-gray-400">Optional — paste the product page URL to auto-fill name and description.</p>
+          <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">Optional — paste the product page URL to auto-fill name and description.</p>
         </div>
 
         {/* Name */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
             Product Name <span className="text-red-400">*</span>
           </label>
           <input
@@ -107,7 +107,7 @@ export default function NewProductPage() {
 
         {/* Description */}
         <div>
-          <label className="mb-1 block text-sm font-medium text-gray-700">Description</label>
+          <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Description</label>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -117,12 +117,12 @@ export default function NewProductPage() {
           />
         </div>
 
-        {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
         <div className="flex gap-3 pt-2">
           <Link
             href={`/brands/${brandId}`}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50"
+            className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
             Cancel
           </Link>
