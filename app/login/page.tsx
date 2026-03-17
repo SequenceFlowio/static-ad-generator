@@ -5,16 +5,22 @@ import { getBrowserSupabase } from "@/lib/supabase";
 
 export default function LoginPage() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function signInWithGoogle() {
     setLoading(true);
+    setError(null);
     const supabase = getBrowserSupabase();
-    await supabase.auth.signInWithOAuth({
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
         redirectTo: `${window.location.origin}/auth/callback`,
       },
     });
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
   }
 
   return (
@@ -41,6 +47,10 @@ export default function LoginPage() {
           <p className="mb-6 text-sm text-gray-500 dark:text-gray-400 text-center">
             Static Ad Generator
           </p>
+
+          {error && (
+            <p className="mb-4 rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>
+          )}
 
           <button
             onClick={signInWithGoogle}

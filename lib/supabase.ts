@@ -16,10 +16,11 @@ export function getServerSupabase() {
 }
 
 // Browser client (anon key). Call only in client components.
+// Must use static string access — Next.js only inlines NEXT_PUBLIC_ vars when accessed literally.
 export function getBrowserSupabase() {
   return createClient(
-    requireEnv("NEXT_PUBLIC_SUPABASE_URL"),
-    requireEnv("NEXT_PUBLIC_SUPABASE_ANON_KEY")
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 }
 
