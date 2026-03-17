@@ -42,10 +42,10 @@ export default function LoginPage() {
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/30 to-transparent" />
           {/* Headline */}
           <div className="absolute top-7 left-7 right-7">
-            <p className="text-white text-3xl font-bold leading-[1.1]">
+            <p className="text-white text-5xl font-bold leading-[1.05]">
               Stop settling<br />for generic ads
             </p>
-            <p className="mt-1.5 text-white/75 text-lg italic leading-[1.15]">
+            <p className="mt-2 text-white/75 text-2xl italic leading-[1.1]">
               Generate ads that<br />actually convert
             </p>
           </div>
@@ -53,20 +53,19 @@ export default function LoginPage() {
 
         {/* Right — form */}
         <div className="flex-1 flex flex-col justify-center px-10 py-10">
-          {/* Logo */}
+          {/* Logo + heading block */}
           <div className="mb-7">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-black.png" alt="SequenceFlow" className="h-28 w-auto dark:hidden" />
+            <img src="/logo-black.png" alt="SequenceFlow" className="h-28 w-auto dark:hidden mb-3" />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo-white.png" alt="SequenceFlow" className="h-28 w-auto hidden dark:block" />
+            <img src="/logo-white.png" alt="SequenceFlow" className="h-28 w-auto hidden dark:block mb-3" />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              Create Your Account
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+              Join SequenceFlow and start generating ads that actually convert.
+            </p>
           </div>
-
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
-            Create Your Account
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-7 leading-relaxed">
-            Join SequenceFlow and start generating ads that actually convert.
-          </p>
 
           {error && (
             <div className="mb-4 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
