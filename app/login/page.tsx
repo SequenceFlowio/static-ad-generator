@@ -36,11 +36,11 @@ export default function LoginPage() {
 
         {/* Heading */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight">
-            Log in to your account.
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight leading-snug">
+            Your next best-performing ad starts here.
           </h1>
-          <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-            Sign in with Google to access the ad generator.
+          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            Turn your brand into scroll-stopping static ads in minutes — no designer needed.
           </p>
         </div>
 
