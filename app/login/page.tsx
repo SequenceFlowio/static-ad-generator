@@ -26,8 +26,8 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex">
-      {/* Left — login */}
-      <div className="flex flex-col justify-center w-full max-w-md px-10 py-12 bg-white dark:bg-gray-900">
+      {/* Left — 50% */}
+      <div className="flex flex-col justify-center w-1/2 px-16 py-12 bg-white dark:bg-gray-900">
         {/* Logo */}
         <div className="mb-12">
           <img src="/logo-black.png" alt="SequenceFlow" className="h-10 w-auto dark:hidden" />
@@ -36,11 +36,13 @@ export default function LoginPage() {
 
         {/* Heading */}
         <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white tracking-tight leading-snug">
-            Your next best-performing ad starts here.
+          <h1 className="text-4xl font-bold text-gray-900 dark:text-white tracking-tight leading-tight">
+            Your next{" "}
+            <span className="italic font-semibold text-[#C7F56F]">best-performing</span>
+            {" "}ad starts here.
           </h1>
-          <p className="mt-3 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-            Turn your brand into scroll-stopping static ads in minutes — no designer needed.
+          <p className="mt-4 text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+            Turn your brand into scroll-stopping static ads in minutes.
           </p>
         </div>
 
@@ -67,21 +69,17 @@ export default function LoginPage() {
         </button>
       </div>
 
-      {/* Right — showcase image */}
-      <div className="hidden lg:flex flex-1 relative bg-gray-100 dark:bg-gray-800">
-        <Image
-          src="/Stop settling for generic ads, generate ads that actually convert.jpg"
-          alt="Ad example"
-          fill
-          className="object-cover object-center"
-          priority
-          unoptimized
-        />
-        {/* Subtle gradient overlay at bottom */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
-        <div className="absolute bottom-8 left-8 right-8">
-          <p className="text-white text-lg font-semibold leading-snug drop-shadow">Generate ads that actually convert.</p>
-          <p className="text-white/70 text-sm mt-1 drop-shadow">Powered by SequenceFlow</p>
+      {/* Right — 50%, image floating with whitespace */}
+      <div className="hidden lg:flex w-1/2 items-center justify-center bg-gray-50 dark:bg-gray-800">
+        <div className="relative w-[65%] aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl">
+          <Image
+            src="/Stop settling for generic ads, generate ads that actually convert.jpg"
+            alt="Ad example"
+            fill
+            className="object-cover object-center"
+            priority
+            unoptimized
+          />
         </div>
       </div>
     </div>
