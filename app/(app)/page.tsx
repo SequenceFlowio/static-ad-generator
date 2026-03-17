@@ -85,7 +85,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Brands</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            Each brand runs the 3-phase ad pipeline independently.
+            Select a brand to generate ads, or add a new one.
           </p>
         </div>
         <Link
