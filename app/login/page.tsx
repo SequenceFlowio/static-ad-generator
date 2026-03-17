@@ -30,8 +30,8 @@ export default function LoginPage() {
       <div className="flex flex-col justify-center w-1/2 px-16 py-12 bg-white dark:bg-gray-900">
         {/* Logo */}
         <div className="mb-12">
-          <img src="/logo-black.png" alt="SequenceFlow" className="h-10 w-auto dark:hidden" />
-          <img src="/logo-white.png" alt="SequenceFlow" className="h-10 w-auto hidden dark:block" />
+          <img src="/logo-black.png" alt="SequenceFlow" className="h-32 w-auto dark:hidden" />
+          <img src="/logo-white.png" alt="SequenceFlow" className="h-32 w-auto hidden dark:block" />
         </div>
 
         {/* Heading */}
@@ -57,7 +57,7 @@ export default function LoginPage() {
         <button
           onClick={signInWithGoogle}
           disabled={loading}
-          className="flex w-full items-center justify-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3.5 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 shadow-sm"
+          className="inline-flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-5 py-3 text-sm font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 shadow-sm"
         >
           <svg className="h-5 w-5 flex-shrink-0" viewBox="0 0 24 24">
             <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -71,9 +71,9 @@ export default function LoginPage() {
 
       {/* Right — 50%, image floating with whitespace */}
       <div className="hidden lg:flex w-1/2 items-center justify-center bg-gray-50 dark:bg-gray-800">
-        <div className="relative w-[65%] aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl">
+        <div className="relative w-[50%] aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl">
           <Image
-            src="/Stop settling for generic ads, generate ads that actually convert.jpg"
+            src="/Generate ads that actually convert.jpg"
             alt="Ad example"
             fill
             className="object-cover object-center"
