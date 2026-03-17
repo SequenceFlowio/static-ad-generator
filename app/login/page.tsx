@@ -52,7 +52,7 @@ export default function LoginPage() {
         </div>
 
         {/* Right — form */}
-        <div className="relative flex-1 flex flex-col justify-center px-10 py-10">
+        <div className="relative flex-1 flex flex-col justify-center px-10 py-10 pt-28">
           {/* Logo — top-right corner */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-black.png" alt="SequenceFlow" className="absolute top-6 right-8 h-20 w-auto dark:hidden" />
