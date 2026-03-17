@@ -1,10 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { getBrowserSupabase } from "@/lib/supabase";
 
 export default function Header() {
   const [dark, setDark] = useState(false);
+  const router = useRouter();
 
   useEffect(() => {
     const saved = localStorage.getItem("theme");
@@ -13,6 +16,12 @@ export default function Header() {
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
   }, []);
+
+  async function handleSignOut() {
+    const supabase = getBrowserSupabase();
+    await supabase.auth.signOut();
+    router.push("/login");
+  }
 
   function toggleTheme() {
     const next = !dark;
@@ -33,6 +42,7 @@ export default function Header() {
           />
         </Link>
 
+        <div className="flex items-center gap-2">
         <button
           onClick={toggleTheme}
           className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
@@ -54,6 +64,13 @@ export default function Header() {
             </>
           )}
         </button>
+        <button
+          onClick={handleSignOut}
+          className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+        >
+          Sign out
+        </button>
+        </div>
       </div>
     </header>
   );
