@@ -16,6 +16,7 @@ interface ContentSession {
   created_at: string;
 }
 
+
 interface Props {
   brandId: string;
   brandDna: BrandDnaData | null;

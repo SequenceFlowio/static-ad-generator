@@ -8,6 +8,7 @@ interface ContentSession {
   platform: string;
   caption: string | null;
   image_url: string | null;
+  image_prompt: string | null;
   status: string;
   created_at: string;
 }
