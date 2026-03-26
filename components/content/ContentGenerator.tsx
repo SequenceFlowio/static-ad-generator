@@ -14,6 +14,7 @@ interface ContentSession {
   image_url: string | null;
   image_prompt: string | null;
   status: string;
+  created_at: string;
 }
 
 interface Props {

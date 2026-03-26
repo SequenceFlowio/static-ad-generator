@@ -111,7 +111,7 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
     }
 
     setGenerating(false);
-  }, [brandId, promptSet, selectedTemplates, resolution, numImages]);
+  }, [brandId, promptSet, selectedTemplates, resolution, numImages, selectedInspo]);
 
   return (
     <div className={`rounded-xl border bg-white dark:bg-gray-900 overflow-hidden ${!hasPromptSet ? "opacity-50 pointer-events-none" : "border-gray-200 dark:border-gray-700"}`}>
