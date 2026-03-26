@@ -6,6 +6,8 @@ import Link from "next/link";
 import Phase1Research from "@/components/pipeline/Phase1Research";
 import BrandDnaCard from "@/components/BrandDnaCard";
 import BrandDnaForm from "@/components/BrandDnaForm";
+import InspoLibrary from "@/components/InspoLibrary";
+import ContentGrid from "@/components/content/ContentGrid";
 import type { Brand, BrandDna, BrandDnaData, Product } from "@/types";
 
 export default function BrandPage() {
@@ -173,10 +175,10 @@ export default function BrandPage() {
         )}
       </section>
 
-      {/* Products */}
+      {/* Ad Generator */}
       <section>
         <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Products</h2>
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Ad Generator</h2>
           <Link href={`/brands/${id}/gallery`} className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-xs font-semibold text-[#C7F56F] hover:bg-black transition-colors">
             View Gallery →
           </Link>
@@ -219,6 +221,21 @@ export default function BrandPage() {
             <span className="text-sm font-medium">Add Product</span>
           </Link>
         </div>
+      </section>
+      {/* Inspo Library */}
+      <section className="mt-10">
+        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Inspo Library</h2>
+        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 space-y-6">
+          <InspoLibrary brandId={id} type="ad" label="Ad Inspo (used during ad generation)" />
+          <div className="border-t border-gray-100 dark:border-gray-800" />
+          <InspoLibrary brandId={id} type="content" label="Content Inspo (used during content generation)" />
+        </div>
+      </section>
+
+      {/* Content Generator */}
+      <section className="mt-10">
+        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Content Generator</h2>
+        <ContentGrid brandId={id} brandDna={dna?.data ?? null} products={products} />
       </section>
     </div>
   );

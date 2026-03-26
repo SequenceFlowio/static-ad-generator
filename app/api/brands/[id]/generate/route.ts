@@ -13,7 +13,8 @@ async function runGeneration(
   productImageUrls: string[],
   resolution: string,
   model: KieModel,
-  aspectRatioOverride?: string
+  aspectRatioOverride?: string,
+  inspoImageUrl?: string | null
 ) {
   const db = getServerSupabase();
   for (const promptItem of prompts) {
@@ -28,6 +29,7 @@ async function runGeneration(
       if (promptItem.needs_product_images && productImageUrls.length > 0) {
         refImages.push(...productImageUrls);
       }
+      if (inspoImageUrl) refImages.push(inspoImageUrl);
 
       const aspectRatio = aspectRatioOverride ?? promptItem.aspect_ratio;
 
@@ -74,7 +76,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio } = body;
+  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio, inspo_image_url } = body as GenerateRequest & { inspo_image_url?: string | null };
 
   const db = getServerSupabase();
 
@@ -141,7 +143,7 @@ export async function POST(
   }
 
   // Fire off generation in the background — response returns immediately
-  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model, aspect_ratio).catch(
+  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model, aspect_ratio, inspo_image_url).catch(
     (err) => console.error("runGeneration error:", err)
   );
 

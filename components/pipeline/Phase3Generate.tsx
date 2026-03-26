@@ -2,6 +2,7 @@
 
 import { useCallback, useState } from "react";
 import Link from "next/link";
+import InspoPicker from "@/components/InspoPicker";
 import type { PromptSet, SseEvent, Resolution } from "@/types";
 
 const TEMPLATES = [
@@ -28,6 +29,7 @@ interface TemplateProgress {
 interface Props {
   brandId: string;
   promptSet: PromptSet | null;
+  inspoImageUrl?: string | null;
 }
 
 export default function Phase3Generate({ brandId, promptSet }: Props) {
@@ -39,6 +41,7 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
   const [progress, setProgress] = useState<TemplateProgress[]>([]);
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState("");
+  const [selectedInspo, setSelectedInspo] = useState<string | null>(null);
 
   const hasPromptSet = !!promptSet;
 
@@ -64,6 +67,7 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
         resolution,
         num_images: numImages,
         prompt_set_id: promptSet.id,
+        inspo_image_url: selectedInspo,
       }),
     });
 
@@ -185,6 +189,9 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
               </span>
             </div>
           </div>
+
+          {/* Ad inspo style reference */}
+          <InspoPicker brandId={brandId} type="ad" selected={selectedInspo} onSelect={setSelectedInspo} />
 
           {error && <p className="rounded-lg bg-red-50 dark:bg-red-900/20 px-3 py-2 text-sm text-red-600 dark:text-red-400">{error}</p>}
 
