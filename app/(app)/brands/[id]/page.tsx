@@ -24,6 +24,7 @@ export default function BrandPage() {
   const [savingDna, setSavingDna] = useState(false);
   const [reSearching, setReSearching] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [mode, setMode] = useState<"ads" | "content" | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -175,68 +176,124 @@ export default function BrandPage() {
         )}
       </section>
 
-      {/* Ad Generator */}
-      <section>
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Ad Generator</h2>
-          <Link href={`/brands/${id}/gallery`} className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-xs font-semibold text-[#C7F56F] hover:bg-black transition-colors">
-            View Gallery →
-          </Link>
-        </div>
-        {!dna && (
-          <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">Complete Brand DNA first to enable product generation.</p>
-        )}
+      {/* Mode selector */}
+      {dna && !mode && (
+        <section>
+          <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">What do you want to create?</h2>
+          <div className="grid grid-cols-2 gap-4">
+            <button
+              onClick={() => setMode("ads")}
+              className="group rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-left hover:border-[#C7F56F] hover:shadow-sm transition-all"
+            >
+              <div className="mb-3 text-3xl">🎯</div>
+              <p className="text-base font-bold text-gray-900 dark:text-white mb-1">Generate Ads</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 leading-relaxed">Product-based static ad creatives — headlines, offers, testimonials, UGC.</p>
+              <p className="mt-4 text-xs font-semibold text-[#C7F56F]">Select →</p>
+            </button>
+            <button
+              onClick={() => setMode("content")}
+              className="group rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6 text-left hover:border-[#C7F56F] hover:shadow-sm transition-all"
+            >
+              <div className="mb-3 text-3xl">📱</div>
+              <p className="text-base font-bold text-gray-900 dark:text-white mb-1">Generate Social Content</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 leading-relaxed">Brand-level social posts — tips, stories, lifestyle, behind the scenes.</p>
+              <p className="mt-4 text-xs font-semibold text-[#C7F56F]">Select →</p>
+            </button>
+          </div>
+        </section>
+      )}
 
-        <div className={`grid gap-4 sm:grid-cols-2 lg:grid-cols-3 ${!dna ? "opacity-50 pointer-events-none" : ""}`}>
-          {products.map((product) => (
-            <div key={product.id} className="group relative">
-              <Link
-                href={`/brands/${id}/products/${product.id}`}
-                className="block rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
-              >
-                <p className="font-semibold text-sm">{product.name}</p>
-                {product.description && (
-                  <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{product.description}</p>
-                )}
-                {product.url && (
-                  <p className="mt-1 text-xs text-gray-300 dark:text-gray-600 truncate">{product.url}</p>
-                )}
-                <p className="mt-3 text-xs text-[#C7F56F] font-medium">Generate ads →</p>
-              </Link>
-              <button
-                onClick={(e) => { e.preventDefault(); handleDeleteProduct(product.id); }}
-                disabled={deletingProductId === product.id}
-                className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50"
-              >
-                {deletingProductId === product.id ? "…" : "Delete"}
-              </button>
+      {/* No DNA yet — prompt to complete it first */}
+      {!dna && (
+        <section>
+          <div className="grid grid-cols-2 gap-4 opacity-40 pointer-events-none">
+            <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+              <div className="mb-3 text-3xl">🎯</div>
+              <p className="text-base font-bold text-gray-900 dark:text-white mb-1">Generate Ads</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Complete Brand DNA first.</p>
             </div>
-          ))}
+            <div className="rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
+              <div className="mb-3 text-3xl">📱</div>
+              <p className="text-base font-bold text-gray-900 dark:text-white mb-1">Generate Social Content</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500">Complete Brand DNA first.</p>
+            </div>
+          </div>
+        </section>
+      )}
 
-          <Link
-            href={`/brands/${id}/products/new`}
-            className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 p-5 hover:border-[#C7F56F] transition-all flex flex-col items-center justify-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 min-h-[100px]"
-          >
-            <span className="text-2xl font-light">+</span>
-            <span className="text-sm font-medium">Add Product</span>
-          </Link>
-        </div>
-      </section>
-      {/* Inspo Library */}
-      <section className="mt-10">
-        <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Inspo Library</h2>
-        <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 space-y-6">
-          <InspoLibrary brandId={id} type="ad" label="Ad Inspo (used during ad generation)" />
-          <div className="border-t border-gray-100 dark:border-gray-800" />
-          <InspoLibrary brandId={id} type="content" label="Content Inspo (used during content generation)" />
-        </div>
-      </section>
+      {/* Ad Generator mode */}
+      {mode === "ads" && (
+        <section>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setMode(null)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">← Back</button>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Ad Generator</h2>
+            </div>
+            <Link href={`/brands/${id}/gallery`} className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-xs font-semibold text-[#C7F56F] hover:bg-black transition-colors">
+              View Gallery →
+            </Link>
+          </div>
 
-      {/* Content Generator */}
-      <section className="mt-10">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Content Generator</h2>
-        <ContentGrid brandId={id} brandDna={dna?.data ?? null} products={products} />
-      </section>
+          {/* Products */}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
+            {products.map((product) => (
+              <div key={product.id} className="group relative">
+                <Link
+                  href={`/brands/${id}/products/${product.id}`}
+                  className="block rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5 hover:border-[#C7F56F] hover:shadow-sm transition-all"
+                >
+                  <p className="font-semibold text-sm">{product.name}</p>
+                  {product.description && (
+                    <p className="mt-1 text-xs text-gray-400 dark:text-gray-500 line-clamp-2">{product.description}</p>
+                  )}
+                  {product.url && (
+                    <p className="mt-1 text-xs text-gray-300 dark:text-gray-600 truncate">{product.url}</p>
+                  )}
+                  <p className="mt-3 text-xs text-[#C7F56F] font-medium">Generate ads →</p>
+                </Link>
+                <button
+                  onClick={(e) => { e.preventDefault(); handleDeleteProduct(product.id); }}
+                  disabled={deletingProductId === product.id}
+                  className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg bg-red-50 dark:bg-red-900/20 px-2 py-1 text-xs text-red-500 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/30 disabled:opacity-50"
+                >
+                  {deletingProductId === product.id ? "…" : "Delete"}
+                </button>
+              </div>
+            ))}
+            <Link
+              href={`/brands/${id}/products/new`}
+              className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 p-5 hover:border-[#C7F56F] transition-all flex flex-col items-center justify-center gap-1 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300 min-h-[100px]"
+            >
+              <span className="text-2xl font-light">+</span>
+              <span className="text-sm font-medium">Add Product</span>
+            </Link>
+          </div>
+
+          {/* Ad Inspo */}
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Ad Inspo Library</h3>
+            <InspoLibrary brandId={id} type="ad" label="Reference images used as style guide during ad generation (max 20)" />
+          </div>
+        </section>
+      )}
+
+      {/* Content Generator mode */}
+      {mode === "content" && (
+        <section>
+          <div className="mb-4 flex items-center gap-3">
+            <button onClick={() => setMode(null)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">← Back</button>
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Social Content Generator</h2>
+          </div>
+
+          <ContentGrid brandId={id} brandDna={dna?.data ?? null} products={products} />
+
+          {/* Content Inspo */}
+          <div className="mt-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+            <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Content Inspo Library</h3>
+            <InspoLibrary brandId={id} type="content" label="Reference images used as style guide during content generation (max 20)" />
+          </div>
+        </section>
+      )}
     </div>
   );
 }
