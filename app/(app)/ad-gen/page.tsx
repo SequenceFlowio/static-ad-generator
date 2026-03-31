@@ -18,7 +18,7 @@ export default function AdGenPage() {
         setBrands(list);
         // Auto-redirect if exactly 1 store
         if (list.length === 1) {
-          router.replace(`/brands/${list[0].id}?mode=ads`);
+          router.replace(`/brands/${list[0].id}/ads`);
         } else {
           setLoading(false);
         }
@@ -48,7 +48,7 @@ export default function AdGenPage() {
         {brands.map((brand) => (
           <Link
             key={brand.id}
-            href={`/brands/${brand.id}?mode=ads`}
+            href={`/brands/${brand.id}/ads`}
             className="flex items-center gap-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-5 py-4 hover:border-[#C7F56F] hover:shadow-sm transition-all"
           >
             <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-[#C7F56F]/15 text-lg font-bold text-gray-700 dark:text-gray-200">

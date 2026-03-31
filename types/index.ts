@@ -107,18 +107,21 @@ export const MODEL_CONFIGS: Record<KieModel, {
   description: string;
   resolutions: Resolution[];
   costPerImage: Record<string, number>;
+  creditsPerImage: number;
 }> = {
   "nano-banana-2": {
-    label: "Nano Banana 2",
-    description: "Fast · Structured commercial design",
+    label: "Quality",
+    description: "Best results · Structured commercial design",
     resolutions: ["1K", "2K", "4K"],
     costPerImage: { "1K": 0.04, "2K": 0.06, "4K": 0.09 },
+    creditsPerImage: 2,
   },
   "seedream/4.5-edit": {
-    label: "Seedream 4.5",
-    description: "Premium · Superior text & spatial accuracy",
+    label: "Fast & Efficient",
+    description: "Quick results · Great for volume generation",
     resolutions: ["2K", "4K"],
     costPerImage: { "2K": 0.0325, "4K": 0.0325 },
+    creditsPerImage: 1,
   },
 };
 

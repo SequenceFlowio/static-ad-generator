@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
+import PricingModal from "@/components/PricingModal";
 
 const NAV_ITEMS = [
   {
@@ -51,7 +52,7 @@ const BOTTOM_LINKS = [
   { label: "Support", href: "#" },
 ];
 
-function SettingsModal({ onClose }: { onClose: () => void }) {
+function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
   const [tab, setTab] = useState<"profile" | "billing">("profile");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -149,7 +150,7 @@ function SettingsModal({ onClose }: { onClose: () => void }) {
                     </div>
                     <p className="text-xl font-bold text-gray-900 dark:text-white">$0<span className="text-sm font-normal text-gray-400 dark:text-gray-500">/mo</span></p>
                   </div>
-                  <button className="w-full rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+                  <button onClick={() => { onClose(); onUpgrade(); }} className="w-full rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
                     Upgrade Plan
                   </button>
                 </div>
@@ -180,6 +181,7 @@ export default function Sidebar() {
   const [userEmail, setUserEmail] = useState<string | null>(null);
   const [userPopover, setUserPopover] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [showPricing, setShowPricing] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -219,6 +221,15 @@ export default function Sidebar() {
 
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
+    if (href === "/stores") {
+      if (pathname.startsWith("/stores")) return true;
+      if (pathname.startsWith("/brands/")) {
+        return !pathname.match(/\/brands\/[^/]+\/ads/) && !pathname.match(/\/brands\/[^/]+\/content($|\/)/);
+      }
+      return false;
+    }
+    if (href === "/ad-gen") return pathname.startsWith("/ad-gen") || !!pathname.match(/\/brands\/[^/]+\/ads/);
+    if (href === "/content-gen") return pathname.startsWith("/content-gen") || !!pathname.match(/\/brands\/[^/]+\/content($|\/)/);
     return pathname.startsWith(href);
   }
 
@@ -236,7 +247,7 @@ export default function Sidebar() {
             <img
               src={dark ? "/logo-white.png" : "/logo-black.png"}
               alt="SequenceFlow"
-              className="h-7 w-auto"
+              className="h-10 w-auto"
             />
           </Link>
         </div>
@@ -249,15 +260,32 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
                 isActive(item.href)
-                  ? "bg-[#C7F56F]/15 text-gray-900 dark:text-white font-medium"
+                  ? "bg-[#C7F56F] text-[#1a1a1a] font-semibold"
                   : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
               }`}
             >
-              <span className={isActive(item.href) ? "text-[#1a1a1a] dark:text-[#C7F56F]" : ""}>{item.icon}</span>
+              <span className={isActive(item.href) ? "text-[#1a1a1a]" : ""}>{item.icon}</span>
               {item.label}
             </Link>
           ))}
         </nav>
+
+        {/* Upgrade CTA */}
+        <div className="px-3 pb-3">
+          <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 p-3.5">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-bold text-gray-900 dark:text-white">Upgrade to Pro</p>
+              <span className="rounded-full bg-[#C7F56F] px-2 py-0.5 text-[9px] font-bold text-[#1a1a1a]">20% OFF</span>
+            </div>
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2.5 leading-relaxed">Unlock 3 stores, 2K generations & batch mode.</p>
+            <button
+              onClick={() => setShowPricing(true)}
+              className="w-full rounded-lg bg-[#C7F56F] py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors"
+            >
+              See plans →
+            </button>
+          </div>
+        </div>
 
         {/* Bottom section */}
         <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-3 space-y-0.5">
@@ -342,7 +370,8 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onUpgrade={() => setShowPricing(true)} />}
+      {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
     </>
   );
 }

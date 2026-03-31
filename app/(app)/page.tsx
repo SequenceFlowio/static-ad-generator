@@ -16,18 +16,18 @@ export default function HomePage() {
   return (
     <div>
       {/* Hero */}
-      <section className="mb-14 pt-4">
-        <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#C7F56F]/30 bg-[#C7F56F]/10 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300">
+      <section className="mb-14 pt-8 text-center flex flex-col items-center">
+        <div className="mb-4 inline-flex items-center gap-2 rounded-full border border-[#C7F56F]/30 bg-[#C7F56F]/10 px-3 py-1 text-xs font-medium text-gray-600 dark:text-gray-300">
           <span className="h-1.5 w-1.5 rounded-full bg-[#C7F56F]" />
           Powered by your Brand DNA
         </div>
-        <h1 className="mt-3 text-4xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight">
+        <h1 className="mt-2 text-4xl font-bold tracking-tight text-gray-900 dark:text-white leading-tight max-w-xl">
           Create on-brand ads &amp; content<br />in minutes
         </h1>
-        <p className="mt-3 max-w-lg text-base text-gray-500 dark:text-gray-400">
+        <p className="mt-4 max-w-md text-base text-gray-500 dark:text-gray-400">
           Train the AI on your brand once. Generate unlimited ads and social content that actually sound and look like you.
         </p>
-        <div className="mt-6 flex items-center gap-3">
+        <div className="mt-6 flex items-center justify-center gap-3">
           <Link
             href="/stores"
             className="rounded-lg bg-[#C7F56F] px-5 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors"
