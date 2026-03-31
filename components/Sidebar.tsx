@@ -176,9 +176,13 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const TRIAL_DAYS = 7;
+  const WHITELISTED_EMAILS = ["sequenceflownl@gmail.com"];
+
   const [dark, setDark] = useState(false);
   const [userName, setUserName] = useState<string | null>(null);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [trialDaysLeft, setTrialDaysLeft] = useState<number | null>(null);
   const [userPopover, setUserPopover] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
@@ -192,8 +196,16 @@ export default function Sidebar() {
     document.documentElement.classList.toggle("dark", isDark);
 
     getBrowserSupabase().auth.getUser().then(({ data: { user } }) => {
-      setUserName(user?.user_metadata?.full_name ?? user?.email ?? null);
-      setUserEmail(user?.email ?? null);
+      const email = user?.email ?? null;
+      setUserName(user?.user_metadata?.full_name ?? email ?? null);
+      setUserEmail(email);
+      // Trial countdown — skip for whitelisted accounts
+      if (user?.created_at && email && !WHITELISTED_EMAILS.includes(email)) {
+        const daysElapsed = Math.floor(
+          (Date.now() - new Date(user.created_at).getTime()) / (1000 * 60 * 60 * 24)
+        );
+        setTrialDaysLeft(Math.max(0, TRIAL_DAYS - daysElapsed));
+      }
     });
   }, []);
 
@@ -241,7 +253,7 @@ export default function Sidebar() {
     <>
       <aside className="fixed left-0 top-0 z-30 flex h-screen w-[240px] flex-col border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-[#111]">
         {/* Logo */}
-        <div className="px-5 py-5 border-b border-gray-100 dark:border-gray-800">
+        <div className="px-4 py-2 border-b border-gray-100 dark:border-gray-800">
           <Link href="/" className="flex items-center gap-2.5">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -271,7 +283,7 @@ export default function Sidebar() {
         </nav>
 
         {/* Upgrade CTA */}
-        <div className="px-3 pb-3">
+        <div className="px-3 pb-3 space-y-2">
           <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 p-3.5">
             <div className="mb-2">
               <p className="text-xs font-bold text-gray-900 dark:text-white">Upgrade to Pro</p>
@@ -284,6 +296,51 @@ export default function Sidebar() {
               See plans →
             </button>
           </div>
+
+          {/* Trial countdown */}
+          {trialDaysLeft !== null && (
+            <div className={`rounded-xl border p-3 ${
+              trialDaysLeft === 0
+                ? "border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-900/20"
+                : trialDaysLeft <= 2
+                ? "border-amber-200 dark:border-amber-900/30 bg-amber-50 dark:bg-amber-900/20"
+                : "border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900"
+            }`}>
+              <div className="flex items-center justify-between mb-2">
+                <p className={`text-[10px] font-semibold uppercase tracking-wider ${
+                  trialDaysLeft === 0 ? "text-red-500 dark:text-red-400"
+                  : trialDaysLeft <= 2 ? "text-amber-600 dark:text-amber-400"
+                  : "text-gray-400 dark:text-gray-500"
+                }`}>
+                  Free Trial
+                </p>
+                <p className={`text-[10px] font-bold ${
+                  trialDaysLeft === 0 ? "text-red-500 dark:text-red-400"
+                  : trialDaysLeft <= 2 ? "text-amber-600 dark:text-amber-400"
+                  : "text-gray-600 dark:text-gray-300"
+                }`}>
+                  {trialDaysLeft === 0 ? "Expired" : `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left`}
+                </p>
+              </div>
+              {/* Progress bar */}
+              <div className="h-1.5 w-full rounded-full bg-gray-200 dark:bg-gray-700 overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    trialDaysLeft === 0 ? "bg-red-400"
+                    : trialDaysLeft <= 2 ? "bg-amber-400"
+                    : "bg-[#C7F56F]"
+                  }`}
+                  style={{ width: `${Math.round((trialDaysLeft / TRIAL_DAYS) * 100)}%` }}
+                />
+              </div>
+              {trialDaysLeft === 0 && (
+                <button onClick={() => setShowPricing(true)}
+                  className="mt-2 w-full rounded-lg bg-red-500 py-1.5 text-[10px] font-semibold text-white hover:bg-red-600 transition-colors">
+                  Upgrade to continue →
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Bottom section */}
