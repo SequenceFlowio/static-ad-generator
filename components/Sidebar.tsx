@@ -259,7 +259,7 @@ export default function Sidebar() {
             <img
               src={dark ? "/logo-white.png" : "/logo-black.png"}
               alt="SequenceFlow"
-              className="h-[120px] w-auto"
+              className="h-12 w-auto"
             />
           </Link>
         </div>
