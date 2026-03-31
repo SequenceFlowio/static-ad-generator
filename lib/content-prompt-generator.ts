@@ -59,6 +59,8 @@ export async function generateContentPost({
   productDescription,
   topicHint,
   selectedDesire,
+  variationIndex,
+  totalCount,
 }: {
   brandDna: BrandDnaData;
   templateName: string;
@@ -67,6 +69,8 @@ export async function generateContentPost({
   productDescription?: string | null;
   topicHint?: string | null;
   selectedDesire?: string | null;
+  variationIndex?: number;
+  totalCount?: number;
 }): Promise<ContentGenerationResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -127,7 +131,11 @@ ${topicHint ? `\nTopic / Angle hint from user: ${topicHint}` : ""}
 
 ---
 
-Generate the image_prompt and caption. The image_prompt must reflect the brand visual system (fonts, colors described visually). The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.`;
+Generate the image_prompt and caption. The image_prompt must reflect the brand visual system (fonts, colors described visually). The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
+    totalCount && totalCount > 1
+      ? `\n\nThis is variation ${(variationIndex ?? 0) + 1} of ${totalCount}. Generate a DISTINCT angle, opening hook, and visual direction from the other variations. Do not repeat concepts, hooks, or visual scenes.`
+      : ""
+  }`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",

@@ -8,15 +8,34 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const { product_id, num_variants = 2, hook_intent = null, background_intent = null, template_numbers = [], awareness_level = "problem-aware", selected_desire = null } = await req.json();
+  const body = await req.json();
+  const {
+    product_id: singleProductId,
+    product_ids: multiProductIds,
+    num_variants = 2,
+    hook_intent = null,
+    background_intent = null,
+    template_numbers = [],
+    awareness_level = "problem-aware",
+    selected_desire = null,
+  } = body;
 
-  if (!product_id) {
-    return NextResponse.json({ error: "product_id is required" }, { status: 400 });
+  // Support both single product_id (legacy) and product_ids array
+  const productIdList: string[] = multiProductIds?.length
+    ? multiProductIds
+    : singleProductId
+    ? [singleProductId]
+    : [];
+
+  if (productIdList.length === 0) {
+    return NextResponse.json({ error: "product_id or product_ids is required" }, { status: 400 });
   }
+
+  const primaryProductId = productIdList[0];
 
   const db = getServerSupabase();
 
-  const [brandRes, dnaRes, productRes] = await Promise.all([
+  const [brandRes, dnaRes] = await Promise.all([
     db.from("brands").select("*").eq("id", id).single(),
     db
       .from("brand_dna")
@@ -25,7 +44,6 @@ export async function POST(
       .order("generated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
-    db.from("products").select("*").eq("id", product_id).single(),
   ]);
 
   if (brandRes.error || !brandRes.data) {
@@ -34,17 +52,30 @@ export async function POST(
   if (!dnaRes.data) {
     return NextResponse.json({ error: "Brand DNA not found. Complete Phase 1 first." }, { status: 400 });
   }
-  if (productRes.error || !productRes.data) {
-    return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
+  // Load all selected products
+  const { data: productsData, error: productsErr } = await db
+    .from("products")
+    .select("*")
+    .in("id", productIdList);
+
+  if (productsErr || !productsData || productsData.length === 0) {
+    return NextResponse.json({ error: "Products not found" }, { status: 404 });
   }
 
-  const product = productRes.data;
+  // Combine product names + descriptions for multi-product prompt
+  const primaryProduct = productsData.find((p) => p.id === primaryProductId) ?? productsData[0];
+  const combinedProductName = productsData.map((p) => p.name).join(", ");
+  const combinedProductDescription = productsData
+    .map((p) => `${p.name}: ${p.description ?? ""}`)
+    .filter((s) => s.trim().length > 1)
+    .join("\n\n");
 
   try {
     const promptsJson = await generatePrompts(
       dnaRes.data.data,
-      product.name,
-      product.description,
+      combinedProductName,
+      combinedProductDescription || primaryProduct.description,
       brandRes.data.name,
       num_variants,
       hook_intent,
@@ -64,8 +95,8 @@ export async function POST(
       .from("prompt_sets")
       .insert({
         brand_id: id,
-        product_id,
-        product_name: product.name,
+        product_id: primaryProductId,
+        product_name: combinedProductName,
         prompts_json: dataToStore,
       })
       .select()

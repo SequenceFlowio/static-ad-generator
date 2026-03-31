@@ -53,6 +53,8 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
   const [topicHint, setTopicHint] = useState("");
   const [selectedDesire, setSelectedDesire] = useState<string>(brandDna.customer_desires?.[0] ?? "");
   const [selectedInspo, setSelectedInspo] = useState<string[]>([]);
+  const [quantity, setQuantity] = useState<1 | 5 | 10 | 20 | 50>(1);
+  const [bulkDone, setBulkDone] = useState(false);
 
   // Generation state
   const [generatingCopy, setGeneratingCopy] = useState(false);
@@ -72,40 +74,58 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
   async function handleGenerate() {
     if (!selectedTemplate || !selectedPlatform) return;
     setGeneratingCopy(true);
+    setBulkDone(false);
     setError(null);
     setOverlayProgress(5);
-    setOverlayMessage(COPY_MESSAGES[0]);
+    setOverlayMessage(quantity > 1 ? `Generating 1 of ${quantity}...` : COPY_MESSAGES[0]);
 
-    // Animate copy progress
-    let pct = 5;
-    const copyTimer = setInterval(() => {
-      pct = Math.min(pct + 7, 38);
-      setOverlayProgress(pct);
-      setOverlayMessage(COPY_MESSAGES[Math.floor(Math.random() * COPY_MESSAGES.length)]);
-    }, 2000);
+    let lastSession = null;
 
-    const res = await fetch(`/api/brands/${brandId}/content`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        template_name: selectedTemplate,
-        platform: selectedPlatform,
-        product_id: selectedProductId || null,
-        topic_hint: topicHint || null,
-        selected_desire: selectedDesire || null,
-      }),
-    });
+    for (let i = 0; i < quantity; i++) {
+      const basePct = Math.round((i / quantity) * 90);
+      setOverlayProgress(Math.max(5, basePct));
+      if (quantity > 1) setOverlayMessage(`Generating ${i + 1} of ${quantity}...`);
 
-    clearInterval(copyTimer);
-    const data = await res.json();
+      // Animate progress within this variation
+      let pct = Math.max(5, basePct);
+      const copyTimer = setInterval(() => {
+        pct = Math.min(pct + 5, basePct + Math.round(80 / quantity) - 2);
+        setOverlayProgress(pct);
+        if (quantity === 1) setOverlayMessage(COPY_MESSAGES[Math.floor(Math.random() * COPY_MESSAGES.length)]);
+      }, 2000);
+
+      const res = await fetch(`/api/brands/${brandId}/content`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          template_name: selectedTemplate,
+          platform: selectedPlatform,
+          product_id: selectedProductId || null,
+          topic_hint: topicHint || null,
+          selected_desire: selectedDesire || null,
+          variation_index: i,
+          total_count: quantity,
+        }),
+      });
+
+      clearInterval(copyTimer);
+      const data = await res.json();
+
+      if (!res.ok) { setGeneratingCopy(false); setError(data.error ?? "Generation failed."); return; }
+      lastSession = data;
+    }
+
     setGeneratingCopy(false);
+    if (!lastSession) return;
 
-    if (!res.ok) { setError(data.error ?? "Generation failed."); return; }
-
-    setSession(data);
-    setEditedCaption(data.caption ?? "");
-    setEditedImagePrompt(data.image_prompt ?? "");
-    setStep("review");
+    if (quantity > 1) {
+      setBulkDone(true);
+    } else {
+      setSession(lastSession);
+      setEditedCaption(lastSession.caption ?? "");
+      setEditedImagePrompt(lastSession.image_prompt ?? "");
+      setStep("review");
+    }
   }
 
   async function handleSaveEdits() {
@@ -275,6 +295,31 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
           </div>
         )}
 
+        {/* Quantity selector */}
+        <div>
+          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">How many variations?</p>
+          <div className="flex gap-2">
+            {([1, 5, 10, 20, 50] as const).map((n) => (
+              <button
+                key={n}
+                onClick={() => setQuantity(n)}
+                className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
+                  quantity === n
+                    ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white"
+                    : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+          {quantity > 1 && (
+            <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
+              Generates {quantity} unique variations with different angles. Each is saved to your gallery.
+            </p>
+          )}
+        </div>
+
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
             Topic / angle hint <span className="text-gray-400 font-normal">(optional)</span>
@@ -292,6 +337,17 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
 
         {error && <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
+        {bulkDone && (
+          <div className="rounded-xl border border-[#C7F56F]/30 bg-[#C7F56F]/10 px-4 py-3 flex items-center justify-between">
+            <p className="text-sm font-medium text-gray-800 dark:text-white">
+              {quantity} variations generated!
+            </p>
+            <button onClick={onClose} className="text-xs font-semibold text-[#C7F56F] hover:underline">
+              View in Gallery →
+            </button>
+          </div>
+        )}
+
         <div className="flex justify-between gap-3 pt-2">
           <button onClick={() => setStep("template")} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">← Back</button>
           <button
@@ -299,7 +355,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
             disabled={generatingCopy || (template?.needs_product && !selectedProductId)}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Generate content
+            {quantity > 1 ? `Generate ${quantity} variations` : "Generate content"}
           </button>
         </div>
       </div>

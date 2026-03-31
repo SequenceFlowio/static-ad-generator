@@ -76,7 +76,7 @@ export async function POST(
 ) {
   const { id } = await params;
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio, inspo_image_urls } = body as GenerateRequest & { inspo_image_urls?: string[] };
+  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio, inspo_image_urls, product_ids: multiProductIds } = body as GenerateRequest & { inspo_image_urls?: string[]; product_ids?: string[] };
 
   const db = getServerSupabase();
 
@@ -107,14 +107,25 @@ export async function POST(
     ? allPrompts.filter((p) => template_numbers.includes(p.template_number))
     : allPrompts;
 
-  let productImageUrls: string[] = [];
-  if (promptSet.product_id) {
-    const { data: product } = await db
+  // Load product images — support multi-product (first 2 images each, max 6 total)
+  const productImageUrls: string[] = [];
+  const productIdsToLoad = multiProductIds?.length
+    ? multiProductIds
+    : promptSet.product_id
+    ? [promptSet.product_id]
+    : [];
+
+  if (productIdsToLoad.length > 0) {
+    const { data: productsData } = await db
       .from("products")
       .select("image_urls")
-      .eq("id", promptSet.product_id)
-      .single();
-    productImageUrls = (product?.image_urls as string[]) ?? [];
+      .in("id", productIdsToLoad);
+    if (productsData) {
+      for (const p of productsData) {
+        const urls = (p.image_urls as string[]) ?? [];
+        productImageUrls.push(...urls.slice(0, 2)); // max 2 per product
+      }
+    }
   }
 
   // Create all job rows as "pending" upfront

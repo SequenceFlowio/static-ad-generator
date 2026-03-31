@@ -32,12 +32,14 @@ export async function POST(
   try { await getAuthUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
   const body = await req.json();
-  const { template_name, platform, product_id, topic_hint, selected_desire } = body as {
+  const { template_name, platform, product_id, topic_hint, selected_desire, variation_index, total_count } = body as {
     template_name: string;
     platform: Platform;
     product_id?: string | null;
     topic_hint?: string | null;
     selected_desire?: string | null;
+    variation_index?: number;
+    total_count?: number;
   };
 
   if (!template_name || !platform) {
@@ -79,6 +81,8 @@ export async function POST(
     productDescription,
     topicHint: topic_hint,
     selectedDesire: selected_desire,
+    variationIndex: variation_index,
+    totalCount: total_count,
   });
 
   // Save session as draft
