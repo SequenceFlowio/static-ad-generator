@@ -5,10 +5,12 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
+import { useLanguage } from "@/components/LanguageProvider";
+import type { Lang } from "@/lib/translations";
 
 const NAV_ITEMS = [
   {
-    label: "Home",
+    labelKey: "nav.home",
     href: "/",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -17,7 +19,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Stores",
+    labelKey: "nav.stores",
     href: "/stores",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -26,7 +28,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Ad Generator",
+    labelKey: "nav.adGen",
     href: "/ad-gen",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -36,7 +38,7 @@ const NAV_ITEMS = [
     ),
   },
   {
-    label: "Content Generator",
+    labelKey: "nav.contentGen",
     href: "/content-gen",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -46,13 +48,19 @@ const NAV_ITEMS = [
   },
 ];
 
-const BOTTOM_LINKS = [
-  { label: "Tutorial", href: "#" },
-  { label: "Feedback", href: "#" },
-  { label: "Support", href: "#" },
+const BOTTOM_LINK_KEYS = [
+  { labelKey: "nav.tutorial", href: "#" },
+  { labelKey: "nav.feedback", href: "#" },
+  { labelKey: "nav.support", href: "#" },
 ];
 
-function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade: () => void }) {
+function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
+  onClose: () => void;
+  onUpgrade: () => void;
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: string) => string;
+}) {
   const [tab, setTab] = useState<"profile" | "billing">("profile");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -77,8 +85,8 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
               </svg>
             </div>
             <div>
-              <p className="font-semibold text-sm text-gray-900 dark:text-white">Settings</p>
-              <p className="text-xs text-gray-400 dark:text-gray-500">Manage your account and subscription</p>
+              <p className="font-semibold text-sm text-gray-900 dark:text-white">{t("settings.title")}</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500">{t("settings.subtitle")}</p>
             </div>
           </div>
           <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-200">
@@ -91,17 +99,17 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
         <div className="flex">
           {/* Tabs */}
           <nav className="w-44 border-r border-gray-100 dark:border-gray-800 p-3 space-y-0.5">
-            {(["profile", "billing"] as const).map((t) => (
+            {(["profile", "billing"] as const).map((tabKey) => (
               <button
-                key={t}
-                onClick={() => setTab(t)}
+                key={tabKey}
+                onClick={() => setTab(tabKey)}
                 className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm transition-colors ${
-                  tab === t
+                  tab === tabKey
                     ? "bg-gray-100 dark:bg-gray-800 font-medium text-gray-900 dark:text-white"
                     : "text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800/50"
                 }`}
               >
-                {t === "profile" ? (
+                {tabKey === "profile" ? (
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                   </svg>
@@ -110,7 +118,7 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
                     <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
                   </svg>
                 )}
-                {t === "profile" ? "Profile" : "Plans & Billing"}
+                {tabKey === "profile" ? t("settings.profile") : t("settings.billing")}
               </button>
             ))}
           </nav>
@@ -119,44 +127,57 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
           <div className="flex-1 p-6">
             {tab === "profile" && (
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Profile</h3>
+                <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t("settings.profile")}</h3>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Full Name</label>
-                  <input
-                    value={userName}
-                    readOnly
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300"
-                  />
+                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("settings.fullName")}</label>
+                  <input value={userName} readOnly className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300" />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Email</label>
-                  <input
-                    value={userEmail}
-                    readOnly
-                    className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300"
-                  />
+                  <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("settings.email")}</label>
+                  <input value={userEmail} readOnly className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-300" />
                 </div>
-                <p className="text-xs text-gray-400 dark:text-gray-500">Profile info is managed via Google OAuth.</p>
+                <p className="text-xs text-gray-400 dark:text-gray-500">{t("settings.oauthNote")}</p>
+
+                {/* Language switcher */}
+                <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
+                  <label className="mb-2 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("settings.language")}</label>
+                  <div className="flex gap-2">
+                    {(["nl", "en"] as Lang[]).map((l) => (
+                      <button
+                        key={l}
+                        onClick={() => setLang(l)}
+                        className={`flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
+                          lang === l
+                            ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white"
+                            : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
+                        }`}
+                      >
+                        <span>{l === "nl" ? "🇳🇱" : "🇬🇧"}</span>
+                        {l === "nl" ? "Nederlands" : "English"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
               </div>
             )}
             {tab === "billing" && (
               <div className="space-y-4">
-                <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">Plans & Billing</h3>
+                <h3 className="text-sm font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wider">{t("settings.billing")}</h3>
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
                       <p className="font-bold text-gray-900 dark:text-white">Free</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">Your current subscription plan</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{t("settings.currentPlan")}</p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">$0<span className="text-sm font-normal text-gray-400 dark:text-gray-500">/mo</span></p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-white">€0<span className="text-sm font-normal text-gray-400 dark:text-gray-500">/mo</span></p>
                   </div>
                   <button onClick={() => { onClose(); onUpgrade(); }} className="w-full rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
-                    Upgrade Plan
+                    {t("settings.upgradePlan")}
                   </button>
                 </div>
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Credits remaining</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">Credit tracking coming soon.</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("settings.creditsTitle")}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{t("settings.creditsSoon")}</p>
                 </div>
               </div>
             )}
@@ -165,7 +186,7 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
 
         <div className="flex justify-end border-t border-gray-100 dark:border-gray-800 px-6 py-3">
           <button onClick={onClose} className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
-            Close
+            {t("settings.close")}
           </button>
         </div>
       </div>
@@ -176,6 +197,7 @@ function SettingsModal({ onClose, onUpgrade }: { onClose: () => void; onUpgrade:
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const { lang, setLang, t } = useLanguage();
   const TRIAL_DAYS = 7;
   const WHITELISTED_EMAILS = ["sequenceflownl@gmail.com"];
 
@@ -277,7 +299,7 @@ export default function Sidebar() {
               }`}
             >
               <span className={isActive(item.href) ? "text-[#1a1a1a]" : ""}>{item.icon}</span>
-              {item.label}
+              {t(item.labelKey)}
             </Link>
           ))}
         </nav>
@@ -286,14 +308,11 @@ export default function Sidebar() {
         <div className="px-3 pb-3 space-y-2">
           <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 p-3.5">
             <div className="mb-2">
-              <p className="text-xs font-bold text-gray-900 dark:text-white">Upgrade to Pro</p>
+              <p className="text-xs font-bold text-gray-900 dark:text-white">{t("upgrade.title")}</p>
             </div>
-            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2.5 leading-relaxed">Unlock 3 stores, 2K generations & batch mode.</p>
-            <button
-              onClick={() => setShowPricing(true)}
-              className="w-full rounded-lg bg-[#C7F56F] py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors"
-            >
-              See plans →
+            <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2.5 leading-relaxed">{t("upgrade.desc")}</p>
+            <button onClick={() => setShowPricing(true)} className="w-full rounded-lg bg-[#C7F56F] py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
+              {t("upgrade.cta")}
             </button>
           </div>
 
@@ -312,14 +331,14 @@ export default function Sidebar() {
                   : trialDaysLeft <= 2 ? "text-amber-600 dark:text-amber-400"
                   : "text-gray-400 dark:text-gray-500"
                 }`}>
-                  Free Trial
+                  {t("trial.title")}
                 </p>
                 <p className={`text-[10px] font-bold ${
                   trialDaysLeft === 0 ? "text-red-500 dark:text-red-400"
                   : trialDaysLeft <= 2 ? "text-amber-600 dark:text-amber-400"
                   : "text-gray-600 dark:text-gray-300"
                 }`}>
-                  {trialDaysLeft === 0 ? "Expired" : `${trialDaysLeft} day${trialDaysLeft !== 1 ? "s" : ""} left`}
+                  {trialDaysLeft === 0 ? t("trial.expired") : `${trialDaysLeft} ${trialDaysLeft === 1 ? t("trial.dayLeft") : t("trial.daysLeft")}`}
                 </p>
               </div>
               {/* Progress bar */}
@@ -336,7 +355,7 @@ export default function Sidebar() {
               {trialDaysLeft === 0 && (
                 <button onClick={() => setShowPricing(true)}
                   className="mt-2 w-full rounded-lg bg-red-500 py-1.5 text-[10px] font-semibold text-white hover:bg-red-600 transition-colors">
-                  Upgrade to continue →
+                  {t("trial.upgradeCta")}
                 </button>
               )}
             </div>
@@ -345,13 +364,13 @@ export default function Sidebar() {
 
         {/* Bottom section */}
         <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-3 space-y-0.5">
-          {BOTTOM_LINKS.map((link) => (
+          {BOTTOM_LINK_KEYS.map((link) => (
             <a
-              key={link.label}
+              key={link.labelKey}
               href={link.href}
               className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
             >
-              {link.label}
+              {t(link.labelKey)}
             </a>
           ))}
 
@@ -387,7 +406,7 @@ export default function Sidebar() {
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M2 12h2M20 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
                     </svg>
-                    Light
+                    {t("theme.light")}
                   </button>
                   <button
                     onClick={() => toggleTheme(true)}
@@ -398,7 +417,7 @@ export default function Sidebar() {
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                       <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
                     </svg>
-                    Dark
+                    {t("theme.dark")}
                   </button>
                 </div>
                 <button
@@ -418,7 +437,7 @@ export default function Sidebar() {
                   <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
                   </svg>
-                  Sign out
+                  {t("auth.signOut")}
                 </button>
               </div>
             )}
@@ -426,7 +445,7 @@ export default function Sidebar() {
         </div>
       </aside>
 
-      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onUpgrade={() => setShowPricing(true)} />}
+      {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onUpgrade={() => setShowPricing(true)} lang={lang} setLang={setLang} t={t} />}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
     </>
   );
