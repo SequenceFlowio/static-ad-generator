@@ -7,7 +7,8 @@ import Phase1Research from "@/components/pipeline/Phase1Research";
 import BrandDnaCard from "@/components/BrandDnaCard";
 import BrandDnaForm from "@/components/BrandDnaForm";
 import InspoLibrary from "@/components/InspoLibrary";
-import ContentGrid from "@/components/content/ContentGrid";
+import ContentGenerator from "@/components/content/ContentGenerator";
+import { CONTENT_TEMPLATES } from "@/lib/content-templates";
 import type { Brand, BrandDna, BrandDnaData, Product } from "@/types";
 
 export default function BrandPage() {
@@ -25,6 +26,7 @@ export default function BrandPage() {
   const [reSearching, setReSearching] = useState(false);
   const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
   const [mode, setMode] = useState<"ads" | "content" | null>(null);
+  const [contentModalTemplate, setContentModalTemplate] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -280,19 +282,53 @@ export default function BrandPage() {
       {/* Content Generator mode */}
       {mode === "content" && (
         <section>
-          <div className="mb-4 flex items-center gap-3">
-            <button onClick={() => setMode(null)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">← Back</button>
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Social Content Generator</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <button onClick={() => setMode(null)} className="text-xs text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300">← Back</button>
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Social Content Generator</h2>
+            </div>
+            <Link href={`/brands/${id}/content-gallery`} className="rounded-full bg-[#1a1a1a] px-4 py-1.5 text-xs font-semibold text-[#C7F56F] hover:bg-black transition-colors">
+              View Gallery →
+            </Link>
           </div>
 
-          <ContentGrid brandId={id} brandDna={dna?.data ?? null} products={products} />
+          {/* 9 template cards */}
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {CONTENT_TEMPLATES.map((t) => (
+              <button
+                key={t.name}
+                onClick={() => setContentModalTemplate(t.name)}
+                className="flex flex-col items-start gap-1 rounded-xl border-2 border-gray-200 dark:border-gray-700 px-4 py-3 text-left hover:border-[#C7F56F] hover:bg-[#C7F56F]/5 transition-colors"
+              >
+                <span className="text-xl">{t.icon}</span>
+                <span className="text-sm font-semibold text-gray-900 dark:text-white">{t.label}</span>
+                <span className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">{t.description}</span>
+              </button>
+            ))}
+          </div>
 
           {/* Content Inspo */}
-          <div className="mt-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
             <h3 className="mb-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Content Inspo Library</h3>
             <InspoLibrary brandId={id} type="content" label="Reference images used as style guide during content generation (max 20)" />
           </div>
         </section>
+      )}
+
+      {/* Content Generator modal */}
+      {contentModalTemplate && dna && (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white dark:bg-gray-900 p-6 shadow-2xl">
+            <ContentGenerator
+              brandId={id}
+              brandDna={dna.data}
+              products={products}
+              initialTemplate={contentModalTemplate}
+              onCreated={() => {}}
+              onClose={() => setContentModalTemplate(null)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

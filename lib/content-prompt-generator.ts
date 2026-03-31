@@ -15,16 +15,19 @@ const PLATFORM_TONE: Record<Platform, string> = {
   pinterest: "descriptive and keyword-rich — 100-150 words max, 10-15 hashtags at the end",
 };
 
+// These templates produce purely visual images — NO text, labels, or overlays
+const NO_TEXT_TEMPLATES = new Set(["lifestyle", "using-product", "behind-scenes", "seasonal-trend"]);
+
 const TEMPLATE_INSTRUCTIONS: Record<string, string> = {
   "tips-tricks": "Create an educational post sharing 3 specific, actionable tips related to the brand's niche. Each tip should feel genuinely useful, not promotional. The image shows a clean, typographic layout with the tips presented visually.",
   "about-brand": "Tell the brand's story, values, or mission in a way that feels human and relatable. Focus on why the brand exists, not just what it sells. The image is warm, brand-aesthetic, with minimal text overlay.",
   "about-product": "Spotlight the product — what it is, what makes it different, and why it matters. Be specific. The image is a clean product hero shot or lifestyle placement that shows the product clearly.",
-  "using-product": "Show the product in action — a how-to moment, a daily routine, or a specific use case. Make it feel real and accessible. The image shows the product being used naturally.",
+  "using-product": "Show the product in action — a how-to moment, a daily routine, or a specific use case. Make it feel real and accessible. The image shows the product being used naturally. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
   "testimonial": "Feature a compelling customer result or quote. Keep it specific and believable — a real outcome, not generic praise. The image is a clean quote card with brand styling.",
-  "lifestyle": "Place the brand or product in an aspirational but relatable scene. The focus is on the feeling and lifestyle, not the product itself. The image is beautiful, editorial, scene-first.",
+  "lifestyle": "Place the brand or product in an aspirational but relatable scene. The focus is on the feeling and lifestyle, not the product itself. The image is beautiful, editorial, scene-first. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
   "before-after": "Show the transformation the brand enables — the before state (pain or frustration) and the after state (result or relief). Make both states vivid. The image uses a split or contrast layout.",
-  "behind-scenes": "Pull back the curtain — show the team, the process, the sourcing, or the craft behind the brand. Build trust through authenticity. The image feels candid and real.",
-  "seasonal-trend": "Connect the brand to a current season, moment, or cultural trend in a way that feels natural and on-brand. The image reflects the seasonal or trend aesthetic clearly.",
+  "behind-scenes": "Pull back the curtain — show the team, the process, the sourcing, or the craft behind the brand. Build trust through authenticity. The image feels candid and real. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
+  "seasonal-trend": "Connect the brand to a current season, moment, or cultural trend in a way that feels natural and on-brand. The image reflects the seasonal or trend aesthetic clearly. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
 };
 
 function brandDnaToText(dna: BrandDnaData): string {
@@ -94,6 +97,9 @@ COPY RULES:
 - Voice and tone must match the brand personality exactly
 - Do NOT write generic brand content — make it specific to this brand and their audience
 
+NO-TEXT TEMPLATES RULE:
+For the following templates: lifestyle, using-product, behind-scenes, seasonal-trend — the image_prompt MUST end with the sentence: "No text, no labels, no overlays — purely visual image." These images will never have any text on them. Do not include any typography, captions, headlines, or text elements in image_prompt for these templates.
+
 OUTPUT: Valid JSON only. No markdown, no code blocks.
 
 JSON Schema:
@@ -103,12 +109,15 @@ JSON Schema:
   "caption_note": "One sentence explaining the angle used"
 }`;
 
+  const isNoText = NO_TEXT_TEMPLATES.has(templateName);
+
   const userMessage = `${brandDnaToText(brandDna)}
 
 ---
 
 Template: ${templateName}
 Instructions: ${templateInstruction}
+${isNoText ? "⚠️ NO TEXT IN IMAGE: This template must produce a purely visual image. The image_prompt must NOT include any text, labels, headlines, or overlays. End image_prompt with: \"No text, no labels, no overlays — purely visual image.\"" : ""}
 
 Platform: ${platform}
 Caption tone & length: ${platformTone}

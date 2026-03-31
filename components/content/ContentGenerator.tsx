@@ -5,6 +5,7 @@ import { CONTENT_TEMPLATES, PLATFORMS } from "@/lib/content-templates";
 import type { Platform } from "@/lib/content-templates";
 import type { BrandDnaData, Product } from "@/types";
 import InspoPicker from "@/components/InspoPicker";
+import GeneratingOverlay from "@/components/GeneratingOverlay";
 
 interface ContentSession {
   id: string;
@@ -23,31 +24,65 @@ interface Props {
   products: Product[];
   onCreated: (session: ContentSession) => void;
   onClose: () => void;
+  initialTemplate?: string;
 }
 
 type Step = "template" | "inputs" | "review";
 
-export default function ContentGenerator({ brandId, brandDna, products, onCreated, onClose }: Props) {
-  const [step, setStep] = useState<Step>("template");
-  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null);
+const COPY_MESSAGES = [
+  "Reading the brand DNA...",
+  "Checking your vibe...",
+  "Crafting your copy...",
+  "Talking to the AI...",
+];
+
+const IMAGE_MESSAGES = [
+  "Starting the engines...",
+  "Pixel by pixel...",
+  "Making it look good...",
+  "Almost there...",
+  "Adding the finishing touches...",
+  "Because details matter...",
+];
+
+export default function ContentGenerator({ brandId, brandDna, products, onCreated, onClose, initialTemplate }: Props) {
+  const [step, setStep] = useState<Step>(initialTemplate ? "inputs" : "template");
+  const [selectedTemplate, setSelectedTemplate] = useState<string | null>(initialTemplate ?? null);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("instagram");
   const [selectedProductId, setSelectedProductId] = useState<string>("");
   const [topicHint, setTopicHint] = useState("");
   const [selectedDesire, setSelectedDesire] = useState<string>(brandDna.customer_desires?.[0] ?? "");
-  const [generating, setGenerating] = useState(false);
+  const [selectedInspo, setSelectedInspo] = useState<string[]>([]);
+
+  // Generation state
+  const [generatingCopy, setGeneratingCopy] = useState(false);
   const [generatingImage, setGeneratingImage] = useState(false);
+  const [overlayProgress, setOverlayProgress] = useState(0);
+  const [overlayMessage, setOverlayMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  // Result state
   const [session, setSession] = useState<ContentSession | null>(null);
   const [editedCaption, setEditedCaption] = useState("");
   const [editedImagePrompt, setEditedImagePrompt] = useState("");
-  const [selectedInspo, setSelectedInspo] = useState<string | null>(null);
 
   const template = CONTENT_TEMPLATES.find((t) => t.name === selectedTemplate);
+  const isOverlayVisible = generatingCopy || generatingImage;
 
   async function handleGenerate() {
     if (!selectedTemplate || !selectedPlatform) return;
-    setGenerating(true);
+    setGeneratingCopy(true);
     setError(null);
+    setOverlayProgress(5);
+    setOverlayMessage(COPY_MESSAGES[0]);
+
+    // Animate copy progress
+    let pct = 5;
+    const copyTimer = setInterval(() => {
+      pct = Math.min(pct + 7, 38);
+      setOverlayProgress(pct);
+      setOverlayMessage(COPY_MESSAGES[Math.floor(Math.random() * COPY_MESSAGES.length)]);
+    }, 2000);
 
     const res = await fetch(`/api/brands/${brandId}/content`, {
       method: "POST",
@@ -61,8 +96,9 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
       }),
     });
 
+    clearInterval(copyTimer);
     const data = await res.json();
-    setGenerating(false);
+    setGeneratingCopy(false);
 
     if (!res.ok) { setError(data.error ?? "Generation failed."); return; }
 
@@ -85,15 +121,31 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
     if (!session) return;
     setGeneratingImage(true);
     setError(null);
+    setOverlayProgress(40);
+    setOverlayMessage(IMAGE_MESSAGES[0]);
 
-    // Save edits first
     await handleSaveEdits();
+
+    // Simulate image generation progress
+    let pct = 40;
+    let msgIdx = 0;
+    const imgTimer = setInterval(() => {
+      pct = Math.min(pct + 4, 92);
+      msgIdx = (msgIdx + 1) % IMAGE_MESSAGES.length;
+      setOverlayProgress(pct);
+      setOverlayMessage(IMAGE_MESSAGES[msgIdx]);
+    }, 3000);
 
     const res = await fetch(`/api/brands/${brandId}/content/${session.id}/generate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ inspo_image_url: selectedInspo }),
+      body: JSON.stringify({ inspo_image_urls: selectedInspo }),
     });
+
+    clearInterval(imgTimer);
+    setOverlayProgress(100);
+    setOverlayMessage("Wrapping up...");
+    await new Promise((r) => setTimeout(r, 600));
 
     const data = await res.json();
     setGeneratingImage(false);
@@ -109,7 +161,8 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
   if (step === "template") {
     return (
       <div className="space-y-6">
-        {/* Template picker */}
+        <GeneratingOverlay visible={isOverlayVisible} progress={overlayProgress} message={overlayMessage} />
+
         <div>
           <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Choose a template</p>
           <div className="grid grid-cols-3 gap-3">
@@ -131,7 +184,6 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
           </div>
         </div>
 
-        {/* Platform picker */}
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Platform</p>
           <div className="flex gap-2">
@@ -175,6 +227,8 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
 
     return (
       <div className="space-y-5">
+        <GeneratingOverlay visible={isOverlayVisible} progress={overlayProgress} message={overlayMessage} />
+
         <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
           <span className="text-lg">{template?.icon}</span>
           <span className="font-medium text-gray-700 dark:text-gray-200">{template?.label}</span>
@@ -182,7 +236,6 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
           <span className="capitalize">{selectedPlatform}</span>
         </div>
 
-        {/* Product picker */}
         {showProduct && products.length > 0 && (
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
@@ -201,7 +254,6 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
           </div>
         )}
 
-        {/* Customer desire */}
         {desires.length > 0 && (
           <div>
             <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Customer desire</p>
@@ -223,7 +275,6 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
           </div>
         )}
 
-        {/* Topic hint */}
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
             Topic / angle hint <span className="text-gray-400 font-normal">(optional)</span>
@@ -232,26 +283,23 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
             type="text"
             value={topicHint}
             onChange={(e) => setTopicHint(e.target.value)}
-            placeholder="e.g. focus on morning routines, summer campaign, back-to-school"
+            placeholder="e.g. focus on morning routines, summer campaign"
             className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
           />
         </div>
 
-        {/* Inspo picker */}
         <InspoPicker brandId={brandId} type="content" selected={selectedInspo} onSelect={setSelectedInspo} />
 
-        {error && (
-          <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>
-        )}
+        {error && <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
         <div className="flex justify-between gap-3 pt-2">
           <button onClick={() => setStep("template")} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">← Back</button>
           <button
             onClick={handleGenerate}
-            disabled={generating || (template?.needs_product && !selectedProductId)}
+            disabled={generatingCopy || (template?.needs_product && !selectedProductId)}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {generating ? "Generating…" : "Generate content"}
+            Generate content
           </button>
         </div>
       </div>
@@ -261,9 +309,10 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
   // ── STEP 3: Review ───────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
+      <GeneratingOverlay visible={isOverlayVisible} progress={overlayProgress} message={overlayMessage} />
+
       <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Review & edit</p>
 
-      {/* Caption */}
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Caption</label>
         <textarea
@@ -274,7 +323,6 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         />
       </div>
 
-      {/* Image prompt */}
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Image prompt</label>
         <textarea
@@ -285,10 +333,8 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         />
       </div>
 
-      {/* Inspo style reference */}
       <InspoPicker brandId={brandId} type="content" selected={selectedInspo} onSelect={setSelectedInspo} />
 
-      {/* Result image */}
       {session?.image_url && (
         <div>
           <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Generated image</p>
@@ -296,36 +342,28 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={session.image_url} alt="Generated content" className="w-full" />
           </div>
-          <a
-            href={session.image_url}
-            download
-            target="_blank"
-            rel="noopener noreferrer"
-            className="mt-2 inline-block text-xs text-[#C7F56F] hover:underline"
-          >
+          <a href={session.image_url} download target="_blank" rel="noopener noreferrer"
+            className="mt-2 inline-block text-xs text-[#C7F56F] hover:underline">
             Download image →
           </a>
         </div>
       )}
 
-      {error && (
-        <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>
-      )}
+      {error && <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
       <div className="flex justify-between gap-3 pt-2">
         <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Close</button>
-
         {!session?.image_url ? (
           <button
             onClick={handleGenerateImage}
             disabled={generatingImage}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {generatingImage ? "Generating image…" : "Generate image"}
+            Generate image
           </button>
         ) : (
           <button
-            onClick={() => { setStep("template"); setSession(null); setSelectedTemplate(null); setTopicHint(""); setSelectedInspo(null); }}
+            onClick={() => { setStep("template"); setSession(null); setSelectedTemplate(null); setTopicHint(""); setSelectedInspo([]); }}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
           >
             New content +

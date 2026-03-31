@@ -16,7 +16,7 @@ export async function POST(
   try { await getAuthUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
   const body = await req.json();
-  const { inspo_image_url } = body as { inspo_image_url?: string | null };
+  const { inspo_image_urls } = body as { inspo_image_urls?: string[] };
 
   const db = getServerSupabase();
 
@@ -59,10 +59,25 @@ export async function POST(
   try {
     const aspect_ratio = getPlatformAspectRatio(session.platform as Platform);
 
-    // Build reference images: logo + optional inspo
+    // Build reference images: logo + product images + inspo
     const referenceUrls: string[] = [];
     if (logoUrl) referenceUrls.push(logoUrl);
-    if (inspo_image_url) referenceUrls.push(inspo_image_url);
+
+    // Load product images if session has a product
+    if (session.product_id) {
+      const { data: product } = await db
+        .from("products")
+        .select("image_urls")
+        .eq("id", session.product_id)
+        .single();
+      const productUrls = (product?.image_urls as string[]) ?? [];
+      referenceUrls.push(...productUrls.slice(0, 4));
+    }
+
+    // Add inspo images (max 2)
+    if (inspo_image_urls?.length) {
+      referenceUrls.push(...inspo_image_urls.slice(0, 2));
+    }
 
     const urls = await generateImages({
       prompt: session.image_prompt,

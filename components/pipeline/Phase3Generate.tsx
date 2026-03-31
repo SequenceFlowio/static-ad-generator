@@ -3,6 +3,7 @@
 import { useCallback, useState } from "react";
 import Link from "next/link";
 import InspoPicker from "@/components/InspoPicker";
+import GeneratingOverlay from "@/components/GeneratingOverlay";
 import type { PromptSet, SseEvent, Resolution } from "@/types";
 
 const TEMPLATES = [
@@ -41,7 +42,7 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
   const [progress, setProgress] = useState<TemplateProgress[]>([]);
   const [complete, setComplete] = useState(false);
   const [error, setError] = useState("");
-  const [selectedInspo, setSelectedInspo] = useState<string | null>(null);
+  const [selectedInspo, setSelectedInspo] = useState<string[]>([]);
 
   const hasPromptSet = !!promptSet;
 
@@ -67,7 +68,7 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
         resolution,
         num_images: numImages,
         prompt_set_id: promptSet.id,
-        inspo_image_url: selectedInspo,
+        inspo_image_urls: selectedInspo,
       }),
     });
 
@@ -113,8 +114,14 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
     setGenerating(false);
   }, [brandId, promptSet, selectedTemplates, resolution, numImages, selectedInspo]);
 
+  const doneCount = progress.filter((p) => p.status === "done").length;
+  const overlayProgress = selectedTemplates.length > 0
+    ? Math.round((doneCount / selectedTemplates.length) * 100)
+    : 0;
+
   return (
     <div className={`rounded-xl border bg-white dark:bg-gray-900 overflow-hidden ${!hasPromptSet ? "opacity-50 pointer-events-none" : "border-gray-200 dark:border-gray-700"}`}>
+      <GeneratingOverlay visible={generating} progress={overlayProgress} />
       <button
         onClick={() => hasPromptSet && setOpen((o) => !o)}
         className="flex w-full items-center justify-between px-6 py-4 text-left hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
