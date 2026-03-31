@@ -247,7 +247,7 @@ export default function Sidebar() {
             <img
               src={dark ? "/logo-white.png" : "/logo-black.png"}
               alt="SequenceFlow"
-              className="h-10 w-auto"
+              className="h-[120px] w-auto"
             />
           </Link>
         </div>
@@ -273,9 +273,8 @@ export default function Sidebar() {
         {/* Upgrade CTA */}
         <div className="px-3 pb-3">
           <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 p-3.5">
-            <div className="flex items-center justify-between mb-2">
+            <div className="mb-2">
               <p className="text-xs font-bold text-gray-900 dark:text-white">Upgrade to Pro</p>
-              <span className="rounded-full bg-[#C7F56F] px-2 py-0.5 text-[9px] font-bold text-[#1a1a1a]">20% OFF</span>
             </div>
             <p className="text-[10px] text-gray-500 dark:text-gray-400 mb-2.5 leading-relaxed">Unlock 3 stores, 2K generations & batch mode.</p>
             <button
