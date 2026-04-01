@@ -1,8 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 const TOP_PLANS = [
   {
     name: "Trial",
+    planId: null,
     price: "€0",
     period: "/7 days",
     description: "Try everything free",
@@ -20,6 +23,7 @@ const TOP_PLANS = [
   },
   {
     name: "Starter",
+    planId: "starter",
     price: "€49",
     period: "/mo",
     description: "For solo creators",
@@ -36,6 +40,7 @@ const TOP_PLANS = [
   },
   {
     name: "Pro",
+    planId: "pro",
     price: "€89",
     period: "/mo",
     description: "For growing brands",
@@ -56,6 +61,7 @@ const TOP_PLANS = [
 ];
 
 const AGENCY = {
+  planId: "agency",
   name: "Agency",
   price: "€249",
   period: "/mo",
@@ -72,6 +78,29 @@ const AGENCY = {
 };
 
 export default function PricingModal({ onClose }: { onClose: () => void }) {
+  const [loading, setLoading] = useState<string | null>(null);
+
+  async function handleUpgrade(planId: string) {
+    setLoading(planId);
+    try {
+      const res = await fetch("/api/stripe/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan: planId }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        alert(data.error ?? "Something went wrong");
+        setLoading(null);
+      }
+    } catch {
+      alert("Failed to start checkout. Please try again.");
+      setLoading(null);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="w-full max-w-3xl rounded-2xl bg-white dark:bg-[#111] shadow-2xl overflow-hidden">
@@ -89,7 +118,7 @@ export default function PricingModal({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="p-6 space-y-4">
-          {/* Top 3 plans — cards */}
+          {/* Top 3 plans */}
           <div className="grid grid-cols-3 gap-4">
             {TOP_PLANS.map((plan) => (
               <div key={plan.name}
@@ -127,22 +156,24 @@ export default function PricingModal({ onClose }: { onClose: () => void }) {
                   ))}
                 </ul>
 
-                <button disabled={plan.ctaDisabled}
+                <button
+                  disabled={plan.ctaDisabled || loading === plan.planId}
+                  onClick={() => plan.planId && handleUpgrade(plan.planId)}
                   className={`w-full rounded-xl py-2.5 text-sm font-semibold transition-colors ${
                     plan.ctaDisabled
                       ? "bg-gray-100 dark:bg-gray-800 text-gray-400 dark:text-gray-500 cursor-default"
                       : plan.highlight
-                      ? "bg-[#C7F56F] text-[#1a1a1a] hover:bg-[#b8e85e]"
-                      : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-100"
+                      ? "bg-[#C7F56F] text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-60"
+                      : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-100 disabled:opacity-60"
                   }`}
                 >
-                  {plan.cta}
+                  {loading === plan.planId ? "Redirecting…" : plan.cta}
                 </button>
               </div>
             ))}
           </div>
 
-          {/* Agency — horizontal full-width card */}
+          {/* Agency — horizontal */}
           <div className="relative flex items-center gap-6 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-5">
             <div className="w-44 flex-shrink-0">
               <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1">{AGENCY.name}</p>
@@ -164,8 +195,12 @@ export default function PricingModal({ onClose }: { onClose: () => void }) {
               ))}
             </div>
 
-            <button className="flex-shrink-0 rounded-xl bg-gray-900 dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors">
-              {AGENCY.cta}
+            <button
+              disabled={loading === AGENCY.planId}
+              onClick={() => handleUpgrade(AGENCY.planId)}
+              className="flex-shrink-0 rounded-xl bg-gray-900 dark:bg-white px-5 py-2.5 text-sm font-semibold text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-100 transition-colors disabled:opacity-60"
+            >
+              {loading === AGENCY.planId ? "Redirecting…" : AGENCY.cta}
             </button>
           </div>
         </div>

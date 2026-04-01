@@ -64,13 +64,24 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
   const [tab, setTab] = useState<"profile" | "billing">("profile");
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
+  const [subscription, setSubscription] = useState<{ plan: string; status: string; current_period_end: string | null } | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
     getBrowserSupabase().auth.getUser().then(({ data: { user } }) => {
       setUserName(user?.user_metadata?.full_name ?? "");
       setUserEmail(user?.email ?? "");
     });
+    fetch("/api/stripe/subscription").then(r => r.json()).then(setSubscription).catch(() => {});
   }, []);
+
+  async function handleManageBilling() {
+    setPortalLoading(true);
+    const res = await fetch("/api/stripe/portal", { method: "POST" });
+    const data = await res.json();
+    if (data.url) window.location.href = data.url;
+    else { alert(data.error ?? "Could not open billing portal"); setPortalLoading(false); }
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
@@ -166,14 +177,33 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <div>
-                      <p className="font-bold text-gray-900 dark:text-white">Free</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{t("settings.currentPlan")}</p>
+                      <p className="font-bold text-gray-900 dark:text-white capitalize">
+                        {subscription?.plan ?? "Free"}
+                      </p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">
+                        {subscription?.status === "active" && subscription?.current_period_end
+                          ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
+                          : t("settings.currentPlan")}
+                      </p>
                     </div>
-                    <p className="text-xl font-bold text-gray-900 dark:text-white">€0<span className="text-sm font-normal text-gray-400 dark:text-gray-500">/mo</span></p>
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+                      subscription?.status === "active"
+                        ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
+                        : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
+                    }`}>
+                      {subscription?.status === "active" ? "Active" : "Free"}
+                    </span>
                   </div>
-                  <button onClick={() => { onClose(); onUpgrade(); }} className="w-full rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
-                    {t("settings.upgradePlan")}
-                  </button>
+                  {subscription?.status === "active" ? (
+                    <button onClick={handleManageBilling} disabled={portalLoading}
+                      className="w-full rounded-lg border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
+                      {portalLoading ? "Opening…" : "Manage billing →"}
+                    </button>
+                  ) : (
+                    <button onClick={() => { onClose(); onUpgrade(); }} className="w-full rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+                      {t("settings.upgradePlan")}
+                    </button>
+                  )}
                 </div>
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                   <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("settings.creditsTitle")}</p>
