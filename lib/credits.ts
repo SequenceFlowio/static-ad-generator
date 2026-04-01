@@ -1,6 +1,6 @@
 import { getServerSupabase } from "@/lib/supabase";
 
-// Per-plan image limits
+// Per-plan image limits (used for quota enforcement)
 export const PLAN_QUALITY_LIMITS: Record<string, number> = {
   trial: 10,
   free: 10,
@@ -14,6 +14,15 @@ export const PLAN_EFFICIENCY_LIMITS: Record<string, number> = {
   free: 20,
   starter: 250,
   pro: 600,
+  agency: 999999,
+};
+
+// Total generation pool per plan (quality×2 + efficiency×1)
+export const PLAN_TOTAL_LIMITS: Record<string, number> = {
+  trial: 20,
+  free: 20,
+  starter: 550,   // 150×2 + 250
+  pro: 1300,      // 350×2 + 600
   agency: 999999,
 };
 
@@ -35,6 +44,8 @@ export interface UsageData {
   qualityLimit: number;
   efficiencyUsed: number;
   efficiencyLimit: number;
+  totalUsed: number;
+  totalLimit: number;
   plan: string;
 }
 
@@ -48,12 +59,16 @@ export async function getUsage(userId: string): Promise<UsageData> {
   ]);
 
   const plan = sub?.status === "active" || sub?.status === "trialing" ? (sub?.plan ?? "trial") : "trial";
+  const qualityUsed = usage?.quality_used ?? 0;
+  const efficiencyUsed = usage?.efficiency_used ?? 0;
 
   return {
-    qualityUsed: usage?.quality_used ?? 0,
+    qualityUsed,
     qualityLimit: PLAN_QUALITY_LIMITS[plan] ?? 10,
-    efficiencyUsed: usage?.efficiency_used ?? 0,
+    efficiencyUsed,
     efficiencyLimit: PLAN_EFFICIENCY_LIMITS[plan] ?? 20,
+    totalUsed: qualityUsed * 2 + efficiencyUsed,
+    totalLimit: PLAN_TOTAL_LIMITS[plan] ?? 20,
     plan,
   };
 }

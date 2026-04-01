@@ -65,10 +65,7 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [subscription, setSubscription] = useState<{ plan: string; status: string; current_period_end: string | null } | null>(null);
-  const [credits, setCredits] = useState<{
-    quality: { used: number; limit: number; remaining: number };
-    efficiency: { used: number; limit: number; remaining: number };
-  } | null>(null);
+  const [credits, setCredits] = useState<{ used: number; limit: number; remaining: number } | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
@@ -210,36 +207,25 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
                     </button>
                   )}
                 </div>
-                <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-3">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("settings.creditsTitle")}</p>
-                  {credits ? (
-                    <>
-                      {[
-                        { label: t("credits.quality"), data: credits.quality },
-                        { label: t("credits.efficiency"), data: credits.efficiency },
-                      ].map(({ label, data }) => (
-                        <div key={label}>
-                          <div className="flex items-center justify-between mb-1.5">
-                            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{label}</span>
-                            <span className="text-xs text-gray-400 dark:text-gray-500">
-                              {data.limit >= 999999 ? "∞" : `${data.used} / ${data.limit}`}
-                            </span>
-                          </div>
-                          <div className="h-1.5 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                            <div
-                              className={`h-full rounded-full transition-all ${data.remaining < data.limit * 0.1 ? "bg-red-400" : "bg-[#C7F56F]"}`}
-                              style={{ width: data.limit >= 999999 ? "8%" : `${Math.min(100, (data.used / data.limit) * 100)}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="h-1.5 w-full rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                      <div className="h-1.5 w-full rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse" />
-                    </div>
-                  )}
+                <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-700 dark:text-gray-200">{t("settings.creditsTitle")}</p>
+                    {credits && (
+                      <span className="text-xs text-gray-400 dark:text-gray-500">
+                        {credits.limit >= 999999 ? "∞" : `${credits.used} / ${credits.limit}`}
+                      </span>
+                    )}
+                  </div>
+                  <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                    {credits ? (
+                      <div
+                        className={`h-full rounded-full transition-all ${credits.remaining < credits.limit * 0.1 ? "bg-red-400" : "bg-[#C7F56F]"}`}
+                        style={{ width: credits.limit >= 999999 ? "8%" : `${Math.min(100, (credits.used / credits.limit) * 100)}%` }}
+                      />
+                    ) : (
+                      <div className="h-full w-full animate-pulse bg-gray-200 dark:bg-gray-700 rounded-full" />
+                    )}
+                  </div>
                 </div>
               </div>
             )}
