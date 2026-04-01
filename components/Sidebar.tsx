@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
+import SupportModal from "@/components/SupportModal";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { Lang } from "@/lib/translations";
 
@@ -50,8 +51,7 @@ const NAV_ITEMS = [
 
 const BOTTOM_LINK_KEYS = [
   { labelKey: "nav.tutorial", href: "#" },
-  { labelKey: "nav.feedback", href: "#" },
-  { labelKey: "nav.support", href: "#" },
+  { labelKey: "nav.feedback", href: "mailto:hello@sequenceflow.io?subject=Feedback" },
 ];
 
 function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
@@ -238,6 +238,7 @@ export default function Sidebar() {
   const [userPopover, setUserPopover] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
+  const [showSupport, setShowSupport] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -310,7 +311,7 @@ export default function Sidebar() {
             <img
               src={dark ? "/logo-white.png" : "/logo-black.png"}
               alt="SequenceFlow"
-              className="h-20 w-auto"
+              className="w-[176px] h-auto object-contain"
             />
           </Link>
         </div>
@@ -402,6 +403,12 @@ export default function Sidebar() {
               {t(link.labelKey)}
             </a>
           ))}
+          <button
+            onClick={() => setShowSupport(true)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          >
+            {t("nav.support")}
+          </button>
 
           {/* User row */}
           <div className="relative" ref={popoverRef}>
@@ -476,6 +483,7 @@ export default function Sidebar() {
 
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onUpgrade={() => setShowPricing(true)} lang={lang} setLang={setLang} t={t} />}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
+      {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
     </>
   );
 }

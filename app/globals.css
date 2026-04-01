@@ -17,3 +17,18 @@
     @apply text-sm leading-relaxed whitespace-pre-wrap font-mono text-gray-700;
   }
 }
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+  will-change: transform;
+}
+
+.animate-marquee-slow {
+  animation: marquee 40s linear infinite;
+  will-change: transform;
+}
