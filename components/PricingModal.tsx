@@ -184,7 +184,7 @@ export default function PricingModal({ onClose }: { onClose: () => void }) {
               <p className="mt-1 text-xs text-gray-400 dark:text-gray-500">{AGENCY.description}</p>
             </div>
 
-            <div className="flex flex-1 flex-wrap gap-x-6 gap-y-1.5">
+            <div className="flex flex-1 flex-col gap-2">
               {AGENCY.features.map((f) => (
                 <div key={f} className="flex items-center gap-1.5 text-xs">
                   <svg className="h-3.5 w-3.5 flex-shrink-0 text-[#C7F56F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
