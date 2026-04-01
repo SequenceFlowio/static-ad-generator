@@ -243,7 +243,7 @@ export default function Sidebar() {
   useEffect(() => {
     const saved = localStorage.getItem("theme");
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = saved ? saved === "dark" : prefersDark;
+    const isDark = saved === "dark";
     setDark(isDark);
     document.documentElement.classList.toggle("dark", isDark);
 
@@ -311,7 +311,7 @@ export default function Sidebar() {
             <img
               src={dark ? "/logo-white.png" : "/logo-black.png"}
               alt="SequenceFlow"
-              className="h-12 w-auto"
+              className="h-20 w-auto"
             />
           </Link>
         </div>
