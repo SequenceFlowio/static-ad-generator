@@ -42,7 +42,7 @@ const SUPPORT_CARDS = [
     titleKey: "home.requestSection.title",
     descKey: "home.requestSection.desc",
     ctaKey: "home.requestSection.cta",
-    action: "mailto:hello@sequenceflow.io?subject=Section Request" as const,
+    action: "mailto:hallo@sequenceflow.io?subject=Section Request" as const,
   },
   {
     icon: (
@@ -53,7 +53,7 @@ const SUPPORT_CARDS = [
     titleKey: "home.requestFeature.title",
     descKey: "home.requestFeature.desc",
     ctaKey: "home.requestFeature.cta",
-    action: "mailto:hello@sequenceflow.io?subject=Feature Request" as const,
+    action: "mailto:hallo@sequenceflow.io?subject=Feature Request" as const,
   },
   {
     icon: (
@@ -64,7 +64,7 @@ const SUPPORT_CARDS = [
     titleKey: "home.partner.title",
     descKey: "home.partner.desc",
     ctaKey: "home.partner.cta",
-    action: "mailto:hello@sequenceflow.io?subject=Affiliate Program" as const,
+    action: "mailto:hallo@sequenceflow.io?subject=Affiliate Program" as const,
   },
 ];
 

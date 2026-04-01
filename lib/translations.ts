@@ -104,6 +104,15 @@ export const translations: Record<string, Record<Lang, string>> = {
   "home.partner.desc": { en: "Join our affiliate program and earn commission on every referral.", nl: "Word affiliate partner en verdien commissie op elke doorverwijzing." },
   "home.partner.cta": { en: "Join affiliate program", nl: "Aanmelden als partner" },
 
+  // Support modal
+  "support.title": { en: "Contact Support", nl: "Contact opnemen" },
+  "support.subtitle": { en: "Have questions or need help? Reach out to our team.", nl: "Vragen of hulp nodig? Neem contact op met ons team." },
+  "support.helpCenter": { en: "Help Center", nl: "Kennisbank" },
+  "support.helpCenterDesc": { en: "Browse guides, tutorials, and FAQs", nl: "Bekijk handleidingen, tutorials en veelgestelde vragen" },
+  "support.copy": { en: "Copy", nl: "Kopiëren" },
+  "support.copied": { en: "Copied!", nl: "Gekopieerd!" },
+  "support.sendEmail": { en: "Send Email", nl: "E-mail sturen" },
+
   // Credits / generations
   "credits.quality": { en: "Quality", nl: "Kwaliteit" },
   "credits.efficiency": { en: "Efficiency", nl: "Efficiëntie" },
