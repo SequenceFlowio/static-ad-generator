@@ -33,11 +33,11 @@ export default function AdsPage() {
   const [adMode, setAdMode] = useState<"regular" | "batch">("regular");
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
   const [numImages, setNumImages] = useState(2);
-  const [resolution, setResolution] = useState<Resolution>("2K");
   const [model, setModel] = useState<KieModel>("nano-banana-2");
   const [selectedInspo, setSelectedInspo] = useState<string[]>([]);
   const [batchSize, setBatchSize] = useState<10 | 20 | 50>(10);
   const [batchTemplates, setBatchTemplates] = useState<string[]>(["headline", "offer-promotion", "testimonial", "vs-them", "ugc-lifestyle"]);
+  const [userPlan, setUserPlan] = useState<string>("trial");
 
   // Generation progress
   const [generating, setGenerating] = useState(false);
@@ -45,6 +45,14 @@ export default function AdsPage() {
   const [overlayMessage, setOverlayMessage] = useState("");
   const [genError, setGenError] = useState<string | null>(null);
   const [genDone, setGenDone] = useState(false);
+
+  // Derive resolution from plan + model — not exposed to user
+  const isPaidPlan = userPlan !== "trial" && userPlan !== "free";
+  const resolution: Resolution = isPaidPlan ? "4K" : model === "nano-banana-2" ? "1K" : "2K";
+
+  useEffect(() => {
+    fetch("/api/credits").then(r => r.json()).then(d => { if (d.plan) setUserPlan(d.plan); }).catch(() => {});
+  }, []);
 
   useEffect(() => {
     async function load() {
@@ -81,13 +89,8 @@ export default function AdsPage() {
     setBatchTemplates((prev) => prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]);
   }
 
-  // Switch model — update resolution to a valid option
   function selectModel(m: KieModel) {
     setModel(m);
-    const allowed = MODEL_CONFIGS[m].resolutions;
-    if (!allowed.includes(resolution)) {
-      setResolution(allowed[0]);
-    }
   }
 
   // Credit estimate
@@ -231,8 +234,6 @@ export default function AdsPage() {
   if (loading) return <p className="text-sm text-gray-400 dark:text-gray-500">Loading…</p>;
   if (!brand) return null;
 
-  const currentModelConfig = MODEL_CONFIGS[model];
-
   return (
     <div>
       <GeneratingOverlay visible={generating} progress={overlayProgress} message={overlayMessage} />
@@ -359,19 +360,6 @@ export default function AdsPage() {
                   </div>
                 </div>
 
-                {/* Resolution */}
-                <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Resolution</p>
-                  <div className="flex gap-2">
-                    {currentModelConfig.resolutions.map((r) => (
-                      <button key={r} onClick={() => setResolution(r)}
-                        className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
-                        {r}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
                 {/* Inspo */}
                 <InspoPicker brandId={id} type="ad" selected={selectedInspo} onSelect={setSelectedInspo} />
 
@@ -432,19 +420,6 @@ export default function AdsPage() {
                       <button key={n} onClick={() => setBatchSize(n)}
                         className={`rounded-lg border px-4 py-1.5 text-sm font-medium transition-colors ${batchSize === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
                         {n}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Resolution */}
-                <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Resolution</p>
-                  <div className="flex gap-2">
-                    {(["1K", "2K", "4K"] as Resolution[]).map((r) => (
-                      <button key={r} onClick={() => setResolution(r)}
-                        className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
-                        {r}
                       </button>
                     ))}
                   </div>

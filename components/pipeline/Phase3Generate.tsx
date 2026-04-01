@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import InspoPicker from "@/components/InspoPicker";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
-import type { PromptSet, SseEvent, Resolution } from "@/types";
+import type { PromptSet, SseEvent } from "@/types";
+
+type Resolution = "1K" | "2K" | "4K";
 
 const TEMPLATES = [
   { number: 1, name: "headline", label: "01 Headline", aspect: "4:5" },
@@ -14,11 +16,6 @@ const TEMPLATES = [
   { number: 5, name: "ugc-lifestyle", label: "05 UGC Lifestyle", aspect: "9:16" },
 ];
 
-const COST_PER_IMAGE: Record<Resolution, number> = {
-  "1K": 0.08,
-  "2K": 0.12,
-  "4K": 0.16,
-};
 
 interface TemplateProgress {
   template_number: number;
@@ -36,8 +33,13 @@ interface Props {
 export default function Phase3Generate({ brandId, promptSet }: Props) {
   const [open, setOpen] = useState(false);
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
-  const [resolution, setResolution] = useState<Resolution>("2K");
   const [numImages, setNumImages] = useState(2);
+  const [userPlan, setUserPlan] = useState<string>("trial");
+  const resolution: Resolution = (userPlan !== "trial" && userPlan !== "free") ? "4K" : "1K";
+
+  useEffect(() => {
+    fetch("/api/credits").then(r => r.json()).then(d => { if (d.plan) setUserPlan(d.plan); }).catch(() => {});
+  }, []);
   const [generating, setGenerating] = useState(false);
   const [progress, setProgress] = useState<TemplateProgress[]>([]);
   const [complete, setComplete] = useState(false);
@@ -50,8 +52,6 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
     setSelectedTemplates((prev) =>
       prev.includes(n) ? prev.filter((t) => t !== n) : [...prev, n]
     );
-
-  const estimatedCost = selectedTemplates.length * numImages * (COST_PER_IMAGE[resolution] ?? 0.12);
 
   const handleGenerate = useCallback(async () => {
     if (!promptSet || selectedTemplates.length === 0) return;
@@ -175,25 +175,6 @@ export default function Phase3Generate({ brandId, promptSet }: Props) {
                   {n}
                 </button>
               ))}
-            </div>
-          </div>
-
-          {/* Resolution */}
-          <div>
-            <p className="mb-2 text-sm font-medium">Resolution</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {(["1K", "2K", "4K"] as Resolution[]).map((r) => (
-                <button
-                  key={r}
-                  onClick={() => setResolution(r)}
-                  className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${resolution === r ? "border-[#C7F56F] bg-[#C7F56F]/10 text-[#1a1a1a]" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
-                >
-                  {r}
-                </button>
-              ))}
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                ~${estimatedCost.toFixed(2)} · {selectedTemplates.length * numImages} images
-              </span>
             </div>
           </div>
 

@@ -19,7 +19,7 @@ export const PLAN_EFFICIENCY_LIMITS: Record<string, number> = {
 
 // "Quality" = nano-banana-2, "Efficiency" = seedream-3
 export const QUALITY_MODEL = "nano-banana-2";
-export const EFFICIENCY_MODEL = "seedream-3";
+export const EFFICIENCY_MODEL = "seedream/4.5-edit";
 
 export function isQualityModel(model: string): boolean {
   return model === QUALITY_MODEL;
