@@ -3,10 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useLanguage } from "@/components/LanguageProvider";
 import type { Brand } from "@/types";
 
 export default function AdGenPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -16,7 +18,6 @@ export default function AdGenPage() {
       .then((data) => {
         const list: Brand[] = Array.isArray(data) ? data : [];
         setBrands(list);
-        // Auto-redirect if exactly 1 store
         if (list.length === 1) {
           router.replace(`/brands/${list[0].id}/ads`);
         } else {
@@ -26,20 +27,20 @@ export default function AdGenPage() {
       .catch(() => setLoading(false));
   }, [router]);
 
-  if (loading) return <p className="text-sm text-gray-400 dark:text-gray-500">Loading…</p>;
+  if (loading) return <p className="text-sm text-gray-400 dark:text-gray-500">{t("stores.loading")}</p>;
 
   return (
     <div>
       <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Ad Generator</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Select a store to generate ads for.</p>
+        <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{t("adGen.title")}</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("adGen.subtitle")}</p>
       </div>
 
       {brands.length === 0 && (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-12 text-center">
-          <p className="text-gray-500 dark:text-gray-400 text-sm">No stores yet.</p>
+          <p className="text-gray-500 dark:text-gray-400 text-sm">{t("adGen.noStores")}</p>
           <Link href="/brands/new" className="mt-4 inline-block rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
-            Connect a store first
+            {t("adGen.connectFirst")}
           </Link>
         </div>
       )}
@@ -58,7 +59,7 @@ export default function AdGenPage() {
               <p className="font-semibold text-sm text-gray-900 dark:text-white">{brand.name}</p>
               {brand.url && <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{brand.url}</p>}
             </div>
-            <span className="text-xs font-medium text-[#C7F56F]">Generate ads →</span>
+            <span className="text-xs font-medium text-gray-500 dark:text-gray-400">{t("adGen.generate")}</span>
           </Link>
         ))}
       </div>

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
+import { getAuthUser } from "@/lib/auth";
 import { generateImages } from "@/lib/kie";
+import { checkAndDeduct, generationCost } from "@/lib/credits";
 import type { GenerateRequest, PromptItem, KieModel } from "@/types";
 
 export const maxDuration = 300;
@@ -75,6 +77,11 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
+  let user;
+  try { user = await getAuthUser(); } catch {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body: GenerateRequest = await req.json();
   const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio, inspo_image_urls, product_ids: multiProductIds } = body as GenerateRequest & { inspo_image_urls?: string[]; product_ids?: string[] };
 
@@ -126,6 +133,14 @@ export async function POST(
         productImageUrls.push(...urls.slice(0, 2)); // max 2 per product
       }
     }
+  }
+
+  // Check + deduct generations (num templates × variants per template × model cost)
+  const totalImages = selectedPrompts.reduce((sum, p) => sum + p.hook_variants.length, 0);
+  const cost = generationCost(model, totalImages);
+  const { ok } = await checkAndDeduct(user.id, cost);
+  if (!ok) {
+    return NextResponse.json({ error: "Not enough generations remaining. Upgrade your plan.", code: "INSUFFICIENT_CREDITS" }, { status: 402 });
   }
 
   // Create all job rows as "pending" upfront

@@ -65,6 +65,7 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [subscription, setSubscription] = useState<{ plan: string; status: string; current_period_end: string | null } | null>(null);
+  const [credits, setCredits] = useState<{ used: number; limit: number; remaining: number } | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
 
   useEffect(() => {
@@ -73,6 +74,7 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
       setUserEmail(user?.email ?? "");
     });
     fetch("/api/stripe/subscription").then(r => r.json()).then(setSubscription).catch(() => {});
+    fetch("/api/credits").then(r => r.json()).then(setCredits).catch(() => {});
   }, []);
 
   async function handleManageBilling() {
@@ -206,8 +208,25 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
                   )}
                 </div>
                 <div className="rounded-xl border border-gray-200 dark:border-gray-700 p-4">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">{t("settings.creditsTitle")}</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">{t("settings.creditsSoon")}</p>
+                  <p className="text-sm font-medium text-gray-700 dark:text-gray-200 mb-3">{t("settings.creditsTitle")}</p>
+                  {credits ? (
+                    <>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs text-gray-400 dark:text-gray-500">
+                          {credits.used} {t("settings.creditsUsed")} {t("settings.creditsOf")} {credits.limit >= 999999 ? t("settings.creditsUnlimited") : credits.limit}
+                        </span>
+                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">{credits.limit >= 999999 ? "∞" : credits.remaining} {t("settings.creditsOf").replace("of", "").replace("van", "").trim() === "" ? "left" : "over"}</span>
+                      </div>
+                      <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all ${credits.remaining < credits.limit * 0.1 ? "bg-red-400" : "bg-[#C7F56F]"}`}
+                          style={{ width: credits.limit >= 999999 ? "100%" : `${Math.min(100, (credits.used / credits.limit) * 100)}%` }}
+                        />
+                      </div>
+                    </>
+                  ) : (
+                    <div className="h-2 w-full rounded-full bg-gray-100 dark:bg-gray-800 animate-pulse" />
+                  )}
                 </div>
               </div>
             )}

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateContentPost } from "@/lib/content-prompt-generator";
+import { checkAndDeduct } from "@/lib/credits";
 import type { Platform } from "@/lib/content-templates";
 
 // GET /api/brands/[id]/content — list all content sessions for brand
@@ -29,7 +30,14 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  try { await getAuthUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+  let user;
+  try { user = await getAuthUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
+
+  // Content generation costs 1 generation (efficiency equivalent)
+  const { ok } = await checkAndDeduct(user.id, 1);
+  if (!ok) {
+    return NextResponse.json({ error: "Not enough generations remaining. Upgrade your plan.", code: "INSUFFICIENT_CREDITS" }, { status: 402 });
+  }
 
   const body = await req.json();
   const { template_name, platform, product_id, topic_hint, selected_desire, variation_index, total_count } = body as {

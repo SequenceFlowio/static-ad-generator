@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import PricingModal from "@/components/PricingModal";
+import { useLanguage } from "@/components/LanguageProvider";
 import type { Brand } from "@/types";
 
 // Plan limits — free & starter allow max 1 store
@@ -43,6 +44,7 @@ function StoreCard({ brand, deleting, onDelete }: { brand: Brand; deleting: bool
 
 export default function StoresPage() {
   const router = useRouter();
+  const { t } = useLanguage();
   const [brands, setBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -57,7 +59,7 @@ export default function StoresPage() {
 
   async function handleDelete(e: React.MouseEvent, brand: Brand) {
     e.preventDefault();
-    if (!confirm(`Delete "${brand.name}"? This cannot be undone.`)) return;
+    if (!confirm(t("stores.deleteConfirm"))) return;
     setDeletingId(brand.id);
     await fetch(`/api/brands/${brand.id}`, { method: "DELETE" });
     setBrands((prev) => prev.filter((b) => b.id !== brand.id));
@@ -78,8 +80,8 @@ export default function StoresPage() {
     <div>
       <div className="mb-8 flex items-end justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">Stores</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Manage your brand stores and their DNA.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{t("stores.title")}</h1>
+          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("stores.subtitle")}</p>
         </div>
         <button
           onClick={handleConnectStore}
@@ -88,7 +90,7 @@ export default function StoresPage() {
           <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
             <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
           </svg>
-          Connect Store
+          {t("stores.connect")}
         </button>
       </div>
 
@@ -101,10 +103,10 @@ export default function StoresPage() {
             </div>
             <div>
               <p className={`text-sm font-medium ${atLimit ? "text-amber-800 dark:text-amber-300" : "text-gray-700 dark:text-gray-200"}`}>
-                {brands.length} of {FREE_STORE_LIMIT} store{FREE_STORE_LIMIT !== 1 ? "s" : ""} connected
+                {brands.length} {t("stores.of")} {FREE_STORE_LIMIT} {FREE_STORE_LIMIT !== 1 ? t("stores.connectedPlural") : t("stores.connected")}
               </p>
               <p className={`text-xs ${atLimit ? "text-amber-600 dark:text-amber-400" : "text-gray-400 dark:text-gray-500"}`}>
-                {atLimit ? "Free plan limit reached" : "Free plan"}
+                {atLimit ? t("stores.freePlanLimit") : t("stores.freePlan")}
               </p>
             </div>
           </div>
@@ -113,13 +115,13 @@ export default function StoresPage() {
               onClick={() => setShowPricing(true)}
               className="rounded-lg bg-[#C7F56F] px-4 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors"
             >
-              Upgrade for more →
+              {t("stores.upgradeMore")}
             </button>
           )}
         </div>
       )}
 
-      {loading && <p className="text-sm text-gray-400 dark:text-gray-500">Loading stores…</p>}
+      {loading && <p className="text-sm text-gray-400 dark:text-gray-500">{t("stores.loading")}</p>}
 
       {!loading && brands.length === 0 && (
         <div className="rounded-xl border border-dashed border-gray-300 dark:border-gray-600 p-16 text-center">
@@ -128,8 +130,8 @@ export default function StoresPage() {
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
             </svg>
           </div>
-          <p className="font-semibold text-gray-700 dark:text-gray-200">No stores connected</p>
-          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">Connect your brand to start generating ads and content.</p>
+          <p className="font-semibold text-gray-700 dark:text-gray-200">{t("stores.noStores")}</p>
+          <p className="mt-1 text-sm text-gray-400 dark:text-gray-500">{t("stores.noStoresDesc")}</p>
           <button
             onClick={handleConnectStore}
             className="mt-5 inline-flex items-center gap-2 rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
@@ -137,7 +139,7 @@ export default function StoresPage() {
             <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
             </svg>
-            Connect Store
+            {t("stores.connect")}
           </button>
         </div>
       )}
