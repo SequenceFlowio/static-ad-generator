@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateImages } from "@/lib/kie";
-import { checkAndDeduct, generationCost } from "@/lib/credits";
+import { checkAndDeduct, isQualityModel } from "@/lib/credits";
 import type { GenerateRequest, PromptItem, KieModel } from "@/types";
 
 export const maxDuration = 300;
@@ -135,10 +135,11 @@ export async function POST(
     }
   }
 
-  // Check + deduct generations (num templates × variants per template × model cost)
+  // Check + deduct per model type
   const totalImages = selectedPrompts.reduce((sum, p) => sum + p.hook_variants.length, 0);
-  const cost = generationCost(model, totalImages);
-  const { ok } = await checkAndDeduct(user.id, cost);
+  const qualityImages = isQualityModel(model) ? totalImages : 0;
+  const efficiencyImages = isQualityModel(model) ? 0 : totalImages;
+  const { ok } = await checkAndDeduct(user.id, qualityImages, efficiencyImages);
   if (!ok) {
     return NextResponse.json({ error: "Not enough generations remaining. Upgrade your plan.", code: "INSUFFICIENT_CREDITS" }, { status: 402 });
   }

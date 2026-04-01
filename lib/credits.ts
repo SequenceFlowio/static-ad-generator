@@ -1,21 +1,28 @@
 import { getServerSupabase } from "@/lib/supabase";
 
-export const PLAN_GENERATION_LIMITS: Record<string, number> = {
-  trial: 50,
-  free: 50,
-  starter: 500,
-  pro: 2000,
+// Per-plan image limits
+export const PLAN_QUALITY_LIMITS: Record<string, number> = {
+  trial: 10,
+  free: 10,
+  starter: 150,
+  pro: 350,
   agency: 999999,
 };
 
-// Cost per image generation
-export const MODEL_COST: Record<string, number> = {
-  "nano-banana-2": 2,  // Quality
-  "seedream-3": 1,     // Efficiency
+export const PLAN_EFFICIENCY_LIMITS: Record<string, number> = {
+  trial: 20,
+  free: 20,
+  starter: 250,
+  pro: 600,
+  agency: 999999,
 };
 
-export function generationCost(model: string, count: number): number {
-  return (MODEL_COST[model] ?? 1) * count;
+// "Quality" = nano-banana-2, "Efficiency" = seedream-3
+export const QUALITY_MODEL = "nano-banana-2";
+export const EFFICIENCY_MODEL = "seedream-3";
+
+export function isQualityModel(model: string): boolean {
+  return model === QUALITY_MODEL;
 }
 
 function currentMonth(): string {
@@ -23,36 +30,68 @@ function currentMonth(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
-export async function getUsage(userId: string): Promise<{ used: number; limit: number; plan: string }> {
+export interface UsageData {
+  qualityUsed: number;
+  qualityLimit: number;
+  efficiencyUsed: number;
+  efficiencyLimit: number;
+  plan: string;
+}
+
+export async function getUsage(userId: string): Promise<UsageData> {
   const db = getServerSupabase();
   const month = currentMonth();
 
   const [{ data: sub }, { data: usage }] = await Promise.all([
     db.from("subscriptions").select("plan, status").eq("user_id", userId).single(),
-    db.from("generation_usage").select("used").eq("user_id", userId).eq("month", month).single(),
+    db.from("generation_usage").select("quality_used, efficiency_used").eq("user_id", userId).eq("month", month).single(),
   ]);
 
   const plan = sub?.status === "active" || sub?.status === "trialing" ? (sub?.plan ?? "trial") : "trial";
-  const limit = PLAN_GENERATION_LIMITS[plan] ?? 50;
-  const used = usage?.used ?? 0;
 
-  return { used, limit, plan };
+  return {
+    qualityUsed: usage?.quality_used ?? 0,
+    qualityLimit: PLAN_QUALITY_LIMITS[plan] ?? 10,
+    efficiencyUsed: usage?.efficiency_used ?? 0,
+    efficiencyLimit: PLAN_EFFICIENCY_LIMITS[plan] ?? 20,
+    plan,
+  };
 }
 
-export async function checkAndDeduct(userId: string, cost: number): Promise<{ ok: boolean; used: number; limit: number }> {
+export async function checkAndDeduct(
+  userId: string,
+  qualityImages: number,
+  efficiencyImages: number
+): Promise<{ ok: boolean; reason?: string } & UsageData> {
   const db = getServerSupabase();
   const month = currentMonth();
-  const { used, limit, plan } = await getUsage(userId);
+  const usage = await getUsage(userId);
 
-  if (plan !== "agency" && used + cost > limit) {
-    return { ok: false, used, limit };
+  const isAgency = usage.plan === "agency";
+
+  if (!isAgency) {
+    if (qualityImages > 0 && usage.qualityUsed + qualityImages > usage.qualityLimit) {
+      return { ok: false, reason: "quality", ...usage };
+    }
+    if (efficiencyImages > 0 && usage.efficiencyUsed + efficiencyImages > usage.efficiencyLimit) {
+      return { ok: false, reason: "efficiency", ...usage };
+    }
   }
 
-  // Upsert: increment used count
   await db.from("generation_usage").upsert(
-    { user_id: userId, month, used: used + cost },
+    {
+      user_id: userId,
+      month,
+      quality_used: usage.qualityUsed + qualityImages,
+      efficiency_used: usage.efficiencyUsed + efficiencyImages,
+    },
     { onConflict: "user_id,month" }
   );
 
-  return { ok: true, used: used + cost, limit };
+  return {
+    ok: true,
+    ...usage,
+    qualityUsed: usage.qualityUsed + qualityImages,
+    efficiencyUsed: usage.efficiencyUsed + efficiencyImages,
+  };
 }

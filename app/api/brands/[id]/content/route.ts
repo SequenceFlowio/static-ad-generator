@@ -3,6 +3,7 @@ import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateContentPost } from "@/lib/content-prompt-generator";
 import { checkAndDeduct } from "@/lib/credits";
+
 import type { Platform } from "@/lib/content-templates";
 
 // GET /api/brands/[id]/content — list all content sessions for brand
@@ -33,8 +34,8 @@ export async function POST(
   let user;
   try { user = await getAuthUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
-  // Content generation costs 1 generation (efficiency equivalent)
-  const { ok } = await checkAndDeduct(user.id, 1);
+  // Content generation counts as 1 efficiency image
+  const { ok } = await checkAndDeduct(user.id, 0, 1);
   if (!ok) {
     return NextResponse.json({ error: "Not enough generations remaining. Upgrade your plan.", code: "INSUFFICIENT_CREDITS" }, { status: 402 });
   }
