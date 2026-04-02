@@ -51,7 +51,7 @@ export default function ProductsPage() {
               <div className="mb-3 flex items-center justify-between">
                 <h2 className="text-sm font-semibold text-gray-700 dark:text-gray-200">{brand.name}</h2>
                 <Link href={`/brands/${brand.id}/products/new`}
-                  className="text-xs font-medium text-[#C7F56F] hover:underline">
+                  className="text-xs font-medium text-gray-700 dark:text-gray-200 hover:underline">
                   + {t("products.add")}
                 </Link>
               </div>
@@ -80,7 +80,7 @@ export default function ProductsPage() {
                 ))}
 
                 <Link href={`/brands/${brand.id}/products/new`}
-                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 p-4 hover:border-[#C7F56F] hover:text-gray-600 dark:hover:text-gray-300 text-gray-400 dark:text-gray-500 transition-all min-h-[120px]">
+                  className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-900 p-4 hover:border-[#C7F56F] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 transition-all min-h-[120px]">
                   <span className="text-2xl font-light">+</span>
                   <span className="text-xs font-medium">{t("products.add")}</span>
                 </Link>
