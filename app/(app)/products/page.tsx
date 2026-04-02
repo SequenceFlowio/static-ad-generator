@@ -20,11 +20,6 @@ export default function ProductsPage() {
       .then(async (data: Brand[]) => {
         const list: Brand[] = Array.isArray(data) ? data : [];
         setBrands(list);
-        // If only 1 brand, redirect directly to its products
-        if (list.length === 1) {
-          router.replace(`/brands/${list[0].id}/products/new`);
-          return;
-        }
         // Load products for all brands in parallel
         const entries = await Promise.all(
           list.map(async (b) => {
