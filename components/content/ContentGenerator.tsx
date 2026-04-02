@@ -249,11 +249,30 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
       <div className="space-y-5">
         <GeneratingOverlay visible={isOverlayVisible} progress={overlayProgress} message={overlayMessage} />
 
-        <div className="flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
+        <div className="flex items-center gap-2 text-sm">
           <span className="text-lg">{template?.icon}</span>
-          <span className="font-medium text-gray-700 dark:text-gray-200">{template?.label}</span>
-          <span>·</span>
-          <span className="capitalize">{selectedPlatform}</span>
+          <span className="font-semibold text-gray-800 dark:text-white">{template?.label}</span>
+        </div>
+
+        {/* Platform selector — always shown in the inputs step */}
+        <div>
+          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Platform</p>
+          <div className="flex flex-wrap gap-2">
+            {PLATFORMS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => setSelectedPlatform(p.value)}
+                className={`rounded-lg border-2 px-3 py-1.5 text-sm font-medium transition-colors ${
+                  selectedPlatform === p.value
+                    ? "border-[#C7F56F] bg-[#C7F56F]/5 text-gray-900 dark:text-white"
+                    : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                {p.label}
+                <span className="ml-1.5 text-[10px] text-gray-400 dark:text-gray-500">{p.aspectRatio}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
         {showProduct && products.length > 0 && (
@@ -349,7 +368,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         )}
 
         <div className="flex justify-between gap-3 pt-2">
-          <button onClick={() => setStep("template")} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">← Back</button>
+          <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
           <button
             onClick={handleGenerate}
             disabled={generatingCopy || (template?.needs_product && !selectedProductId)}

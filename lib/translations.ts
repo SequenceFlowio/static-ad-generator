@@ -6,6 +6,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   "nav.stores": { en: "Stores", nl: "Winkels" },
   "nav.adGen": { en: "Ad Generator", nl: "Advertenties" },
   "nav.contentGen": { en: "Content Generator", nl: "Content" },
+  "nav.products": { en: "Products", nl: "Producten" },
   "nav.tutorial": { en: "Tutorial", nl: "Tutorial" },
   "nav.feedback": { en: "Feedback", nl: "Feedback" },
   "nav.support": { en: "Support", nl: "Support" },
@@ -62,6 +63,10 @@ export const translations: Record<string, Record<Lang, string>> = {
   "stores.noStoresDesc": { en: "Connect your brand to start generating ads and content.", nl: "Voeg een winkel toe om te beginnen met advertenties en content maken." },
   "stores.loading": { en: "Loading stores…", nl: "Winkels laden…" },
   "stores.deleteConfirm": { en: "Delete this store? This cannot be undone.", nl: "Winkel verwijderen? Dit kan niet ongedaan worden gemaakt." },
+
+  // Products page
+  "products.subtitle": { en: "Manage products across all your stores.", nl: "Beheer producten in al je winkels." },
+  "products.add": { en: "Add product", nl: "Product toevoegen" },
 
   // Ad Generator page
   "adGen.title": { en: "Ad Generator", nl: "Advertenties maken" },

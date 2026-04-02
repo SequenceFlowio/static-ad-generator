@@ -272,26 +272,39 @@ export default function AdsPage() {
               <Link href={`/brands/${id}/products/new`} className="text-[#C7F56F] hover:underline">Add one first →</Link>
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-3">
               {products.map((p) => {
                 const isSelected = selectedProductIds.includes(p.id);
                 const isDisabled = !isSelected && selectedProductIds.length >= 3;
+                const thumb = p.image_urls?.[0];
                 return (
                   <button
                     key={p.id}
                     onClick={() => toggleProductSelect(p.id)}
                     disabled={isDisabled}
                     title={isDisabled ? "Max 3 products" : undefined}
-                    className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+                    className={`group relative flex flex-col rounded-xl border-2 overflow-hidden transition-colors disabled:opacity-40 disabled:cursor-not-allowed w-28 ${
                       isSelected
-                        ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white font-medium"
-                        : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                        ? "border-[#C7F56F]"
+                        : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                     }`}
                   >
-                    <span className={`flex h-4 w-4 flex-shrink-0 items-center justify-center rounded border text-[10px] ${isSelected ? "border-[#C7F56F] bg-[#C7F56F] text-[#1a1a1a]" : "border-gray-300 dark:border-gray-600"}`}>
-                      {isSelected ? "✓" : ""}
-                    </span>
-                    {p.name}
+                    <div className="aspect-square w-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+                      {thumb ? (
+                        <Image src={thumb} alt={p.name} width={112} height={112}
+                          className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-200" />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center text-2xl text-gray-300 dark:text-gray-600">
+                          {p.name.charAt(0).toUpperCase()}
+                        </div>
+                      )}
+                    </div>
+                    <div className={`px-2 py-1.5 ${isSelected ? "bg-[#C7F56F]/10" : ""}`}>
+                      <p className="text-[11px] font-semibold text-gray-800 dark:text-white truncate">{p.name}</p>
+                    </div>
+                    {isSelected && (
+                      <div className="absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[#C7F56F] text-[#1a1a1a] text-[10px] font-bold shadow-sm">✓</div>
+                    )}
                   </button>
                 );
               })}
