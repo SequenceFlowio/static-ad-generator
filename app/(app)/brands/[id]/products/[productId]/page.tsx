@@ -40,7 +40,8 @@ export default function ProductPage() {
         setBrandName(d.brand?.name ?? "Brand");
       }
       if (!productRes.ok) { router.push(`/brands/${brandId}`); return; }
-      const p: Product = await productRes.json();
+      const productData = await productRes.json();
+      const p: Product = productData.product ?? productData;
       setProduct(p);
       setEditName(p.name);
       setEditDescription(p.description ?? "");
