@@ -2,9 +2,10 @@ export interface ContentTemplate {
   name: string;
   label: string;
   description: string;
-  needs_product: boolean;   // If true, show product picker
-  product_optional: boolean; // If true, product enhances but isn't required
-  icon: string;             // Emoji icon for UI
+  needs_product: boolean;
+  product_optional: boolean;
+  icon: string;
+  thumb: string;
 }
 
 export const CONTENT_TEMPLATES: ContentTemplate[] = [
@@ -15,6 +16,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: false,
     product_optional: false,
     icon: "💡",
+    thumb: "/template thumbnails/content/tips_tricks.jpg",
   },
   {
     name: "about-brand",
@@ -23,6 +25,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: false,
     product_optional: false,
     icon: "✨",
+    thumb: "/template thumbnails/content/about_the_brand.jpg",
   },
   {
     name: "about-product",
@@ -31,6 +34,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: true,
     product_optional: false,
     icon: "🎯",
+    thumb: "/template thumbnails/content/about_a_product.jpg",
   },
   {
     name: "using-product",
@@ -39,6 +43,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: true,
     product_optional: false,
     icon: "🤝",
+    thumb: "/template thumbnails/content/using_product.jpg",
   },
   {
     name: "testimonial",
@@ -47,6 +52,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: false,
     product_optional: false,
     icon: "⭐",
+    thumb: "/template thumbnails/content/testimonial.jpg",
   },
   {
     name: "lifestyle",
@@ -55,6 +61,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: false,
     product_optional: true,
     icon: "🌿",
+    thumb: "/template thumbnails/content/lifestyle.jpg",
   },
   {
     name: "before-after",
@@ -63,22 +70,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     needs_product: false,
     product_optional: true,
     icon: "🔄",
-  },
-  {
-    name: "behind-scenes",
-    label: "Behind the Scenes",
-    description: "Brand authenticity — team, process, sourcing, or craftsmanship.",
-    needs_product: false,
-    product_optional: false,
-    icon: "🎬",
-  },
-  {
-    name: "seasonal-trend",
-    label: "Seasonal / Trend",
-    description: "Tie the brand to a moment, season, or cultural trend.",
-    needs_product: false,
-    product_optional: true,
-    icon: "📅",
+    thumb: "/template thumbnails/content/before_after.jpg",
   },
 ];
 

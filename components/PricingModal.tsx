@@ -18,7 +18,6 @@ const TOP_PLANS = [
       "Quality: 10 img/mo",
       "Efficiency: 20 img/mo",
       "1K resolution only",
-      "Watermark on exports",
     ],
   },
   {

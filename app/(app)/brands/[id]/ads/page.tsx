@@ -3,6 +3,7 @@
 import { useEffect, useCallback, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import InspoPicker from "@/components/InspoPicker";
 import InspoLibrary from "@/components/InspoLibrary";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
@@ -10,11 +11,11 @@ import type { Brand, Product, KieModel } from "@/types";
 import { MODEL_CONFIGS } from "@/types";
 
 const AD_TEMPLATES = [
-  { number: 1, name: "headline", label: "Headline" },
-  { number: 2, name: "offer-promotion", label: "Offer / Promo" },
-  { number: 3, name: "testimonial", label: "Testimonial" },
-  { number: 4, name: "vs-them", label: "Us vs Them" },
-  { number: 5, name: "ugc-lifestyle", label: "UGC Lifestyle" },
+  { number: 1, name: "headline", label: "Headline", thumb: "/template thumbnails/headline.jpg" },
+  { number: 2, name: "offer-promotion", label: "Offer / Promo", thumb: "/template thumbnails/offer.jpg" },
+  { number: 3, name: "testimonial", label: "Testimonial", thumb: "/template thumbnails/testimonial.jpg" },
+  { number: 4, name: "vs-them", label: "Us vs Them", thumb: "/template thumbnails/us_vs_them.jpg" },
+  { number: 5, name: "ugc-lifestyle", label: "UGC Lifestyle", thumb: "/template thumbnails/ugc_lifestyle.jpg" },
 ];
 
 type Resolution = "1K" | "2K" | "4K";
@@ -320,11 +321,20 @@ export default function AdsPage() {
                 {/* Templates */}
                 <div>
                   <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Templates</p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     {AD_TEMPLATES.map((t) => (
                       <button key={t.number} onClick={() => toggleTemplate(t.number)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${selectedTemplates.includes(t.number) ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
-                        {t.label}
+                        className={`group relative flex flex-col rounded-xl border-2 overflow-hidden transition-colors ${selectedTemplates.includes(t.number) ? "border-[#C7F56F]" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                        <div className="aspect-[4/5] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          <Image src={t.thumb} alt={t.label} width={120} height={150}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                        <div className={`px-2 py-1.5 ${selectedTemplates.includes(t.number) ? "bg-[#C7F56F]/10" : ""}`}>
+                          <p className="text-[11px] font-semibold text-gray-800 dark:text-white truncate">{t.label}</p>
+                        </div>
+                        {selectedTemplates.includes(t.number) && (
+                          <div className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#C7F56F] text-[#1a1a1a] text-[9px] font-bold">✓</div>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -402,11 +412,20 @@ export default function AdsPage() {
                 {/* Templates */}
                 <div>
                   <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Allowed templates <span className="text-gray-400 dark:text-gray-500 font-normal">(AI picks from these)</span></p>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     {AD_TEMPLATES.map((t) => (
                       <button key={t.name} onClick={() => toggleBatchTemplate(t.name)}
-                        className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${batchTemplates.includes(t.name) ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
-                        {t.label}
+                        className={`group relative flex flex-col rounded-xl border-2 overflow-hidden transition-colors ${batchTemplates.includes(t.name) ? "border-[#C7F56F]" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                        <div className="aspect-[4/5] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                          <Image src={t.thumb} alt={t.label} width={120} height={150}
+                            className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                        <div className={`px-2 py-1.5 ${batchTemplates.includes(t.name) ? "bg-[#C7F56F]/10" : ""}`}>
+                          <p className="text-[11px] font-semibold text-gray-800 dark:text-white truncate">{t.label}</p>
+                        </div>
+                        {batchTemplates.includes(t.name) && (
+                          <div className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#C7F56F] text-[#1a1a1a] text-[9px] font-bold">✓</div>
+                        )}
                       </button>
                     ))}
                   </div>

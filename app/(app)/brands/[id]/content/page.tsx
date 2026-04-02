@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import InspoLibrary from "@/components/InspoLibrary";
 import ContentGenerator from "@/components/content/ContentGenerator";
 import { CONTENT_TEMPLATES } from "@/lib/content-templates";
@@ -68,10 +69,15 @@ export default function ContentPage() {
       <div className="grid grid-cols-3 gap-3 mb-6">
         {CONTENT_TEMPLATES.map((t) => (
           <button key={t.name} onClick={() => setContentModalTemplate(t.name)}
-            className="flex flex-col items-start gap-1 rounded-xl border-2 border-gray-200 dark:border-gray-700 px-4 py-3 text-left hover:border-[#C7F56F] hover:bg-[#C7F56F]/5 transition-colors">
-            <span className="text-xl">{t.icon}</span>
-            <span className="text-sm font-semibold text-gray-900 dark:text-white">{t.label}</span>
-            <span className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight">{t.description}</span>
+            className="group flex flex-col items-start rounded-xl border-2 border-gray-200 dark:border-gray-700 overflow-hidden text-left hover:border-[#C7F56F] transition-colors">
+            <div className="aspect-[4/5] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+              <Image src={t.thumb} alt={t.label} width={240} height={300}
+                className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+            </div>
+            <div className="p-3">
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{t.label}</p>
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 leading-tight mt-0.5">{t.description}</p>
+            </div>
           </button>
         ))}
       </div>

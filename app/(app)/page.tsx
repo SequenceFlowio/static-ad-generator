@@ -15,11 +15,6 @@ const AD_TEMPLATES = [
   { name: "ugc-lifestyle", label: "UGC Lifestyle", description: "Real-person scene", thumb: "/template thumbnails/ugc_lifestyle.jpg" },
 ];
 
-// Placeholder bg colors for content templates until images are provided
-const CONTENT_PLACEHOLDER_COLORS = [
-  "bg-violet-100", "bg-blue-100", "bg-emerald-100", "bg-amber-100", "bg-rose-100",
-  "bg-indigo-100", "bg-teal-100", "bg-orange-100", "bg-pink-100",
-];
 
 const SUPPORT_CARDS = [
   {
@@ -148,8 +143,9 @@ export default function HomePage() {
             {contentLoop.map((tmpl, i) => (
               <Link key={`${tmpl.name}-${i}`} href="/content-gen"
                 className="group flex-shrink-0 w-40 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden hover:border-[#C7F56F] hover:shadow-sm transition-all">
-                <div className={`aspect-[4/5] flex flex-col items-center justify-center gap-2 ${CONTENT_PLACEHOLDER_COLORS[i % CONTENT_PLACEHOLDER_COLORS.length]} dark:bg-gray-800`}>
-                  <span className="text-3xl">{tmpl.icon}</span>
+                <div className="aspect-[4/5] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                  <Image src={tmpl.thumb} alt={tmpl.label} width={160} height={200}
+                    className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 </div>
                 <div className="p-2.5">
                   <p className="text-xs font-semibold text-gray-800 dark:text-white">{tmpl.label}</p>
