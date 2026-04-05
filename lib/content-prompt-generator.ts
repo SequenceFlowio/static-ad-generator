@@ -8,6 +8,23 @@ export interface ContentGenerationResult {
   caption_note: string;
 }
 
+interface ImagePromptJson {
+  style: "editorial" | "clean_ad" | "ugc_raw" | "ui_card";
+  scene: string;
+  subject?: string;
+  product_placement?: string;
+  composition: string;
+  lighting: string;
+  camera: string;
+  color_palette: string;
+  typography?: { headline: string; body?: string };
+  text_density: "none" | "low" | "medium" | "high";
+  overlay: { allowed: boolean; type?: string };
+  mood: string;
+  realism: "photorealistic" | "stylized" | "graphic_design";
+  grain_noise?: "none" | "slight" | "heavy";
+}
+
 const PLATFORM_TONE: Record<Platform, string> = {
   instagram: "aspirational and punchy — 150-200 words max, 15-20 relevant hashtags at the end",
   facebook: "conversational and community-driven — 150-200 words max, 5-8 hashtags at the end",
@@ -15,20 +32,123 @@ const PLATFORM_TONE: Record<Platform, string> = {
   pinterest: "descriptive and keyword-rich — 100-150 words max, 10-15 hashtags at the end",
 };
 
-// These templates produce purely visual images — NO text, labels, or overlays
-const NO_TEXT_TEMPLATES = new Set(["lifestyle", "using-product", "behind-scenes", "seasonal-trend"]);
-
-const TEMPLATE_INSTRUCTIONS: Record<string, string> = {
-  "tips-tricks": "Create an educational post sharing 3 specific, actionable tips related to the brand's niche. Each tip should feel genuinely useful, not promotional. The image shows a clean, typographic layout with the tips presented visually.",
-  "about-brand": "Tell the brand's story, values, or mission in a way that feels human and relatable. Focus on why the brand exists, not just what it sells. The image is warm, brand-aesthetic, with minimal text overlay.",
-  "about-product": "Spotlight the product — what it is, what makes it different, and why it matters. Be specific. The image is a clean product hero shot or lifestyle placement that shows the product clearly.",
-  "using-product": "Show the product in action — a how-to moment, a daily routine, or a specific use case. Make it feel real and accessible. The image shows the product being used naturally. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
-  "testimonial": "Feature a compelling customer result or quote. Keep it specific and believable — a real outcome, not generic praise. The image is a clean quote card with brand styling.",
-  "lifestyle": "Place the brand or product in an aspirational but relatable scene. The focus is on the feeling and lifestyle, not the product itself. The image is beautiful, editorial, scene-first. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
-  "before-after": "Show the transformation the brand enables — the before state (pain or frustration) and the after state (result or relief). Make both states vivid. The image uses a split or contrast layout.",
-  "behind-scenes": "Pull back the curtain — show the team, the process, the sourcing, or the craft behind the brand. Build trust through authenticity. The image feels candid and real. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
-  "seasonal-trend": "Connect the brand to a current season, moment, or cultural trend in a way that feels natural and on-brand. The image reflects the seasonal or trend aesthetic clearly. IMAGE MUST BE PURELY VISUAL — absolutely no text, labels, captions, or overlays of any kind in the image.",
+const STYLE_PREFIX: Record<string, string> = {
+  editorial: "Professional editorial photography. Clean composition. Thoughtful styling.",
+  clean_ad: "Performance ad visual. Clear subject hierarchy. Brand-consistent colors and layout.",
+  ugc_raw: "User-generated content aesthetic. Smartphone camera feel. Natural imperfections. Authentic and candid.",
+  ui_card: "Graphic design asset. Typography-led layout. Flat or minimal background. No photography elements.",
 };
+
+// Fixed constraints per template — OpenAI fills in brand-specific details within these boundaries
+const TEMPLATE_SCHEMAS: Record<string, Partial<ImagePromptJson>> = {
+  "tips-tricks": {
+    style: "ui_card",
+    realism: "graphic_design",
+    camera: "none (graphic design)",
+    text_density: "high",
+    overlay: { allowed: true, type: "bold headline at top + 3 numbered tips with icons below, clean list layout" },
+    composition: "centered vertical layout with clear section hierarchy",
+    lighting: "flat, no shadows — graphic design style",
+    mood: "educational and useful",
+  },
+  "about-brand": {
+    style: "editorial",
+    realism: "photorealistic",
+    camera: "medium telephoto, shallow depth of field",
+    text_density: "low",
+    overlay: { allowed: true, type: "minimal brand tagline or short headline at bottom" },
+    composition: "rule of thirds, subject left or right, breathing room",
+    lighting: "soft natural window light or golden hour outdoor",
+    mood: "warm, human, and authentic",
+  },
+  "about-product": {
+    style: "clean_ad",
+    realism: "photorealistic",
+    camera: "studio product shot — overhead or 45-degree angle, sharp focus",
+    text_density: "low",
+    overlay: { allowed: true, type: "product name + short benefit headline" },
+    composition: "centered hero product placement on clean background",
+    lighting: "flat studio lighting or soft box — even, no harsh shadows",
+    mood: "clean, premium, and confident",
+  },
+  "using-product": {
+    style: "ugc_raw",
+    realism: "photorealistic",
+    camera: "smartphone handheld — slight motion, natural framing",
+    text_density: "none",
+    overlay: { allowed: false },
+    composition: "action-first — product in hand or in use, mid-scene moment",
+    lighting: "natural available light — indoor or outdoor",
+    mood: "real, accessible, and relatable",
+    grain_noise: "slight",
+  },
+  "testimonial": {
+    style: "ui_card",
+    realism: "graphic_design",
+    camera: "none (graphic design)",
+    text_density: "medium",
+    overlay: { allowed: true, type: "quote card — large quote text, customer name/avatar at bottom, brand logo subtle" },
+    composition: "centered card layout, generous padding, strong typographic hierarchy",
+    lighting: "flat — graphic design style",
+    mood: "trustworthy, warm, and credible",
+  },
+  "lifestyle": {
+    style: "editorial",
+    realism: "photorealistic",
+    camera: "medium telephoto shallow depth of field — cinematic",
+    text_density: "none",
+    overlay: { allowed: false },
+    composition: "scene-first composition — product present but not dominant, environment tells the story",
+    lighting: "golden hour or soft diffused natural light",
+    mood: "aspirational and effortless",
+  },
+  "before-after": {
+    style: "clean_ad",
+    realism: "photorealistic",
+    camera: "controlled — consistent angle both sides, studio or neutral environment",
+    text_density: "none",
+    overlay: { allowed: true, type: "Before / After text labels on respective sides — minimal, clean" },
+    composition: "vertical split 50/50 — left=before, right=after, same framing and scale",
+    lighting: "matched lighting both sides — flat and even for clarity",
+    mood: "transformative and clear",
+  },
+};
+
+const VARIATION_AXES = ["scene_type", "camera_angle", "lighting", "emotional_tone", "product_placement"];
+
+function serializeImagePromptJson(json: ImagePromptJson): string {
+  const parts: string[] = [];
+
+  const stylePrefix = STYLE_PREFIX[json.style];
+  if (stylePrefix) parts.push(stylePrefix);
+
+  parts.push(json.scene);
+  if (json.subject) parts.push(`Subject: ${json.subject}.`);
+  if (json.product_placement) parts.push(`Product placement: ${json.product_placement}.`);
+  parts.push(`Composition: ${json.composition}.`);
+  parts.push(`Lighting: ${json.lighting}.`);
+  if (json.camera && json.camera !== "none (graphic design)") parts.push(`Camera: ${json.camera}.`);
+  parts.push(`Color palette: ${json.color_palette}.`);
+
+  if (json.typography) {
+    const typo = `Typography: ${json.typography.headline} headlines${json.typography.body ? `, ${json.typography.body} body text` : ""}.`;
+    parts.push(typo);
+  }
+
+  if (!json.overlay.allowed) {
+    parts.push("No text, no labels, no overlays — purely visual image.");
+  } else if (json.overlay.type) {
+    parts.push(`Text overlay: ${json.overlay.type}.`);
+  }
+
+  parts.push(`Mood: ${json.mood}.`);
+
+  if (json.grain_noise && json.grain_noise !== "none") {
+    parts.push(`Film grain/noise: ${json.grain_noise}.`);
+  }
+
+  return parts.filter(Boolean).join(" ");
+}
 
 function brandDnaToText(dna: BrandDnaData): string {
   return `
@@ -43,9 +163,9 @@ Positioning: ${dna.positioning ?? "N/A"}
 Competitive Differentiation: ${dna.competitive_differentiation ?? "N/A"}
 
 VISUAL SYSTEM:
-Primary Font: ${dna.primary_font ?? "N/A"}
-Secondary Font: ${dna.secondary_font ?? "N/A"}
-Accent Color: ${dna.accent_color ?? "N/A"} ← describe visually in image_prompt (e.g. "bright lime green"), NEVER write hex codes
+Primary Font: ${dna.primary_font ?? "N/A"} (describe typography STYLE, not font name — e.g. "bold geometric sans-serif")
+Secondary Font: ${dna.secondary_font ?? "N/A"} (describe as style — e.g. "elegant high-contrast serif")
+Accent Color: ${dna.accent_color ?? "N/A"} ← describe visually in color_palette (e.g. "bright lime green"), NEVER write hex codes
 Lettertype Color: ${dna.lettertype_color ?? "N/A"} ← describe visually
 Background Color: ${dna.background_color ?? "N/A"} ← describe visually
 `.trim();
@@ -77,21 +197,40 @@ export async function generateContentPost({
 
   const client = new OpenAI({ apiKey });
 
-  const templateInstruction = TEMPLATE_INSTRUCTIONS[templateName] ?? "Create engaging brand content.";
   const platformTone = PLATFORM_TONE[platform];
+  const templateSchema = TEMPLATE_SCHEMAS[templateName];
+  const schemaJson = templateSchema ? JSON.stringify(templateSchema, null, 2) : "{}";
 
-  const systemPrompt = `You are a social media content strategist specialising in DTC brand content.
+  const systemPrompt = `You are a social media content strategist and art director specialising in DTC brand content.
 
 Your job: Generate TWO things for a social media post:
-1. image_prompt — a full visual scene description in English for an AI image generator (kie.ai). Describes the scene, mood, lighting, composition, and brand aesthetic. Does NOT include caption copy. MUST include brand font name(s) explicitly. MUST describe colors visually (e.g. "warm cream background") — NEVER write hex codes.
+1. image_prompt_json — a structured JSON object describing the visual for an AI image generator (kie.ai). Fill in ALL fields based on the brand's visual system and the template schema constraints provided.
 2. caption — the full social media caption written in the brand's language. Includes opening hook, body, CTA, and hashtags. Tone and length calibrated to the platform.
+
+IMAGE PROMPT JSON RULES:
+- scene: Specific description of what is happening in the image — place, action, objects. Be concrete.
+- subject: The primary subject (person, product, arrangement). Specific, not vague.
+- product_placement: How the product appears in the frame (skip if no product).
+- composition: Exact layout rule — e.g. "centered hero product", "vertical split 50/50", "rule of thirds subject left".
+- lighting: Specific lighting type — e.g. "soft window light from left", "flat studio softbox", "golden hour backlight".
+- camera: Specific camera description — e.g. "smartphone handheld", "medium telephoto 85mm shallow DOF", "overhead flatlay".
+- color_palette: Describe all brand colors VISUALLY — e.g. "warm cream background, deep forest green accents, off-white text". NEVER write hex codes.
+- typography.headline: Describe the visual STYLE of the headline type — e.g. "bold geometric sans-serif", "elegant high-contrast serif". Do NOT use font names like Poppins, Inter, or Canela.
+- overlay.allowed: Must match the template schema. Do not change this.
+- overlay.type: Specific description of what text/design overlay appears (if allowed).
+- mood: The feeling the image should evoke. Specific and evocative.
+- realism: Must match the template schema. Do not change this.
+- grain_noise: Only for ugc_raw style — adds authenticity.
+
+TEMPLATE SCHEMA CONSTRAINTS:
+Some fields are pre-set by the template schema. You MUST respect those fixed values (style, realism, camera type, overlay rules, text_density). Fill in scene, subject, product_placement, color_palette, typography, and mood based on the brand.
 
 LANGUAGE RULE:
 - caption MUST be written in the language specified in the brand data. Non-negotiable.
-- image_prompt MUST always be in English (technical prompt, not customer-facing).
+- image_prompt_json fields MUST always be in English.
 
 CAPTION STRUCTURE:
-- Opening hook (1-2 lines that stop the scroll — use avatar match + open loop + clear benefit)
+- Opening hook (1-2 lines that stop the scroll — Avatar Match + Open Loop + Clear Benefit)
 - Body (the substance — tips, story, quote, transformation, etc.)
 - CTA (one clear action)
 - Hashtags (platform-appropriate quantity)
@@ -101,27 +240,41 @@ COPY RULES:
 - Voice and tone must match the brand personality exactly
 - Do NOT write generic brand content — make it specific to this brand and their audience
 
-NO-TEXT TEMPLATES RULE:
-For the following templates: lifestyle, using-product, behind-scenes, seasonal-trend — the image_prompt MUST end with the sentence: "No text, no labels, no overlays — purely visual image." These images will never have any text on them. Do not include any typography, captions, headlines, or text elements in image_prompt for these templates.
-
 OUTPUT: Valid JSON only. No markdown, no code blocks.
 
 JSON Schema:
 {
-  "image_prompt": "Full visual scene description in English...",
+  "image_prompt_json": {
+    "style": "editorial|clean_ad|ugc_raw|ui_card",
+    "scene": "...",
+    "subject": "...",
+    "product_placement": "...",
+    "composition": "...",
+    "lighting": "...",
+    "camera": "...",
+    "color_palette": "...",
+    "typography": { "headline": "...", "body": "..." },
+    "text_density": "none|low|medium|high",
+    "overlay": { "allowed": true|false, "type": "..." },
+    "mood": "...",
+    "realism": "photorealistic|stylized|graphic_design",
+    "grain_noise": "none|slight|heavy"
+  },
   "caption": "Full caption text with hashtags...",
   "caption_note": "One sentence explaining the angle used"
 }`;
 
-  const isNoText = NO_TEXT_TEMPLATES.has(templateName);
+  const variationAxis = totalCount && totalCount > 1
+    ? VARIATION_AXES[(variationIndex ?? 0) % VARIATION_AXES.length]
+    : null;
 
   const userMessage = `${brandDnaToText(brandDna)}
 
 ---
 
 Template: ${templateName}
-Instructions: ${templateInstruction}
-${isNoText ? "⚠️ NO TEXT IN IMAGE: This template must produce a purely visual image. The image_prompt must NOT include any text, labels, headlines, or overlays. End image_prompt with: \"No text, no labels, no overlays — purely visual image.\"" : ""}
+Template schema constraints (RESPECT these fixed fields):
+${schemaJson}
 
 Platform: ${platform}
 Caption tone & length: ${platformTone}
@@ -131,9 +284,10 @@ ${topicHint ? `\nTopic / Angle hint from user: ${topicHint}` : ""}
 
 ---
 
-Generate the image_prompt and caption. The image_prompt must reflect the brand visual system (fonts, colors described visually). The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
-    totalCount && totalCount > 1
-      ? `\n\nThis is variation ${(variationIndex ?? 0) + 1} of ${totalCount}. Generate a DISTINCT angle, opening hook, and visual direction from the other variations. Do not repeat concepts, hooks, or visual scenes.`
+Fill in the image_prompt_json using the brand visual system and template schema above.
+The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
+    variationAxis
+      ? `\n\nThis is variation ${(variationIndex ?? 0) + 1} of ${totalCount}. Vary specifically along this axis: **${variationAxis}**. Keep all other elements consistent with the template schema. Do not repeat concepts, scenes, or hooks from other variations.`
       : ""
   }`;
 
@@ -150,10 +304,19 @@ Generate the image_prompt and caption. The image_prompt must reflect the brand v
   const content = response.choices[0]?.message?.content;
   if (!content) throw new Error("No content returned from OpenAI.");
 
-  const parsed = JSON.parse(content) as ContentGenerationResult;
-  if (!parsed.image_prompt || !parsed.caption) {
+  const parsed = JSON.parse(content) as {
+    image_prompt_json: ImagePromptJson;
+    caption: string;
+    caption_note: string;
+  };
+
+  if (!parsed.image_prompt_json || !parsed.caption) {
     throw new Error("Invalid content JSON structure returned by OpenAI.");
   }
 
-  return parsed;
+  return {
+    image_prompt: serializeImagePromptJson(parsed.image_prompt_json),
+    caption: parsed.caption,
+    caption_note: parsed.caption_note,
+  };
 }
