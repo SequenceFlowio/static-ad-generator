@@ -18,6 +18,29 @@ const AD_TEMPLATES = [
   { number: 5, name: "ugc-lifestyle", label: "UGC Lifestyle", thumb: "/template thumbnails/ugc_lifestyle.jpg" },
 ];
 
+const BACKGROUND_PRESETS = [
+  "White marble kitchen counter with soft morning light streaming through a window",
+  "Minimalist white studio with subtle shadows and clean background",
+  "Rustic wooden table with warm amber ambient lighting and soft bokeh background",
+  "Lush green tropical foliage with dappled sunlight and deep shadows",
+  "Modern concrete surface with moody industrial overhead lighting",
+  "Sandy beach at golden hour with soft waves and warm horizon glow",
+  "Cozy café table with warm evening light and blurred café interior",
+  "Dark charcoal background with dramatic directional studio lighting",
+  "Fresh botanical garden with natural deep greens and diffused soft light",
+  "Sleek black granite surface with sharp specular highlights and minimal shadows",
+  "Soft pastel bedroom with morning light, clean white linens and airy feel",
+  "Urban rooftop at sunset with city skyline bokeh in the background",
+  "Cold blue winter landscape with frosted surfaces and overcast ambient light",
+  "Mediterranean terracotta tiles with warm bright midday sunlight",
+  "Forest floor with soft green ambient light filtering through tree canopy",
+  "Minimalist bathroom with clean white tiles and soft diffused natural light",
+  "Artisan workshop surface with natural wood grain and warm task lighting",
+  "Fashion boutique white interior with spotlights and clean cast shadows",
+  "Outdoor farmers market with warm natural morning light and organic context",
+  "Luxurious deep velvet surface with dramatic low-key moody lighting",
+];
+
 type Resolution = "1K" | "2K" | "4K";
 
 export default function AdsPage() {
@@ -39,6 +62,7 @@ export default function AdsPage() {
   const [batchSize, setBatchSize] = useState<10 | 20 | 50>(10);
   const [batchTemplates, setBatchTemplates] = useState<string[]>(["headline", "offer-promotion", "testimonial", "vs-them", "ugc-lifestyle"]);
   const [userPlan, setUserPlan] = useState<string>("trial");
+  const [backgroundIntent, setBackgroundIntent] = useState("");
 
   // Generation progress
   const [generating, setGenerating] = useState(false);
@@ -46,6 +70,7 @@ export default function AdsPage() {
   const [overlayMessage, setOverlayMessage] = useState("");
   const [genError, setGenError] = useState<string | null>(null);
   const [genDone, setGenDone] = useState(false);
+  const [genSubmitted, setGenSubmitted] = useState(false); // jobs created, generating in background
 
   // Derive resolution from plan + model — not exposed to user
   const isPaidPlan = userPlan !== "trial" && userPlan !== "free";
@@ -105,6 +130,7 @@ export default function AdsPage() {
     if (selectedProductIds.length === 0 || selectedTemplates.length === 0) return;
     setGenerating(true);
     setGenDone(false);
+    setGenSubmitted(false);
     setGenError(null);
     setOverlayProgress(5);
     setOverlayMessage("Generating ad concepts...");
@@ -117,6 +143,7 @@ export default function AdsPage() {
         product_id: selectedProductIds[0],
         num_variants: numImages,
         template_numbers: selectedTemplates,
+        background_intent: backgroundIntent.trim() || null,
       }),
     });
 
@@ -129,7 +156,7 @@ export default function AdsPage() {
 
     const { prompt_set } = await promptRes.json();
     setOverlayProgress(30);
-    setOverlayMessage("Creating your ads...");
+    setOverlayMessage("Creating your ads... this may take 1–2 minutes");
 
     const genRes = await fetch(`/api/brands/${id}/generate`, {
       method: "POST",
@@ -145,7 +172,7 @@ export default function AdsPage() {
       }),
     });
 
-    if (!genRes.ok || !genRes.body) {
+    if (!genRes.ok) {
       const d = await genRes.json().catch(() => ({}));
       setGenError(d.error ?? "Generation failed.");
       setGenerating(false);
@@ -155,25 +182,29 @@ export default function AdsPage() {
     const { job_ids } = await genRes.json();
     const total = job_ids.length;
 
+    // Dismiss overlay — let user keep browsing while generation runs in background
+    setGenerating(false);
+    setGenSubmitted(true);
+    setGenDone(false);
+
+    // Poll silently in background to flip genDone when complete
     const poll = async () => {
-      const jobsRes = await fetch(`/api/brands/${id}/jobs?prompt_set_id=${prompt_set.id}`);
-      if (!jobsRes.ok) return;
-      const jobs = await jobsRes.json();
-      const done = jobs.filter((j: { status: string }) => j.status === "done" || j.status === "failed").length;
-      setOverlayProgress(30 + Math.round((done / total) * 70));
-      setOverlayMessage(`Creating your ads... (${done}/${total})`);
-      if (done < total) {
-        setTimeout(poll, 3000);
-      } else {
-        setOverlayProgress(100);
-        setOverlayMessage("Done!");
-        await new Promise((r) => setTimeout(r, 500));
-        setGenerating(false);
-        setGenDone(true);
+      try {
+        const jobsRes = await fetch(`/api/brands/${id}/jobs?prompt_set_id=${prompt_set.id}`);
+        if (!jobsRes.ok) { setTimeout(poll, 5000); return; }
+        const jobs = await jobsRes.json();
+        const done = jobs.filter((j: { status: string }) => j.status === "done" || j.status === "failed").length;
+        if (done < total) {
+          setTimeout(poll, 4000);
+        } else {
+          setGenDone(true);
+        }
+      } catch {
+        setTimeout(poll, 5000);
       }
     };
-    await poll();
-  }, [id, selectedProductIds, selectedTemplates, numImages, resolution, model, selectedInspo]);
+    poll();
+  }, [id, selectedProductIds, selectedTemplates, numImages, resolution, model, selectedInspo, backgroundIntent]);
 
   const handleGenerateBatch = useCallback(async () => {
     if (selectedProductIds.length === 0 || batchTemplates.length === 0) return;
@@ -254,7 +285,7 @@ export default function AdsPage() {
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{brand.name}</p>
         </div>
         <Link href={`/brands/${id}/gallery`}
-          className="rounded-full bg-[#1a1a1a] dark:bg-white px-4 py-1.5 text-xs font-semibold text-[#C7F56F] dark:text-[#1a1a1a] hover:opacity-90 transition-opacity">
+          className="rounded-full bg-[#C7F56F] px-4 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
           View Gallery →
         </Link>
       </div>
@@ -383,6 +414,30 @@ export default function AdsPage() {
                   </div>
                 </div>
 
+                {/* Background / Environment */}
+                <div>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Background / Environment <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span></p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={backgroundIntent}
+                      onChange={(e) => setBackgroundIntent(e.target.value)}
+                      placeholder="e.g. white marble kitchen counter with soft morning light"
+                      className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#C7F56F] transition-colors"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const pick = BACKGROUND_PRESETS[Math.floor(Math.random() * BACKGROUND_PRESETS.length)];
+                        setBackgroundIntent(pick);
+                      }}
+                      className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200 transition-colors whitespace-nowrap"
+                    >
+                      Suggestions ✦
+                    </button>
+                  </div>
+                </div>
+
                 {/* Inspo */}
                 <InspoPicker brandId={id} type="ad" selected={selectedInspo} onSelect={setSelectedInspo} />
 
@@ -396,9 +451,22 @@ export default function AdsPage() {
 
                 {genError && <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{genError}</div>}
 
+                {genSubmitted && !genDone && (
+                  <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-4 py-3 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                      <svg className="h-4 w-4 animate-spin text-[#C7F56F] flex-shrink-0" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                      </svg>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">Ads are generating — check your gallery in a couple of minutes.</p>
+                    </div>
+                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline whitespace-nowrap flex-shrink-0">View Gallery →</Link>
+                  </div>
+                )}
+
                 {genDone && (
                   <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-4 py-3 flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">Ads generated!</p>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">Ads ready!</p>
                     <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline">View Gallery →</Link>
                   </div>
                 )}

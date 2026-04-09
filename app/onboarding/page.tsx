@@ -26,7 +26,7 @@ const STEPS = [
     layout: "horizontal" as const, // always horizontal (pill buttons in a row)
     options: {
       en: ["Agency", "Brand", "Freelancer", "Other"],
-      nl: ["Bureau", "Merk", "Freelancer", "Anders"],
+      nl: ["Bureau", "Webwinkel", "Freelancer", "Anders"],
     },
   },
   {
