@@ -108,6 +108,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   "home.partner.title": { en: "Become a partner", nl: "Partner worden" },
   "home.partner.desc": { en: "Join our affiliate program and earn commission on every referral.", nl: "Word affiliate partner en verdien commissie op elke doorverwijzing." },
   "home.partner.cta": { en: "Join affiliate program", nl: "Aanmelden als partner" },
+  "home.partner.badge": { en: "Coming soon", nl: "Binnenkort" },
 
   // Support modal
   "support.title": { en: "Contact Support", nl: "Contact opnemen" },

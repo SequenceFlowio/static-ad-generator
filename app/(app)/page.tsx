@@ -6,6 +6,8 @@ import Image from "next/image";
 import { CONTENT_TEMPLATES } from "@/lib/content-templates";
 import { useLanguage } from "@/components/LanguageProvider";
 import SupportModal from "@/components/SupportModal";
+import FeedbackModal from "@/components/FeedbackModal";
+import TutorialModal from "@/components/TutorialModal";
 
 const AD_TEMPLATES = [
   { name: "headline", label: "Headline", description: "Bold hook, clear CTA", thumb: "/template thumbnails/headline.jpg" },
@@ -16,56 +18,12 @@ const AD_TEMPLATES = [
 ];
 
 
-const SUPPORT_CARDS = [
-  {
-    icon: (
-      <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
-      </svg>
-    ),
-    titleKey: "home.support.title",
-    descKey: "home.support.desc",
-    ctaKey: "home.support.cta",
-    action: "support" as const,
-  },
-  {
-    icon: (
-      <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 7.125C2.25 6.504 2.754 6 3.375 6h6c.621 0 1.125.504 1.125 1.125v3.75c0 .621-.504 1.125-1.125 1.125h-6a1.125 1.125 0 01-1.125-1.125v-3.75zM14.25 8.625c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v8.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-8.25zM3.75 16.125c0-.621.504-1.125 1.125-1.125h5.25c.621 0 1.125.504 1.125 1.125v2.25c0 .621-.504 1.125-1.125 1.125h-5.25a1.125 1.125 0 01-1.125-1.125v-2.25z" />
-      </svg>
-    ),
-    titleKey: "home.requestSection.title",
-    descKey: "home.requestSection.desc",
-    ctaKey: "home.requestSection.cta",
-    action: "mailto:hallo@sequenceflow.io?subject=Section Request" as const,
-  },
-  {
-    icon: (
-      <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
-      </svg>
-    ),
-    titleKey: "home.requestFeature.title",
-    descKey: "home.requestFeature.desc",
-    ctaKey: "home.requestFeature.cta",
-    action: "mailto:hallo@sequenceflow.io?subject=Feature Request" as const,
-  },
-  {
-    icon: (
-      <svg className="h-5 w-5 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-    ),
-    titleKey: "home.partner.title",
-    descKey: "home.partner.desc",
-    ctaKey: "home.partner.cta",
-    action: "mailto:hallo@sequenceflow.io?subject=Affiliate Program" as const,
-  },
-];
 
 export default function HomePage() {
   const { t } = useLanguage();
   const [showSupport, setShowSupport] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // Double items for seamless infinite loop
   const adLoop = [...AD_TEMPLATES, ...AD_TEMPLATES];
@@ -159,37 +117,71 @@ export default function HomePage() {
 
       {/* Support section */}
       <section className="mb-12 border-t border-gray-200 dark:border-gray-800 pt-10">
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-          {SUPPORT_CARDS.map((card) => (
-            <div key={card.titleKey} className="flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
-              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
-                {card.icon}
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">{t(card.titleKey)}</p>
-                <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{t(card.descKey)}</p>
-              </div>
-              {card.action === "support" ? (
-                <button
-                  onClick={() => setShowSupport(true)}
-                  className="mt-auto w-fit rounded-lg border border-gray-200 dark:border-gray-700 px-3.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  {t(card.ctaKey)}
-                </button>
-              ) : (
-                <a
-                  href={card.action}
-                  className="mt-auto w-fit rounded-lg border border-gray-200 dark:border-gray-700 px-3.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                >
-                  {t(card.ctaKey)}
-                </a>
-              )}
+        <div className="grid grid-cols-3 gap-4">
+          {/* Feature Request */}
+          <div className="flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+              <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 011.037-.443 48.282 48.282 0 005.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" />
+              </svg>
             </div>
-          ))}
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{t("home.requestFeature.title")}</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{t("home.requestFeature.desc")}</p>
+            </div>
+            <button
+              onClick={() => setShowFeedback(true)}
+              className="mt-auto w-fit rounded-lg border border-gray-200 dark:border-gray-700 px-3.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {t("home.requestFeature.cta")}
+            </button>
+          </div>
+
+          {/* Support */}
+          <div className="flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+              <svg className="h-5 w-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9.879 7.519c1.171-1.025 3.071-1.025 4.242 0 1.172 1.025 1.172 2.687 0 3.712-.203.179-.43.326-.67.442-.745.361-1.45.999-1.45 1.827v.75M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9 5.25h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-900 dark:text-white">{t("home.support.title")}</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{t("home.support.desc")}</p>
+            </div>
+            <button
+              onClick={() => setShowSupport(true)}
+              className="mt-auto w-fit rounded-lg border border-gray-200 dark:border-gray-700 px-3.5 py-1.5 text-xs font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+            >
+              {t("home.support.cta")}
+            </button>
+          </div>
+
+          {/* Partner — coming soon */}
+          <div className="flex flex-col gap-3 rounded-xl border border-gray-200 dark:border-gray-800 p-5 opacity-60">
+            <div className="flex items-start justify-between">
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 dark:bg-gray-800">
+                <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                </svg>
+              </div>
+              <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] font-semibold text-gray-400 dark:text-gray-500">
+                {t("home.partner.badge") || "Binnenkort"}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">{t("home.partner.title")}</p>
+              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400 leading-relaxed">{t("home.partner.desc")}</p>
+            </div>
+            <button disabled className="mt-auto w-fit rounded-lg border border-gray-200 dark:border-gray-700 px-3.5 py-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 cursor-not-allowed">
+              {t("home.partner.cta")}
+            </button>
+          </div>
         </div>
       </section>
 
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
     </div>
   );
 }

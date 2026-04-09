@@ -1,6 +1,30 @@
 "use client";
 
+import { useState } from "react";
 import type { BrandDnaData } from "@/types";
+import { useLanguage } from "@/components/LanguageProvider";
+
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex items-center align-middle ml-1">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 dark:border-gray-600 text-[10px] font-semibold text-gray-400 dark:text-gray-500 hover:border-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors leading-none"
+      >
+        i
+      </button>
+      {open && (
+        <div className="absolute left-5 top-0 z-50 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-lg text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+          {text}
+        </div>
+      )}
+    </span>
+  );
+}
 
 function ColorSwatch({ hex, label }: { hex: string | null; label: string }) {
   if (!hex)
@@ -41,6 +65,7 @@ interface Props {
 }
 
 export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Props) {
+  const { t } = useLanguage();
   return (
     <div className="space-y-5">
       {/* Language */}
@@ -76,7 +101,7 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
           )}
           {data.target_audience && (
             <div className="flex gap-3 pt-1">
-              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0">Target Audience</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0 flex items-center">Target Audience<InfoTooltip text={t("brandDna.targetAudienceTooltip")} /></span>
               <span className="text-xs text-gray-700 dark:text-gray-200">{data.target_audience}</span>
             </div>
           )}
@@ -94,7 +119,7 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
           )}
           {data.competitive_differentiation && (
             <div className="flex gap-3">
-              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0">Differentiation</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0 flex items-center">Differentiation<InfoTooltip text={t("brandDna.competitiveDiffTooltip")} /></span>
               <span className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed">{data.competitive_differentiation}</span>
             </div>
           )}
@@ -104,7 +129,7 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
       {/* Copy Strategy */}
       {((data.customer_desires ?? []).length > 0 || (data.hook_examples ?? []).length > 0) && (
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Copy Strategy</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 flex items-center">Copy Strategy<InfoTooltip text={t("brandDna.copyStrategyTooltip")} /></p>
           <div className="rounded-xl bg-gray-50 dark:bg-gray-800 px-4 py-3 space-y-3">
             {(data.customer_desires ?? []).length > 0 && (
               <div>

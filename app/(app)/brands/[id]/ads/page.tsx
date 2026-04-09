@@ -81,7 +81,7 @@ export default function AdsPage() {
   // Selection state
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
   const [adMode, setAdMode] = useState<"regular" | "batch">("regular");
-  const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1, 2, 3, 4, 5]);
+  const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1]);
   const [numImages, setNumImages] = useState(2);
   const [model, setModel] = useState<KieModel>("nano-banana-2");
   const [selectedInspo, setSelectedInspo] = useState<string[]>([]);
@@ -486,7 +486,7 @@ export default function AdsPage() {
                       </svg>
                       <p className="text-sm text-gray-600 dark:text-gray-300">{t("ads.generating")}</p>
                     </div>
-                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline whitespace-nowrap flex-shrink-0">{t("ads.viewGallery")}</Link>
+                    <Link href={`/brands/${id}/gallery`} className="rounded-full bg-[#C7F56F] px-3 py-1 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors whitespace-nowrap flex-shrink-0">{t("ads.viewGallery")}</Link>
                   </div>
                 )}
 

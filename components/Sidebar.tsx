@@ -6,6 +6,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { getBrowserSupabase } from "@/lib/supabase";
 import PricingModal from "@/components/PricingModal";
 import SupportModal from "@/components/SupportModal";
+import FeedbackModal from "@/components/FeedbackModal";
+import TutorialModal from "@/components/TutorialModal";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { Lang } from "@/lib/translations";
 
@@ -58,10 +60,6 @@ const NAV_ITEMS = [
   },
 ];
 
-const BOTTOM_LINK_KEYS = [
-  { labelKey: "nav.tutorial", href: "#" },
-  { labelKey: "nav.feedback", href: "mailto:hello@sequenceflow.io?subject=Feedback" },
-];
 
 function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
   onClose: () => void;
@@ -266,6 +264,8 @@ export default function Sidebar() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPricing, setShowPricing] = useState(false);
   const [showSupport, setShowSupport] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -422,15 +422,18 @@ export default function Sidebar() {
 
         {/* Bottom section */}
         <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-3 space-y-0.5">
-          {BOTTOM_LINK_KEYS.map((link) => (
-            <a
-              key={link.labelKey}
-              href={link.href}
-              className="flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
-            >
-              {t(link.labelKey)}
-            </a>
-          ))}
+          <button
+            onClick={() => setShowTutorial(true)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          >
+            {t("nav.tutorial")}
+          </button>
+          <button
+            onClick={() => setShowFeedback(true)}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
+          >
+            {t("nav.feedback")}
+          </button>
           <button
             onClick={() => setShowSupport(true)}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200 transition-colors"
@@ -512,6 +515,8 @@ export default function Sidebar() {
       {showSettings && <SettingsModal onClose={() => setShowSettings(false)} onUpgrade={() => setShowPricing(true)} lang={lang} setLang={setLang} t={t} />}
       {showPricing && <PricingModal onClose={() => setShowPricing(false)} />}
       {showSupport && <SupportModal onClose={() => setShowSupport(false)} />}
+      {showFeedback && <FeedbackModal onClose={() => setShowFeedback(false)} />}
+      {showTutorial && <TutorialModal onClose={() => setShowTutorial(false)} />}
     </>
   );
 }
