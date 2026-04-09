@@ -18,7 +18,7 @@ function InfoTooltip({ text }: { text: string }) {
         i
       </button>
       {open && (
-        <div className="absolute left-5 top-0 z-50 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-lg text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+        <div className="absolute left-5 top-0 z-50 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-lg text-xs text-gray-600 dark:text-gray-300 leading-relaxed normal-case font-normal tracking-normal">
           {text}
         </div>
       )}
@@ -107,13 +107,13 @@ export default function BrandDnaCard({ data, onEdit, onReResearch, loading }: Pr
           )}
           {data.brand_personality && (
             <div className="flex gap-3">
-              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0">Personality</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0 flex items-center">Personality<InfoTooltip text={t("brandDna.personalityTooltip")} /></span>
               <span className="text-xs text-gray-700 dark:text-gray-200">{data.brand_personality}</span>
             </div>
           )}
           {data.positioning && (
             <div className="flex gap-3">
-              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0">Positioning</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500 w-36 flex-shrink-0 flex items-center">Positioning<InfoTooltip text={t("brandDna.positioningTooltip")} /></span>
               <span className="text-xs text-gray-700 dark:text-gray-200 leading-relaxed">{data.positioning}</span>
             </div>
           )}

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateImages } from "@/lib/kie";
@@ -185,9 +186,12 @@ export async function POST(
     return NextResponse.json({ error: "Failed to create jobs" }, { status: 500 });
   }
 
-  // Fire off generation in the background — response returns immediately
-  runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model, aspect_ratio, inspo_image_urls).catch(
-    (err) => console.error("runGeneration error:", err)
+  // Fire off generation in the background — waitUntil keeps the Vercel function alive
+  // until runGeneration completes, even after the HTTP response is sent.
+  waitUntil(
+    runGeneration(jobs, selectedPrompts, logoUrl, productImageUrls, resolution, model, aspect_ratio, inspo_image_urls).catch(
+      (err) => console.error("runGeneration error:", err)
+    )
   );
 
   return NextResponse.json({ job_ids: jobs.map((j) => j.id), prompt_set_id });

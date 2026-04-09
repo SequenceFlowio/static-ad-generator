@@ -27,7 +27,7 @@ function InfoTooltip({ text }: { text: string }) {
         i
       </button>
       {open && (
-        <div className="absolute left-5 top-0 z-50 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-lg text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+        <div className="absolute left-5 top-0 z-50 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-lg text-xs text-gray-600 dark:text-gray-300 leading-relaxed normal-case font-normal tracking-normal">
           {text}
         </div>
       )}

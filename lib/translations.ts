@@ -175,6 +175,8 @@ export const translations: Record<string, Record<Lang, string>> = {
   "brandDna.brandStory": { en: "Brand Story", nl: "Merkverhaal" },
   "brandDna.targetAudience": { en: "Target Audience", nl: "Doelgroep" },
   "brandDna.targetAudienceTooltip": { en: "Describe your ideal customer: age, lifestyle, interests, and their biggest frustrations. The more specific, the better the AI can write for them.", nl: "Beschrijf je ideale klant: leeftijd, levensstijl, interesses en hun grootste frustraties. Hoe specifieker, hoe gerichter de AI voor hen schrijft." },
+  "brandDna.personalityTooltip": { en: "How your brand sounds and feels. Playful or serious? Warm or authoritative? This ensures ad copy always matches your brand voice.", nl: "Hoe je merk klinkt en voelt. Speels of serieus? Warm of gezaghebbend? Dit zorgt dat advertentieteksten altijd passen bij je merkidentiteit." },
+  "brandDna.positioningTooltip": { en: "Your unique place in the market. What problem do you solve, for whom, and why better than alternatives? One clear sentence is ideal.", nl: "Je unieke positie in de markt. Welk probleem los je op, voor wie, en waarom beter dan de rest? Eén duidelijke zin is ideaal." },
   "brandDna.brandPersonality": { en: "Brand Personality", nl: "Merkpersoonlijkheid" },
   "brandDna.positioning": { en: "Positioning", nl: "Positionering" },
   "brandDna.competitiveDiff": { en: "Competitive Differentiation", nl: "Onderscheidend vermogen" },
