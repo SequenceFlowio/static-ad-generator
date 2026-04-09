@@ -1,0 +1,253 @@
+{
+  "_instructions": {
+    "purpose": "Manually curated winning ads used as few-shot examples during prompt generation. GPT-4o uses these as composition/hook pattern inspiration — not to copy, but to understand what works.",
+    "how_to_add": "Duplicate any entry, change the id, and fill in all fields. Set image_url to the hosted image URL if available (used as soft visual reference for kie.ai). Leave image_url as empty string if no image.",
+    "niche_values": ["skincare", "food", "homewares", "fashion", "supplements", "fitness", "tech", "pet", "beauty", "other"],
+    "ad_templates": ["headline", "offer-promotion", "testimonial", "vs-them", "ugc-lifestyle"],
+    "content_templates": ["tips-tricks", "about-brand", "about-product", "using-product", "testimonial", "lifestyle", "before-after"]
+  },
+  "winning_ads": [
+    {
+      "id": "win-headline-001",
+      "template": "headline",
+      "platform": "instagram",
+      "niche": "skincare",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-headline-002",
+      "template": "headline",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-offer-001",
+      "template": "offer-promotion",
+      "platform": "facebook",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-offer-002",
+      "template": "offer-promotion",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-testimonial-001",
+      "template": "testimonial",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-vsthem-001",
+      "template": "vs-them",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-ugc-001",
+      "template": "ugc-lifestyle",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-content-tips-001",
+      "template": "tips-tricks",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-content-aboutbrand-001",
+      "template": "about-brand",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-content-aboutproduct-001",
+      "template": "about-product",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    },
+    {
+      "id": "win-content-lifestyle-001",
+      "template": "lifestyle",
+      "platform": "instagram",
+      "niche": "other",
+      "performance_note": "",
+      "visual": {
+        "scene": "",
+        "composition": "",
+        "lighting": "",
+        "mood": "",
+        "color_approach": ""
+      },
+      "copy": {
+        "headline": "",
+        "subtitle": "",
+        "cta": ""
+      },
+      "hook_pattern": "",
+      "why_it_works": "",
+      "image_url": ""
+    }
+  ]
+}

@@ -1,6 +1,9 @@
 import OpenAI from "openai";
 import type { BrandDnaData } from "@/types";
 import type { Platform } from "./content-templates";
+import { getPlatformAspectRatio } from "./content-templates";
+import { buildNanoBananaPrompt, CONTENT_TEMPLATE_CAMERA_PRESETS } from "./prompt-utils";
+import { getWinningAds, formatWinningAdsBlock } from "./winning-ads";
 
 export interface ContentGenerationResult {
   image_prompt: string;
@@ -116,12 +119,13 @@ const TEMPLATE_SCHEMAS: Record<string, Partial<ImagePromptJson>> = {
 
 const VARIATION_AXES = ["scene_type", "camera_angle", "lighting", "emotional_tone", "product_placement"];
 
-function serializeImagePromptJson(json: ImagePromptJson): string {
+function serializeImagePromptJson(json: ImagePromptJson, aspectRatio: string): string {
   const parts: string[] = [];
 
   const stylePrefix = STYLE_PREFIX[json.style];
   if (stylePrefix) parts.push(stylePrefix);
 
+  parts.push(`Canvas: ${aspectRatio} aspect ratio — compose the scene for this format.`);
   parts.push(json.scene);
   if (json.subject) parts.push(`Subject: ${json.subject}.`);
   if (json.product_placement) parts.push(`Product placement: ${json.product_placement}.`);
@@ -179,6 +183,7 @@ export async function generateContentPost({
   productDescription,
   topicHint,
   selectedDesire,
+  customerQuote,
   variationIndex,
   totalCount,
 }: {
@@ -189,6 +194,7 @@ export async function generateContentPost({
   productDescription?: string | null;
   topicHint?: string | null;
   selectedDesire?: string | null;
+  customerQuote?: string | null;
   variationIndex?: number;
   totalCount?: number;
 }): Promise<ContentGenerationResult> {
@@ -198,8 +204,14 @@ export async function generateContentPost({
   const client = new OpenAI({ apiKey });
 
   const platformTone = PLATFORM_TONE[platform];
+  const aspectRatio = getPlatformAspectRatio(platform);
   const templateSchema = TEMPLATE_SCHEMAS[templateName];
   const schemaJson = templateSchema ? JSON.stringify(templateSchema, null, 2) : "{}";
+
+  // Infer niche from brand target_audience for winning ad matching
+  const brandNiche = inferNiche(brandDna.target_audience ?? "");
+  const winningAds = getWinningAds(templateName, brandNiche, 2);
+  const winningAdsBlock = formatWinningAdsBlock(winningAds);
 
   const systemPrompt = `You are a social media content strategist and art director specialising in DTC brand content.
 
@@ -211,7 +223,7 @@ IMAGE PROMPT JSON RULES:
 - scene: Specific description of what is happening in the image — place, action, objects. Be concrete.
 - subject: The primary subject (person, product, arrangement). Specific, not vague.
 - product_placement: How the product appears in the frame (skip if no product).
-- composition: Exact layout rule — e.g. "centered hero product", "vertical split 50/50", "rule of thirds subject left".
+- composition: Exact layout rule — e.g. "centered hero product", "vertical split 50/50", "rule of thirds subject left". Must suit the canvas aspect ratio.
 - lighting: Specific lighting type — e.g. "soft window light from left", "flat studio softbox", "golden hour backlight".
 - camera: Specific camera description — e.g. "smartphone handheld", "medium telephoto 85mm shallow DOF", "overhead flatlay".
 - color_palette: Describe all brand colors VISUALLY — e.g. "warm cream background, deep forest green accents, off-white text". NEVER write hex codes.
@@ -273,6 +285,7 @@ JSON Schema:
 ---
 
 Template: ${templateName}
+Canvas: ${aspectRatio} (${platform}) — composition must suit this aspect ratio
 Template schema constraints (RESPECT these fixed fields):
 ${schemaJson}
 
@@ -281,6 +294,8 @@ Caption tone & length: ${platformTone}
 ${productName ? `\nProduct: ${productName}${productDescription ? `\nProduct Description: ${productDescription}` : ""}` : ""}
 ${selectedDesire ? `\nCustomer Desire to focus on: ${selectedDesire}` : ""}
 ${topicHint ? `\nTopic / Angle hint from user: ${topicHint}` : ""}
+${templateName === "testimonial" && customerQuote ? `\nUse this EXACT customer quote verbatim in the testimonial: "${customerQuote}"` : ""}
+${templateName === "testimonial" && !customerQuote ? `\nNo real customer quote provided — generate a plausible one and note in caption_note that it is a placeholder.` : ""}
 
 ---
 
@@ -288,6 +303,10 @@ Fill in the image_prompt_json using the brand visual system and template schema 
 The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
     variationAxis
       ? `\n\nThis is variation ${(variationIndex ?? 0) + 1} of ${totalCount}. Vary specifically along this axis: **${variationAxis}**. Keep all other elements consistent with the template schema. Do not repeat concepts, scenes, or hooks from other variations.`
+      : ""
+  }${
+    winningAdsBlock
+      ? `\n\n---\n\n${winningAdsBlock}`
       : ""
   }`;
 
@@ -314,9 +333,34 @@ The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
     throw new Error("Invalid content JSON structure returned by OpenAI.");
   }
 
+  // Serialize structured JSON → plain English prompt for kie.ai
+  const serialized = serializeImagePromptJson(parsed.image_prompt_json, aspectRatio);
+
+  // Apply cinematic camera/lens enhancement for photorealistic nano-banana-2 templates
+  const cameraPreset = CONTENT_TEMPLATE_CAMERA_PRESETS[templateName];
+  const finalImagePrompt = cameraPreset
+    ? buildNanoBananaPrompt(serialized, cameraPreset.camera, cameraPreset.lens, cameraPreset.focal, cameraPreset.aperture)
+    : serialized;
+
   return {
-    image_prompt: serializeImagePromptJson(parsed.image_prompt_json),
+    image_prompt: finalImagePrompt,
     caption: parsed.caption,
     caption_note: parsed.caption_note,
   };
+}
+
+// Simple niche inference from target audience text.
+// Used to match winning ads by niche — gracefully falls back to "other".
+function inferNiche(targetAudience: string): string {
+  const text = targetAudience.toLowerCase();
+  if (/skin|beauty|face|glow|serum|moistur/.test(text)) return "skincare";
+  if (/food|cook|recipe|eat|chef|kitchen|meal/.test(text)) return "food";
+  if (/home|interior|decor|furniture|living/.test(text)) return "homewares";
+  if (/fashion|style|cloth|wear|outfit|dress/.test(text)) return "fashion";
+  if (/supplement|vitamin|health|wellness|nutrition/.test(text)) return "supplements";
+  if (/fit|gym|workout|train|sport|exercise/.test(text)) return "fitness";
+  if (/tech|software|app|digital|saas|dev/.test(text)) return "tech";
+  if (/pet|dog|cat|animal/.test(text)) return "pet";
+  if (/beauty|makeup|cosmetic|lipstick/.test(text)) return "beauty";
+  return "other";
 }

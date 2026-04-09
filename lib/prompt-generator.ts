@@ -1,6 +1,7 @@
 import OpenAI from "openai";
 import { TEMPLATES } from "./templates";
 import type { BrandDnaData, PromptsJson } from "@/types";
+import { getWinningAds, formatWinningAdsBlock } from "./winning-ads";
 
 const PROMPT_GENERATION_INSTRUCTIONS = `
 You are a prompt engineer specializing in AI image generation for DTC brands.
@@ -14,7 +15,7 @@ LANGUAGE RULE:
 - The background_prompt MUST always be written in English regardless of language — it is a technical prompt for an image generator, not customer-facing copy.
 
 CRITICAL RULES — VISUAL:
-- The background_prompt MUST include the brand's font name(s) explicitly — e.g. "typography in Neue Haas Grotesk"
+- The background_prompt MUST describe typography STYLE visually — e.g. "bold geometric sans-serif headlines", "elegant high-contrast serif body text". Do NOT write font names like Poppins, Inter, Neue Haas, or Canela. Image generators do not render specific font names — they render what they think that style looks like.
 - The background_prompt MUST describe brand colors by their VISUAL APPEARANCE — e.g. "warm off-white background", "deep charcoal text", "bright lime green accent". NEVER write hex codes (#xxxxxx) in the background_prompt — image generators render hex strings as literal text on the image.
 - Use the provided hex codes only to determine the color's visual description (e.g. #C7F56F → "bright lime green", #1a1a1a → "near-black charcoal", #FFFFFF → "clean white").
 - The background_prompt MUST STRICTLY follow reference images — do NOT invent props, objects, or surfaces not present in the reference images
@@ -80,13 +81,37 @@ Customer Desire for this generation: ${selectedDesire ?? "None selected — use 
 ${hookExamples.length > 0 ? `Hook Examples — create VARIANTS of these (same angle, new phrasing):
 ${hookExamples.map((h, i) => `${i + 1}. "${h}"`).join("\n")}` : "Hook Examples: none provided — generate original hooks from the framework"}
 
-VISUAL SYSTEM (font names MUST appear in background_prompt; colors must be described visually — NO hex codes in background_prompt):
-Primary Font: ${dna.primary_font ?? "N/A"} ← use this font name explicitly
-Secondary Font: ${dna.secondary_font ?? "N/A"}
+VISUAL SYSTEM (describe typography as STYLE, not font name; colors must be described visually — NO hex codes in background_prompt):
+Primary Font: ${dna.primary_font ?? "N/A"} ← describe as typography style (e.g. "bold geometric sans-serif"), do NOT use this name literally
+Secondary Font: ${dna.secondary_font ?? "N/A"} ← describe as style (e.g. "elegant high-contrast serif")
 Accent Color: ${dna.accent_color ?? "N/A"} ← describe visually (e.g. "bright lime green"), never write the hex
 Lettertype Color: ${dna.lettertype_color ?? "N/A"} ← describe visually
 Background Color: ${dna.background_color ?? "N/A"} ← describe visually
 `.trim();
+}
+
+// Visual direction tied to awareness level — influences background_prompt mood and composition
+const AWARENESS_VISUAL_DIRECTION: Record<string, string> = {
+  "unaware":       "Editorial lifestyle aesthetic. No dominant product. Scene-first, aspirational. Product present but incidental. Soft, organic composition.",
+  "problem-aware": "Relatable real-world scene. Slight tension or imperfection visible. Product as relief, not hero. Grounded and honest lighting.",
+  "solution-aware":"Product clearly visible and prominent. Benefit-oriented framing. Clean composition that makes the solution obvious at a glance.",
+  "product-aware": "Sharp product detail. Proof-forward framing. Social signal elements (stars, count, result). Clinical clarity, no ambiguity.",
+  "most-aware":    "Offer dominant. Deal/urgency visible in layout. Product large and clear. Direct, no lifestyle softening. High contrast.",
+};
+
+// Niche inference reused from content-prompt-generator
+function inferNiche(targetAudience: string): string {
+  const text = targetAudience.toLowerCase();
+  if (/skin|beauty|face|glow|serum|moistur/.test(text)) return "skincare";
+  if (/food|cook|recipe|eat|chef|kitchen|meal/.test(text)) return "food";
+  if (/home|interior|decor|furniture|living/.test(text)) return "homewares";
+  if (/fashion|style|cloth|wear|outfit|dress/.test(text)) return "fashion";
+  if (/supplement|vitamin|health|wellness|nutrition/.test(text)) return "supplements";
+  if (/fit|gym|workout|train|sport|exercise/.test(text)) return "fitness";
+  if (/tech|software|app|digital|saas|dev/.test(text)) return "tech";
+  if (/pet|dog|cat|animal/.test(text)) return "pet";
+  if (/beauty|makeup|cosmetic|lipstick/.test(text)) return "beauty";
+  return "other";
 }
 
 export async function generatePrompts(
@@ -111,6 +136,20 @@ export async function generatePrompts(
     ? TEMPLATES.filter((t) => templateNumbers.includes(t.template_number))
     : TEMPLATES;
 
+  const visualDirection = AWARENESS_VISUAL_DIRECTION[awarenessLevel] ?? AWARENESS_VISUAL_DIRECTION["problem-aware"];
+  const brandNiche = inferNiche(brandDna.target_audience ?? "");
+
+  // Build per-template winning ads blocks
+  const templateWinningAdsBlocks = selectedTemplates.map((t) => {
+    const ads = getWinningAds(t.template_name, brandNiche, 2);
+    const block = formatWinningAdsBlock(ads);
+    return block ? `${t.template_name}:\n${block}` : null;
+  }).filter(Boolean);
+
+  const winningAdsSection = templateWinningAdsBlocks.length > 0
+    ? `\n---\n\nWINNING AD REFERENCES — use these as inspiration for composition, mood, and hook structure per template. Do not copy — draw on what made them work.\n\n${templateWinningAdsBlocks.join("\n\n")}`
+    : "";
+
   const templatesText = selectedTemplates.map(
     (t) =>
       `Template ${t.template_number} — ${t.template_name}
@@ -132,7 +171,7 @@ Product Description: ${productDescription ?? "No description provided"}
 
 User Intent:
 Hook/Copy intent (what the headline & CTA should communicate): ${hookIntent ?? "Not specified — use brand positioning and product benefits"}
-Background/Scene intent (what the visual scene should look like): ${backgroundIntent ?? "Not specified — follow brand colors and typography exactly"}
+Background/Scene intent (what the visual scene should look like): ${backgroundIntent ?? "Not specified — follow brand colors and typography style"}
 
 ---
 
@@ -144,6 +183,9 @@ Calibrate hook intensity accordingly:
 - product-aware: proof, specific results, social validation
 - most-aware: direct offer, urgency, concrete deal
 
+Visual direction for this awareness level: ${visualDirection}
+Apply this visual direction to background_prompt — it influences composition, product prominence, and mood.
+
 ---
 
 Number of hook variants to generate per template: ${numVariants}
@@ -152,10 +194,11 @@ Number of hook variants to generate per template: ${numVariants}
 
 Templates to fill:
 ${templatesText}
+${winningAdsSection}
 
 ---
 
-Generate the prompts JSON for all ${selectedTemplates.length} templates. Each template needs exactly ${numVariants} hook_variants. Remember: background_prompt MUST include font names explicitly AND describe brand colors visually — do NOT write any hex codes (#xxxxxx) in background_prompt. Output ONLY the JSON object with a "prompts" array.`;
+Generate the prompts JSON for all ${selectedTemplates.length} templates. Each template needs exactly ${numVariants} hook_variants. Remember: describe typography as STYLE (e.g. "bold geometric sans-serif") — do NOT write font names. Describe brand colors visually — do NOT write any hex codes (#xxxxxx) in background_prompt. Output ONLY the JSON object with a "prompts" array.`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",

@@ -3,6 +3,7 @@ import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateImages } from "@/lib/kie";
 import { checkAndDeduct, isQualityModel } from "@/lib/credits";
+import { buildNanoBananaPrompt, AD_TEMPLATE_CAMERA_PRESETS } from "@/lib/prompt-utils";
 import type { GenerateRequest, PromptItem, KieModel } from "@/types";
 
 export const maxDuration = 300;
@@ -35,11 +36,26 @@ async function runGeneration(
 
       const aspectRatio = aspectRatioOverride ?? promptItem.aspect_ratio;
 
+      // Enrich background_prompt with cinematic specs for nano-banana-2 (quality model only)
+      let enrichedBackground = promptItem.background_prompt;
+      if (model === "nano-banana-2") {
+        const preset = AD_TEMPLATE_CAMERA_PRESETS[promptItem.template_name];
+        if (preset) {
+          enrichedBackground = buildNanoBananaPrompt(
+            promptItem.background_prompt,
+            preset.camera,
+            preset.lens,
+            preset.focal,
+            preset.aperture
+          );
+        }
+      }
+
       // Generate all hook variants in parallel — each fires a separate kie.ai task simultaneously
       const variantResults = await Promise.all(
         promptItem.hook_variants.map(async (hookVariant) => {
           try {
-            const combinedPrompt = `${promptItem.background_prompt}\n\nText in the ad: ${hookVariant}`;
+            const combinedPrompt = `${enrichedBackground}\n\nText in the ad: ${hookVariant}`;
             return await generateImages({
               prompt: combinedPrompt,
               aspect_ratio: aspectRatio,
