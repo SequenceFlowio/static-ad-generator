@@ -9,6 +9,7 @@ import InspoLibrary from "@/components/InspoLibrary";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
 import type { Brand, Product, KieModel } from "@/types";
 import { MODEL_CONFIGS } from "@/types";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const AD_TEMPLATES = [
   { number: 1, name: "headline", label: "Headline", thumb: "/template thumbnails/headline.jpg" },
@@ -18,7 +19,7 @@ const AD_TEMPLATES = [
   { number: 5, name: "ugc-lifestyle", label: "UGC Lifestyle", thumb: "/template thumbnails/ugc_lifestyle.jpg" },
 ];
 
-const BACKGROUND_PRESETS = [
+const BACKGROUND_PRESETS_EN = [
   "White marble kitchen counter with soft morning light streaming through a window",
   "Minimalist white studio with subtle shadows and clean background",
   "Rustic wooden table with warm amber ambient lighting and soft bokeh background",
@@ -41,12 +42,37 @@ const BACKGROUND_PRESETS = [
   "Luxurious deep velvet surface with dramatic low-key moody lighting",
 ];
 
+const BACKGROUND_PRESETS_NL = [
+  "Wit marmeren aanrecht met zacht ochtendlicht dat door een raam naar binnen valt",
+  "Minimalistisch wit studio-achtergrond met subtiele schaduwen",
+  "Rustiek houten tafelblad met warm amberkleurig sfeerverlichting en zachte bokeh",
+  "Weelderig groen tropisch gebladerte met gefilterd zonlicht en diepe schaduwen",
+  "Modern betonnen oppervlak met sfeervolle industriële verlichting van boven",
+  "Zandstrand tijdens het gouden uur met zachte golven en warme horizon",
+  "Gezellig caféblad met warm avondlicht en een wazig café-interieur op de achtergrond",
+  "Donkergrijze achtergrond met dramatische gerichte studiobelichting",
+  "Frisse botanische tuin met diepe groentinten en zacht diffuus licht",
+  "Glanzend zwart granieten oppervlak met scherpe spiegelingen en minimale schaduwen",
+  "Zachte pastelkleurige slaapkamer met ochtendlicht en strakke witte beddengoed",
+  "Stads dakterras bij zonsondergang met stedelijke skyline als wazig decor",
+  "Koelblauw winterlandschap met berijpte oppervlakken en bewolkt omgevingslicht",
+  "Mediterrane terracottategels met warm fel middaglicht",
+  "Bosbodem met zacht groen licht dat door het bladerdak filtert",
+  "Minimalistische badkamer met witte tegels en zacht natuurlijk diffuus licht",
+  "Ambachtelijk werkblad met natuurlijke houtstructuur en warm taakverlichting",
+  "Wit modeboutique-interieur met spotlights en strakke slagschaduwen",
+  "Boerenmarkt buiten met warm natuurlijk ochtendlicht en organische sfeer",
+  "Weelderig donker fluwelen oppervlak met dramatische low-key sfeerverlichting",
+];
+
 type Resolution = "1K" | "2K" | "4K";
 
 export default function AdsPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { lang, t } = useLanguage();
+  const BACKGROUND_PRESETS = lang === "nl" ? BACKGROUND_PRESETS_NL : BACKGROUND_PRESETS_EN;
 
   const [brand, setBrand] = useState<Brand | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -272,21 +298,21 @@ export default function AdsPage() {
 
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-        <Link href="/stores" className="hover:text-gray-700 dark:hover:text-gray-200">Stores</Link>
+        <Link href="/stores" className="hover:text-gray-700 dark:hover:text-gray-200">{t("nav.stores")}</Link>
         <span>/</span>
         <Link href={`/brands/${id}`} className="hover:text-gray-700 dark:hover:text-gray-200">{brand.name}</Link>
         <span>/</span>
-        <span className="text-gray-700 dark:text-gray-200 font-medium">Ad Generator</span>
+        <span className="text-gray-700 dark:text-gray-200 font-medium">{t("ads.title")}</span>
       </div>
 
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Ad Generator</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("ads.title")}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{brand.name}</p>
         </div>
         <Link href={`/brands/${id}/gallery`}
           className="rounded-full bg-[#C7F56F] px-4 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
-          View Gallery →
+          {t("ads.viewGallery")}
         </Link>
       </div>
 
@@ -295,12 +321,12 @@ export default function AdsPage() {
         {/* Product selection */}
         <div className="mb-6">
           <p className="mb-2 text-sm font-semibold text-gray-700 dark:text-gray-200">
-            Select products <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(max 3)</span>
+            {t("ads.selectProducts")} <span className="text-xs font-normal text-gray-400 dark:text-gray-500">(max 3)</span>
           </p>
           {products.length === 0 ? (
             <p className="text-xs text-gray-400 dark:text-gray-500">
-              No products yet.{" "}
-              <Link href={`/brands/${id}/products/new`} className="text-[#C7F56F] hover:underline">Add one first →</Link>
+              {t("ads.noProducts")}{" "}
+              <Link href={`/brands/${id}/products/new`} className="text-[#C7F56F] hover:underline">{t("ads.addProductFirst")}</Link>
             </p>
           ) : (
             <div className="flex flex-wrap gap-3">
@@ -342,7 +368,7 @@ export default function AdsPage() {
             </div>
           )}
           {selectedProductIds.length >= 3 && (
-            <p className="mt-1.5 text-xs text-amber-500 dark:text-amber-400">Max 3 products selected.</p>
+            <p className="mt-1.5 text-xs text-amber-500 dark:text-amber-400">{t("ads.maxSelected")}</p>
           )}
         </div>
 
@@ -364,7 +390,7 @@ export default function AdsPage() {
               <div className="space-y-5">
                 {/* Templates */}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Templates</p>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.templates")}</p>
                   <div className="grid grid-cols-5 gap-2">
                     {AD_TEMPLATES.map((t) => (
                       <button key={t.number} onClick={() => toggleTemplate(t.number)}
@@ -386,7 +412,7 @@ export default function AdsPage() {
 
                 {/* Model */}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Generation model</p>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.generationModel")}</p>
                   <div className="flex gap-2">
                     {(Object.entries(MODEL_CONFIGS) as [KieModel, typeof MODEL_CONFIGS[KieModel]][]).map(([key, cfg]) => (
                       <button key={key} onClick={() => selectModel(key)}
@@ -403,7 +429,7 @@ export default function AdsPage() {
 
                 {/* Variants */}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Images per template</p>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.imagesPerTemplate")}</p>
                   <div className="flex gap-2">
                     {[1, 2, 4].map((n) => (
                       <button key={n} onClick={() => setNumImages(n)}
@@ -416,13 +442,13 @@ export default function AdsPage() {
 
                 {/* Background / Environment */}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Background / Environment <span className="font-normal text-gray-400 dark:text-gray-500">(optional)</span></p>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.background")} <span className="font-normal text-gray-400 dark:text-gray-500">{t("ads.optional")}</span></p>
                   <div className="flex gap-2">
                     <input
                       type="text"
                       value={backgroundIntent}
                       onChange={(e) => setBackgroundIntent(e.target.value)}
-                      placeholder="e.g. white marble kitchen counter with soft morning light"
+                      placeholder={t("ads.backgroundPlaceholder")}
                       className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:border-[#C7F56F] transition-colors"
                     />
                     <button
@@ -433,7 +459,7 @@ export default function AdsPage() {
                       }}
                       className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs font-medium text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200 transition-colors whitespace-nowrap"
                     >
-                      Suggestions ✦
+                      {t("ads.suggestions")}
                     </button>
                   </div>
                 </div>
@@ -458,22 +484,22 @@ export default function AdsPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
                       </svg>
-                      <p className="text-sm text-gray-600 dark:text-gray-300">Ads are generating — check your gallery in a couple of minutes.</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-300">{t("ads.generating")}</p>
                     </div>
-                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline whitespace-nowrap flex-shrink-0">View Gallery →</Link>
+                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline whitespace-nowrap flex-shrink-0">{t("ads.viewGallery")}</Link>
                   </div>
                 )}
 
                 {genDone && (
                   <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-4 py-3 flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">Ads ready!</p>
-                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline">View Gallery →</Link>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">{t("ads.adsReady")}</p>
+                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline">{t("ads.viewGallery")}</Link>
                   </div>
                 )}
 
                 <button onClick={handleGenerateRegular} disabled={generating || selectedTemplates.length === 0}
                   className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed">
-                  Generate Ads ▶
+                  {t("ads.generateAds")}
                 </button>
               </div>
             )}
@@ -486,13 +512,13 @@ export default function AdsPage() {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
                   <p className="text-xs text-amber-700 dark:text-amber-400 leading-relaxed">
-                    <strong>Batch mode</strong> uses AI to generate many unique ads automatically. Results may vary. Uses significantly more credits.
+                    <strong>{lang === "nl" ? "Batchmodus" : "Batch mode"}</strong> {lang === "nl" ? "genereert automatisch veel unieke advertenties met AI. Resultaten kunnen variëren. Verbruikt aanzienlijk meer generaties." : "uses AI to generate many unique ads automatically. Results may vary. Uses significantly more credits."}
                   </p>
                 </div>
 
                 {/* Templates */}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Allowed templates <span className="text-gray-400 dark:text-gray-500 font-normal">(AI picks from these)</span></p>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.allowedTemplates")} <span className="text-gray-400 dark:text-gray-500 font-normal">{t("ads.allowedTemplatesNote")}</span></p>
                   <div className="grid grid-cols-5 gap-2">
                     {AD_TEMPLATES.map((t) => (
                       <button key={t.name} onClick={() => toggleBatchTemplate(t.name)}
@@ -514,7 +540,7 @@ export default function AdsPage() {
 
                 {/* Batch size */}
                 <div>
-                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Batch size</p>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.batchSize")}</p>
                   <div className="flex gap-2">
                     {([10, 20, 50] as const).map((n) => (
                       <button key={n} onClick={() => setBatchSize(n)}
@@ -527,8 +553,8 @@ export default function AdsPage() {
 
                 {/* Variants — greyed out */}
                 <div className="opacity-40 pointer-events-none">
-                  <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">Images per template</p>
-                  <p className="text-xs text-gray-400 dark:text-gray-500">AI decides — 1 unique image per concept</p>
+                  <p className="mb-1 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.imagesPerTemplate")}</p>
+                  <p className="text-xs text-gray-400 dark:text-gray-500">{t("ads.batchVariantsNote")}</p>
                 </div>
 
                 {/* Inspo */}
@@ -546,14 +572,14 @@ export default function AdsPage() {
 
                 {genDone && (
                   <div className="rounded-xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-4 py-3 flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-800 dark:text-white">Batch complete!</p>
-                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline">View Gallery →</Link>
+                    <p className="text-sm font-medium text-gray-800 dark:text-white">{t("ads.batchComplete")}</p>
+                    <Link href={`/brands/${id}/gallery`} className="text-xs font-semibold text-[#C7F56F] hover:underline">{t("ads.viewGallery")}</Link>
                   </div>
                 )}
 
                 <button onClick={handleGenerateBatch} disabled={generating || batchTemplates.length === 0}
                   className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed">
-                  Generate Batch ▶
+                  {t("ads.generateBatch")}
                 </button>
               </div>
             )}
@@ -564,10 +590,10 @@ export default function AdsPage() {
       {/* Ad Inspo Library */}
       <details className="mt-4 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <summary className="cursor-pointer px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 select-none hover:text-gray-600 dark:hover:text-gray-300">
-          Ad Inspo Library ▼
+          {t("ads.inspoLibrary")}
         </summary>
         <div className="border-t border-gray-100 dark:border-gray-800 p-5">
-          <InspoLibrary brandId={id} type="ad" label="Reference images used as style guide during ad generation (max 20)" />
+          <InspoLibrary brandId={id} type="ad" label={t("ads.inspoLibraryLabel")} />
         </div>
       </details>
     </div>

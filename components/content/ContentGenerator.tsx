@@ -6,6 +6,7 @@ import type { Platform } from "@/lib/content-templates";
 import type { BrandDnaData, Product } from "@/types";
 import InspoPicker from "@/components/InspoPicker";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface ContentSession {
   id: string;
@@ -46,6 +47,7 @@ const IMAGE_MESSAGES = [
 ];
 
 export default function ContentGenerator({ brandId, brandDna, products, onCreated, onClose, initialTemplate }: Props) {
+  const { lang, t } = useLanguage();
   const [step, setStep] = useState<Step>(initialTemplate ? "inputs" : "template");
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(initialTemplate ?? null);
   const [selectedPlatform, setSelectedPlatform] = useState<Platform>("instagram");
@@ -184,7 +186,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         <GeneratingOverlay visible={isOverlayVisible} progress={overlayProgress} message={overlayMessage} />
 
         <div>
-          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Choose a template</p>
+          <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t("content.chooseTemplate")}</p>
           <div className="grid grid-cols-3 gap-3">
             {CONTENT_TEMPLATES.map((t) => (
               <button
@@ -205,7 +207,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Platform</p>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t("content.platform")}</p>
           <div className="flex gap-2">
             {PLATFORMS.map((p) => (
               <button
@@ -225,13 +227,13 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         </div>
 
         <div className="flex justify-end gap-3 pt-2">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
+          <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">{t("content.cancel")}</button>
           <button
             onClick={() => setStep("inputs")}
             disabled={!selectedTemplate || !selectedPlatform}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Next →
+            {t("content.next")}
           </button>
         </div>
       </div>
@@ -256,7 +258,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
 
         {/* Platform selector — always shown in the inputs step */}
         <div>
-          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Platform</p>
+          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">{t("content.platform")}</p>
           <div className="flex flex-wrap gap-2">
             {PLATFORMS.map((p) => (
               <button
@@ -278,14 +280,14 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         {showProduct && products.length > 0 && (
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-              Product {needsProduct ? <span className="text-red-400">*</span> : <span className="text-gray-400 font-normal">(optional)</span>}
+              {t("content.product")} {needsProduct ? <span className="text-red-400">*</span> : <span className="text-gray-400 font-normal">{t("content.optional")}</span>}
             </label>
             <select
               value={selectedProductId}
               onChange={(e) => setSelectedProductId(e.target.value)}
               className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 px-3 py-2 text-sm outline-none focus:border-[#C7F56F]"
             >
-              <option value="">— No product —</option>
+              <option value="">{t("content.noProduct")}</option>
               {products.map((p) => (
                 <option key={p.id} value={p.id}>{p.name}</option>
               ))}
@@ -295,7 +297,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
 
         {desires.length > 0 && (
           <div>
-            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Customer desire</p>
+            <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">{t("content.customerDesire")}</p>
             <div className="flex flex-wrap gap-2">
               {desires.map((d) => (
                 <button
@@ -316,7 +318,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
 
         {/* Quantity selector */}
         <div>
-          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">How many variations?</p>
+          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">{t("content.howManyVariations")}</p>
           <div className="flex gap-2">
             {([1, 5, 10, 20, 50] as const).map((n) => (
               <button
@@ -334,20 +336,20 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
           </div>
           {quantity > 1 && (
             <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
-              Generates {quantity} unique variations with different angles. Each is saved to your gallery.
+              {quantity} {t("content.variationsNote")}
             </p>
           )}
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">
-            Topic / angle hint <span className="text-gray-400 font-normal">(optional)</span>
+            {t("content.topicHint")} <span className="text-gray-400 font-normal">{t("content.optional")}</span>
           </label>
           <input
             type="text"
             value={topicHint}
             onChange={(e) => setTopicHint(e.target.value)}
-            placeholder="e.g. focus on morning routines, summer campaign"
+            placeholder={t("content.topicHintPlaceholder")}
             className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30"
           />
         </div>
@@ -359,22 +361,24 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
         {bulkDone && (
           <div className="rounded-xl border border-[#C7F56F]/30 bg-[#C7F56F]/10 px-4 py-3 flex items-center justify-between">
             <p className="text-sm font-medium text-gray-800 dark:text-white">
-              {quantity} variations generated!
+              {quantity} {t("content.variationsDone")}
             </p>
             <button onClick={onClose} className="text-xs font-semibold text-[#C7F56F] hover:underline">
-              View in Gallery →
+              {t("content.viewInGallery")}
             </button>
           </div>
         )}
 
         <div className="flex justify-between gap-3 pt-2">
-          <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Cancel</button>
+          <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">{t("content.cancel")}</button>
           <button
             onClick={handleGenerate}
             disabled={generatingCopy || (template?.needs_product && !selectedProductId)}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {quantity > 1 ? `Generate ${quantity} variations` : "Generate content"}
+            {quantity > 1
+              ? (lang === "nl" ? `${quantity} variaties genereren` : `Generate ${quantity} variations`)
+              : t("content.generateContent")}
           </button>
         </div>
       </div>
@@ -386,10 +390,10 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
     <div className="space-y-5">
       <GeneratingOverlay visible={isOverlayVisible} progress={overlayProgress} message={overlayMessage} />
 
-      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Review & edit</p>
+      <p className="text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t("content.reviewEdit")}</p>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Caption</label>
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">{t("content.caption")}</label>
         <textarea
           value={editedCaption}
           onChange={(e) => setEditedCaption(e.target.value)}
@@ -399,7 +403,7 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
       </div>
 
       <div>
-        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">Image prompt</label>
+        <label className="mb-1 block text-sm font-medium text-gray-700 dark:text-gray-200">{t("content.imagePrompt")}</label>
         <textarea
           value={editedImagePrompt}
           onChange={(e) => setEditedImagePrompt(e.target.value)}
@@ -412,14 +416,14 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
 
       {session?.image_url && (
         <div>
-          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">Generated image</p>
+          <p className="mb-2 text-sm font-medium text-gray-700 dark:text-gray-200">{t("content.generatedImage")}</p>
           <div className="rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 max-w-xs">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={session.image_url} alt="Generated content" className="w-full" />
           </div>
           <a href={session.image_url} download target="_blank" rel="noopener noreferrer"
             className="mt-2 inline-block text-xs text-[#C7F56F] hover:underline">
-            Download image →
+            {t("content.downloadImage")}
           </a>
         </div>
       )}
@@ -427,21 +431,21 @@ export default function ContentGenerator({ brandId, brandDna, products, onCreate
       {error && <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>}
 
       <div className="flex justify-between gap-3 pt-2">
-        <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">Close</button>
+        <button onClick={onClose} className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800">{t("content.close")}</button>
         {!session?.image_url ? (
           <button
             onClick={handleGenerateImage}
             disabled={generatingImage}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            Generate image
+            {t("content.generateImage")}
           </button>
         ) : (
           <button
             onClick={() => { setStep("template"); setSession(null); setSelectedTemplate(null); setTopicHint(""); setSelectedInspo([]); }}
             className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
           >
-            New content +
+            {t("content.newContent")}
           </button>
         )}
       </div>

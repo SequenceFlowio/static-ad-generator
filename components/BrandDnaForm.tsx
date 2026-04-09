@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import type { BrandDnaData } from "@/types";
+import { useLanguage } from "@/components/LanguageProvider";
 
 interface Props {
   brandId: string;
@@ -12,24 +13,51 @@ interface Props {
   saveLabel?: string;
 }
 
+function InfoTooltip({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex items-center align-middle ml-1">
+      <button
+        type="button"
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onClick={() => setOpen((v) => !v)}
+        className="flex h-4 w-4 items-center justify-center rounded-full border border-gray-300 dark:border-gray-600 text-[10px] font-semibold text-gray-400 dark:text-gray-500 hover:border-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors leading-none"
+      >
+        i
+      </button>
+      {open && (
+        <div className="absolute left-5 top-0 z-50 w-64 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3 shadow-lg text-xs text-gray-600 dark:text-gray-300 leading-relaxed">
+          {text}
+        </div>
+      )}
+    </span>
+  );
+}
+
 function Field({
   label,
   value,
   onChange,
   placeholder,
   textarea,
+  tooltip,
 }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   textarea?: boolean;
+  tooltip?: string;
 }) {
   const base =
     "w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 px-3 py-2 text-sm outline-none focus:border-[#C7F56F] focus:ring-2 focus:ring-[#C7F56F]/30";
   return (
     <div>
-      <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{label}</label>
+      <label className="mb-1 flex items-center text-xs font-medium text-gray-500 dark:text-gray-400">
+        {label}
+        {tooltip && <InfoTooltip text={tooltip} />}
+      </label>
       {textarea ? (
         <textarea
           value={value}
@@ -86,6 +114,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
   const [d, setD] = useState<Partial<BrandDnaData>>({ ...initialData });
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const logoInputRef = useRef<HTMLInputElement>(null);
+  const { t } = useLanguage();
 
   async function handleLogoUpload(file: File) {
     setUploadingLogo(true);
@@ -114,7 +143,10 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
     <div className="space-y-6">
       {/* Brand Logo */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Brand Logo</p>
+        <p className="mb-3 flex items-center text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          {t("brandDna.logoSection")}
+          <InfoTooltip text={t("brandDna.logoTooltip")} />
+        </p>
         <div className="flex items-center gap-4">
           {d.logo_url ? (
             <>
@@ -125,11 +157,11 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
                 onClick={handleLogoRemove}
                 className="text-xs text-red-400 hover:text-red-600"
               >
-                Remove
+                {t("brandDna.logoRemove")}
               </button>
             </>
           ) : (
-            <p className="text-xs text-gray-400 dark:text-gray-500">No logo uploaded</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{t("brandDna.logoNoLogo")}</p>
           )}
           <input
             ref={logoInputRef}
@@ -144,17 +176,17 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             disabled={uploadingLogo}
             className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50"
           >
-            {uploadingLogo ? "Uploading…" : d.logo_url ? "Replace" : "Upload Logo"}
+            {uploadingLogo ? t("brandDna.logoUploading") : d.logo_url ? t("brandDna.logoReplace") : t("brandDna.logoUpload")}
           </button>
         </div>
-        <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">PNG or SVG with transparent background recommended. Used as reference in every generated ad.</p>
+        <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{t("brandDna.logoTip")}</p>
       </section>
 
       {/* Language */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Ad Copy Language</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t("brandDna.languageSection")}</p>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Language</label>
+          <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{t("brandDna.languageLabel")}</label>
           <select
             value={d.language ?? "English"}
             onChange={(e) => set("language", e.target.value as never)}
@@ -167,23 +199,23 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             <option value="German">German</option>
             <option value="Portuguese">Portuguese</option>
           </select>
-          <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">All generated hook copy will be written in this language. Visual prompts always stay in English.</p>
+          <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">{t("brandDna.languageTip")}</p>
         </div>
       </section>
 
       {/* Brand Overview */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Brand Overview</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t("brandDna.overviewSection")}</p>
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-2">
             <Field
-              label="Tagline"
+              label={t("brandDna.tagline")}
               value={d.tagline ?? ""}
               onChange={setStr("tagline")}
               placeholder="Your brand tagline"
             />
             <Field
-              label="Voice Adjectives (comma-separated)"
+              label={t("brandDna.voiceAdjectives")}
               value={(d.voice_adjectives ?? []).join(", ")}
               onChange={(v) =>
                 set("voice_adjectives", v.split(",").map((s) => s.trim()).filter(Boolean))
@@ -192,51 +224,58 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
             />
           </div>
           <Field
-            label="Brand Story"
+            label={t("brandDna.brandStory")}
             value={d.brand_story ?? ""}
             onChange={setStr("brand_story")}
             textarea
             placeholder="1–2 sentences about the brand's origin or mission"
           />
           <Field
-            label="Target Audience"
+            label={t("brandDna.targetAudience")}
             value={d.target_audience ?? ""}
             onChange={setStr("target_audience")}
             textarea
             placeholder="Who the brand is for — demographics, lifestyle, needs"
+            tooltip={t("brandDna.targetAudienceTooltip")}
           />
           <Field
-            label="Brand Personality"
+            label={t("brandDna.brandPersonality")}
             value={d.brand_personality ?? ""}
             onChange={setStr("brand_personality")}
             textarea
             placeholder="How the brand acts, speaks, and feels — e.g. Premium but approachable"
           />
           <Field
-            label="Positioning"
+            label={t("brandDna.positioning")}
             value={d.positioning ?? ""}
             onChange={setStr("positioning")}
             textarea
             placeholder="1–2 sentences describing what makes this brand unique"
           />
           <Field
-            label="Competitive Differentiation"
+            label={t("brandDna.competitiveDiff")}
             value={d.competitive_differentiation ?? ""}
             onChange={setStr("competitive_differentiation")}
             placeholder="How this brand differs from competitors"
+            tooltip={t("brandDna.competitiveDiffTooltip")}
           />
         </div>
       </section>
 
       {/* Copy Strategy */}
       <section>
-        <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Copy Strategy</p>
-        <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">Used by AI to generate scroll-stopping hooks tailored to your audience.</p>
+        <p className="mb-1 flex items-center text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+          {t("brandDna.copyStrategySection")}
+          <InfoTooltip text={t("brandDna.copyStrategyTooltip")} />
+        </p>
+        <p className="mb-3 text-xs text-gray-400 dark:text-gray-500">{t("brandDna.copyStrategyDesc")}</p>
         <div className="space-y-4">
           {/* Customer Desires — tag input */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Customer Desires <span className="text-gray-400 dark:text-gray-500 font-normal">({(d.customer_desires ?? []).length}/6)</span></label>
-            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">What does your ideal customer deeply want? Press Enter to add. Max 6.</p>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">
+              {t("brandDna.customerDesires")} <span className="text-gray-400 dark:text-gray-500 font-normal">({(d.customer_desires ?? []).length}/6)</span>
+            </label>
+            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">{t("brandDna.customerDesiresDesc")}</p>
             <div className="flex flex-wrap gap-1.5 mb-2">
               {(d.customer_desires ?? []).map((desire, i) => (
                 <span key={i} className="flex items-center gap-1 rounded-full bg-gray-100 dark:bg-gray-700 px-2.5 py-1 text-xs text-gray-700 dark:text-gray-200">
@@ -270,8 +309,8 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
 
           {/* Hook Examples — dynamic list */}
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">Hook Examples</label>
-            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">Add hooks that have worked or angles you want to test. AI creates variants of these.</p>
+            <label className="mb-1 block text-xs font-medium text-gray-500 dark:text-gray-400">{t("brandDna.hookExamples")}</label>
+            <p className="mb-2 text-xs text-gray-400 dark:text-gray-500">{t("brandDna.hookExamplesDesc")}</p>
             <div className="space-y-2">
               {(d.hook_examples ?? []).map((hook, i) => (
                 <div key={i} className="flex gap-2 items-start">
@@ -299,7 +338,7 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
               onClick={() => set("hook_examples", [...(d.hook_examples ?? []), ""])}
               className="mt-2 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 underline underline-offset-2"
             >
-              + Add hook example
+              {t("brandDna.addHookExample")}
             </button>
           </div>
         </div>
@@ -307,32 +346,32 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
 
       {/* Visual System */}
       <section>
-        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">Visual System</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">{t("brandDna.visualSystemSection")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
           <Field
-            label="Primary Font"
+            label={t("brandDna.primaryFont")}
             value={d.primary_font ?? ""}
             onChange={setStr("primary_font")}
             placeholder="Neue Haas Grotesk"
           />
           <Field
-            label="Secondary Font"
+            label={t("brandDna.secondaryFont")}
             value={d.secondary_font ?? ""}
             onChange={setStr("secondary_font")}
             placeholder="Garamond"
           />
           <ColorField
-            label="Accent Color"
+            label={t("brandDna.accentColor")}
             value={d.accent_color ?? ""}
             onChange={(v) => set("accent_color", v || null)}
           />
           <ColorField
-            label="Lettertype Color"
+            label={t("brandDna.lettertypeColor")}
             value={d.lettertype_color ?? ""}
             onChange={(v) => set("lettertype_color", v || null)}
           />
           <ColorField
-            label="Background Color"
+            label={t("brandDna.backgroundColor")}
             value={d.background_color ?? ""}
             onChange={(v) => set("background_color", v || null)}
           />
@@ -345,14 +384,14 @@ export default function BrandDnaForm({ brandId, initialData, onSave, onCancel, l
           disabled={loading}
           className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
         >
-          {saveLabel ?? (loading ? "Saving…" : "Save Brand DNA")}
+          {saveLabel ?? (loading ? t("product.saving") : t("brandDna.save"))}
         </button>
         {onCancel && (
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
           >
-            Cancel
+            {t("brandDna.cancel")}
           </button>
         )}
       </div>

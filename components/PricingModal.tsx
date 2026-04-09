@@ -1,83 +1,69 @@
 "use client";
 
 import { useState } from "react";
-
-const TOP_PLANS = [
-  {
-    name: "Trial",
-    planId: null,
-    price: "€0",
-    period: "/7 days",
-    description: "Try everything free",
-    cta: "Current plan",
-    ctaDisabled: true,
-    highlight: false,
-    badge: "7-day trial",
-    features: [
-      "1 store",
-      "Quality: 10 img/mo",
-      "Efficiency: 20 img/mo",
-      "1K resolution only",
-    ],
-  },
-  {
-    name: "Starter",
-    planId: "starter",
-    price: "€49",
-    period: "/mo",
-    description: "For solo creators",
-    cta: "Upgrade to Starter",
-    ctaDisabled: false,
-    highlight: false,
-    features: [
-      "1 store",
-      "Quality: 150 img/mo",
-      "Efficiency: 250 img/mo",
-      "4K resolution",
-      "Clean exports",
-      "Email support",
-    ],
-  },
-  {
-    name: "Pro",
-    planId: "pro",
-    price: "€89",
-    period: "/mo",
-    description: "For growing brands",
-    cta: "Upgrade to Pro",
-    ctaDisabled: false,
-    highlight: true,
-    badge: "Most popular",
-    features: [
-      "Unlimited stores",
-      "Quality: 350 img/mo",
-      "Efficiency: 600 img/mo",
-      "4K resolution",
-      "Clean exports",
-      "Priority support",
-    ],
-  },
-];
-
-const AGENCY = {
-  planId: "agency",
-  name: "Agency",
-  price: "€249",
-  period: "/mo",
-  description: "For agencies & teams managing multiple brands",
-  cta: "Upgrade to Agency",
-  features: [
-    "Unlimited stores",
-    "Quality: 1,000 img/mo",
-    "Efficiency: 2,000 img/mo",
-    "4K resolution",
-    "Clean + bulk export",
-    "Dedicated support",
-  ],
-};
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function PricingModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState<string | null>(null);
+  const { lang, t } = useLanguage();
+
+  const nl = lang === "nl";
+
+  const TOP_PLANS = [
+    {
+      name: "Trial",
+      planId: null,
+      price: "€0",
+      period: nl ? "/7 dagen" : "/7 days",
+      description: t("pricing.trial.description"),
+      cta: t("pricing.trial.cta"),
+      ctaDisabled: true,
+      highlight: false,
+      badge: t("pricing.badge.trial"),
+      features: nl
+        ? ["1 winkel", "Kwaliteit: 10 afb./mnd", "Efficiëntie: 20 afb./mnd", "Alleen 1K resolutie"]
+        : ["1 store", "Quality: 10 img/mo", "Efficiency: 20 img/mo", "1K resolution only"],
+    },
+    {
+      name: "Starter",
+      planId: "starter",
+      price: "€49",
+      period: nl ? "/mnd" : "/mo",
+      description: t("pricing.starter.description"),
+      cta: t("pricing.starter.cta"),
+      ctaDisabled: false,
+      highlight: false,
+      features: nl
+        ? ["1 winkel", "Kwaliteit: 150 afb./mnd", "Efficiëntie: 250 afb./mnd", "4K resolutie", "Nette exports", "E-mailsupport"]
+        : ["1 store", "Quality: 150 img/mo", "Efficiency: 250 img/mo", "4K resolution", "Clean exports", "Email support"],
+    },
+    {
+      name: "Pro",
+      planId: "pro",
+      price: "€89",
+      period: nl ? "/mnd" : "/mo",
+      description: t("pricing.pro.description"),
+      cta: t("pricing.pro.cta"),
+      ctaDisabled: false,
+      highlight: true,
+      badge: t("pricing.badge.popular"),
+      features: nl
+        ? ["Onbeperkte winkels", "Kwaliteit: 350 afb./mnd", "Efficiëntie: 600 afb./mnd", "4K resolutie", "Nette exports", "Prioriteitsondersteuning"]
+        : ["Unlimited stores", "Quality: 350 img/mo", "Efficiency: 600 img/mo", "4K resolution", "Clean exports", "Priority support"],
+    },
+  ];
+
+  const AGENCY = {
+    planId: "agency",
+    name: "Agency",
+    price: "€249",
+    period: nl ? "/mnd" : "/mo",
+    description: t("pricing.agency.description"),
+    cta: t("pricing.agency.cta"),
+    features: nl
+      ? ["Onbeperkte winkels", "Kwaliteit: 1.000 afb./mnd", "Efficiëntie: 2.000 afb./mnd", "4K resolutie", "Bulk & nette exports", "Persoonlijke ondersteuning"]
+      : ["Unlimited stores", "Quality: 1,000 img/mo", "Efficiency: 2,000 img/mo", "4K resolution", "Clean + bulk export", "Dedicated support"],
+  };
 
   async function handleUpgrade(planId: string) {
     setLoading(planId);
@@ -106,8 +92,8 @@ export default function PricingModal({ onClose }: { onClose: () => void }) {
         {/* Header */}
         <div className="px-8 py-6 border-b border-gray-100 dark:border-gray-800 flex items-start justify-between">
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-white">Choose your plan</h2>
-            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">Scale your ad generation with the right plan.</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white">{t("pricing.title")}</h2>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{t("pricing.subtitle")}</p>
           </div>
           <button onClick={onClose} className="rounded-full p-1.5 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 dark:hover:text-gray-200">
             <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -166,7 +152,7 @@ export default function PricingModal({ onClose }: { onClose: () => void }) {
                       : "bg-gray-900 dark:bg-white text-white dark:text-gray-900 hover:bg-gray-700 dark:hover:bg-gray-100 disabled:opacity-60"
                   }`}
                 >
-                  {loading === plan.planId ? "Redirecting…" : plan.cta}
+                  {loading === plan.planId ? t("pricing.redirecting") : plan.cta}
                 </button>
               </div>
             ))}

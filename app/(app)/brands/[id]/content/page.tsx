@@ -8,11 +8,13 @@ import InspoLibrary from "@/components/InspoLibrary";
 import ContentGenerator from "@/components/content/ContentGenerator";
 import { CONTENT_TEMPLATES } from "@/lib/content-templates";
 import type { Brand, BrandDna, Product } from "@/types";
+import { useLanguage } from "@/components/LanguageProvider";
 
 export default function ContentPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
+  const { t } = useLanguage();
 
   const [brand, setBrand] = useState<Brand | null>(null);
   const [dna, setDna] = useState<BrandDna | null>(null);
@@ -47,21 +49,21 @@ export default function ContentPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-        <Link href="/stores" className="hover:text-gray-700 dark:hover:text-gray-200">Stores</Link>
+        <Link href="/stores" className="hover:text-gray-700 dark:hover:text-gray-200">{t("nav.stores")}</Link>
         <span>/</span>
         <Link href={`/brands/${id}`} className="hover:text-gray-700 dark:hover:text-gray-200">{brand.name}</Link>
         <span>/</span>
-        <span className="text-gray-700 dark:text-gray-200 font-medium">Content Generator</span>
+        <span className="text-gray-700 dark:text-gray-200 font-medium">{t("content.title")}</span>
       </div>
 
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Content Generator</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("content.title")}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{brand.name}</p>
         </div>
         <Link href={`/brands/${id}/content-gallery`}
-          className="rounded-full bg-[#1a1a1a] dark:bg-white px-4 py-1.5 text-xs font-semibold text-[#C7F56F] dark:text-[#1a1a1a] hover:opacity-90 transition-opacity">
-          View Gallery →
+          className="rounded-full bg-[#C7F56F] px-4 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
+          {t("content.viewGallery")} →
         </Link>
       </div>
 
@@ -85,10 +87,10 @@ export default function ContentPage() {
       {/* Content Inspo Library */}
       <details className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
         <summary className="cursor-pointer px-5 py-4 text-xs font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 select-none hover:text-gray-600 dark:hover:text-gray-300">
-          Content Inspo Library ▼
+          {t("content.inspoLibrary")}
         </summary>
         <div className="border-t border-gray-100 dark:border-gray-800 p-5">
-          <InspoLibrary brandId={id} type="content" label="Reference images used as style guide during content generation (max 20)" />
+          <InspoLibrary brandId={id} type="content" label={t("content.inspoLibraryLabel")} />
         </div>
       </details>
 

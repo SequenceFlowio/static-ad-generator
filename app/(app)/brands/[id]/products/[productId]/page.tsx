@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import type { Product } from "@/types";
+import { useLanguage } from "@/components/LanguageProvider";
 
 const MAX_IMAGES = 6;
 
@@ -28,6 +29,7 @@ export default function ProductPage() {
   const [editUrl, setEditUrl] = useState("");
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { lang, t } = useLanguage();
 
   useEffect(() => {
     async function load() {
@@ -68,7 +70,10 @@ export default function ProductPage() {
   }
 
   async function handleDelete() {
-    if (!confirm(`Delete "${product?.name}"? This cannot be undone.`)) return;
+    if (!confirm(lang === "nl"
+      ? `"${product?.name}" verwijderen? Dit kan niet ongedaan worden gemaakt.`
+      : `Delete "${product?.name}"? This cannot be undone.`
+    )) return;
     setDeleting(true);
     await fetch(`/api/brands/${brandId}/products/${productId}`, { method: "DELETE" });
     router.push(`/brands/${brandId}`);
@@ -117,7 +122,7 @@ export default function ProductPage() {
     <div>
       {/* Breadcrumb */}
       <div className="mb-6 flex items-center gap-2 text-sm text-gray-400 dark:text-gray-500">
-        <Link href="/stores" className="hover:text-gray-700 dark:hover:text-gray-200">Stores</Link>
+        <Link href="/stores" className="hover:text-gray-700 dark:hover:text-gray-200">{t("nav.stores")}</Link>
         <span>/</span>
         <Link href={`/brands/${brandId}`} className="hover:text-gray-700 dark:hover:text-gray-200">{brandName}</Link>
         <span>/</span>
@@ -138,7 +143,7 @@ export default function ProductPage() {
               onClick={() => setEditing(true)}
               className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
             >
-              Edit
+              {t("product.edit")}
             </button>
           ) : null}
           <button
@@ -146,7 +151,7 @@ export default function ProductPage() {
             disabled={deleting}
             className="rounded-lg border border-red-200 dark:border-red-800 px-3 py-1.5 text-sm text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50"
           >
-            {deleting ? "Deleting…" : "Delete product"}
+            {deleting ? t("product.deleting") : t("product.delete")}
           </button>
         </div>
       </div>
@@ -156,7 +161,7 @@ export default function ProductPage() {
         {editing ? (
           <>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Product name</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("product.productName")}</label>
               <input
                 value={editName}
                 onChange={(e) => setEditName(e.target.value)}
@@ -164,7 +169,7 @@ export default function ProductPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Description</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("product.description")}</label>
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
@@ -173,7 +178,7 @@ export default function ProductPage() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">Product URL</label>
+              <label className="mb-1 block text-xs font-medium text-gray-600 dark:text-gray-400">{t("product.productUrl")}</label>
               <input
                 value={editUrl}
                 onChange={(e) => setEditUrl(e.target.value)}
@@ -186,25 +191,25 @@ export default function ProductPage() {
                 disabled={saving}
                 className="rounded-lg bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
               >
-                {saving ? "Saving…" : "Save changes"}
+                {saving ? t("product.saving") : t("product.save")}
               </button>
               <button
                 onClick={() => { setEditing(false); setEditName(product.name); setEditDescription(product.description ?? ""); setEditUrl(product.url ?? ""); }}
                 className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
               >
-                Cancel
+                {t("product.cancel")}
               </button>
             </div>
           </>
         ) : (
           <>
             <div>
-              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-0.5">Name</p>
+              <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-0.5">{t("product.name")}</p>
               <p className="text-sm text-gray-900 dark:text-white">{product.name}</p>
             </div>
             {product.description && (
               <div>
-                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-0.5">Description</p>
+                <p className="text-xs font-medium text-gray-400 dark:text-gray-500 mb-0.5">{t("product.description")}</p>
                 <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{product.description}</p>
               </div>
             )}
@@ -222,8 +227,8 @@ export default function ProductPage() {
       <div>
         <div className="mb-3 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">Product images</p>
-            <p className="text-xs text-gray-400 dark:text-gray-500">{images.length}/{MAX_IMAGES} — used as reference images during ad generation</p>
+            <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">{t("product.images")}</p>
+            <p className="text-xs text-gray-400 dark:text-gray-500">{images.length}/{MAX_IMAGES} — {t("product.imagesDesc")}</p>
           </div>
           {images.length < MAX_IMAGES && (
             <>
@@ -232,7 +237,7 @@ export default function ProductPage() {
                 disabled={uploadingImage}
                 className="rounded-lg bg-[#C7F56F] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50"
               >
-                {uploadingImage ? "Uploading…" : "+ Add image"}
+                {uploadingImage ? t("product.uploading") : t("product.addImage")}
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
             </>
@@ -248,7 +253,7 @@ export default function ProductPage() {
                   disabled={deletingImageUrl === url}
                   className="rounded-full bg-white/90 px-2 py-1 text-xs font-semibold text-red-600 hover:bg-white disabled:opacity-50"
                 >
-                  {deletingImageUrl === url ? "…" : "Remove"}
+                  {deletingImageUrl === url ? "…" : t("product.remove")}
                 </button>
               </div>
             </div>

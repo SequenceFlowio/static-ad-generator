@@ -193,7 +193,7 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
                       </p>
                       <p className="text-xs text-gray-400 dark:text-gray-500">
                         {subscription?.status === "active" && subscription?.current_period_end
-                          ? `Renews ${new Date(subscription.current_period_end).toLocaleDateString()}`
+                          ? `${t("settings.renews")} ${new Date(subscription.current_period_end).toLocaleDateString()}`
                           : t("settings.currentPlan")}
                       </p>
                     </div>
@@ -202,13 +202,13 @@ function SettingsModal({ onClose, onUpgrade, lang, setLang, t }: {
                         ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400"
                         : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400"
                     }`}>
-                      {subscription?.status === "active" ? "Active" : "Free"}
+                      {subscription?.status === "active" ? t("settings.statusActive") : t("settings.statusFree")}
                     </span>
                   </div>
                   {subscription?.status === "active" ? (
                     <button onClick={handleManageBilling} disabled={portalLoading}
                       className="w-full rounded-lg border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50">
-                      {portalLoading ? "Opening…" : "Manage billing →"}
+                      {portalLoading ? t("settings.portalLoading") : t("settings.manageBilling")}
                     </button>
                   ) : (
                     <button onClick={() => { onClose(); onUpgrade(); }} className="w-full rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
