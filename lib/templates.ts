@@ -77,9 +77,9 @@ Clean, confident, easy to scan at a glance. 2K resolution.`,
     needs_product_images: true,
     prompt_template: `UGC-style lifestyle photo ad. Scene: [LIFESTYLE_SCENE]. [PRODUCT_NAME] sits naturally in the scene, casually placed — not posed. Soft natural light, [COLOR_GRADING] color grade, slight film grain.
 At the very top of the image: large bold [PRIMARY_FONT] hook text "[HOOK_TEXT]" floats directly over the photo — NO background box, NO overlay panel, NO text container, text sits on top of the image.
-Directly below the hook text on the same line flow: smaller, lighter-weight version of the SAME [PRIMARY_FONT] typeface for CTA text "[CTA_TEXT]" — same font, just smaller (approx 40% of headline size) and regular weight instead of bold. No italic. No different typeface.
-TYPOGRAPHY RULE: all text uses the same typeface throughout — only size and weight differ. Headline = large + bold. Subtitle/CTA = small + regular weight. Never mix typefaces.
-No logo. No watermark. No brand badge. No extra UI elements. Just the photo and the two lines of text at the top.
+Directly below the hook text: a small rounded pill button (white or [ACCENT_COLOR] fill, fully rounded corners like a capsule shape) containing the CTA text "[CTA_TEXT]" in the SAME [PRIMARY_FONT] typeface — regular weight, small size. The pill has a solid fill and the text sits centered inside it. No shadow, no border, just a clean filled capsule shape.
+TYPOGRAPHY RULE: all text uses the same typeface throughout — only size and weight differ. Headline = large + bold. CTA pill = small + regular weight. Never mix typefaces. No italic.
+No logo. No watermark. No brand badge. No extra UI elements. Just the photo, the hook text at the top, and the pill CTA directly below it.
 9:16 vertical. Shot-on-iPhone aesthetic, not a commercial shoot. 2K resolution.`,
   },
 ];
