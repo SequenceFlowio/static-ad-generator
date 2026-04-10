@@ -16,6 +16,7 @@ LANGUAGE RULE:
 
 CRITICAL RULES — VISUAL:
 - The background_prompt MUST describe typography STYLE visually — e.g. "bold geometric sans-serif headlines", "elegant high-contrast serif body text". Do NOT write font names like Poppins, Inter, Neue Haas, or Canela. Image generators do not render specific font names — they render what they think that style looks like.
+- TYPOGRAPHY CONSISTENCY: All text elements in a single ad MUST use the same typeface family. Never mix two different typefaces (e.g. a bold sans for the headline and an italic serif for the subtitle). Use ONE typeface throughout — vary only weight (bold/regular/light) and size. The headline is large + bold. Subtitles and CTAs are the same face, smaller + regular or light weight. No italic unless the entire brand identity is italic.
 - The background_prompt MUST describe brand colors by their VISUAL APPEARANCE — e.g. "warm off-white background", "deep charcoal text", "bright lime green accent". NEVER write hex codes (#xxxxxx) in the background_prompt — image generators render hex strings as literal text on the image.
 - Use the provided hex codes only to determine the color's visual description (e.g. #C7F56F → "bright lime green", #1a1a1a → "near-black charcoal", #FFFFFF → "clean white").
 - The background_prompt MUST STRICTLY follow reference images — do NOT invent props, objects, or surfaces not present in the reference images
@@ -82,8 +83,8 @@ ${hookExamples.length > 0 ? `Hook Examples — create VARIANTS of these (same an
 ${hookExamples.map((h, i) => `${i + 1}. "${h}"`).join("\n")}` : "Hook Examples: none provided — generate original hooks from the framework"}
 
 VISUAL SYSTEM (describe typography as STYLE, not font name; colors must be described visually — NO hex codes in background_prompt):
-Primary Font: ${dna.primary_font ?? "N/A"} ← describe as typography style (e.g. "bold geometric sans-serif"), do NOT use this name literally
-Secondary Font: ${dna.secondary_font ?? "N/A"} ← describe as style (e.g. "elegant high-contrast serif")
+Primary Font: ${dna.primary_font ?? "N/A"} ← use this as the ONLY typeface in ads. Describe its style (e.g. "bold geometric sans-serif") — do NOT use the name literally. All text elements (headline, subtitle, CTA) use this same typeface — vary only weight and size.
+Secondary Font: ${dna.secondary_font ?? "N/A"} ← for PRINT/branding reference only. Do NOT mix this with the primary font in a single ad. Only use if the entire ad intentionally uses it.
 Accent Color: ${dna.accent_color ?? "N/A"} ← describe visually (e.g. "bright lime green"), never write the hex
 Lettertype Color: ${dna.lettertype_color ?? "N/A"} ← describe visually
 Background Color: ${dna.background_color ?? "N/A"} ← describe visually
