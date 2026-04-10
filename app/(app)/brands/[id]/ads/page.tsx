@@ -7,7 +7,7 @@ import Image from "next/image";
 import InspoPicker from "@/components/InspoPicker";
 import InspoLibrary from "@/components/InspoLibrary";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
-import type { Brand, Product, KieModel } from "@/types";
+import type { Brand, BrandDna, Product, KieModel } from "@/types";
 import { MODEL_CONFIGS } from "@/types";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -75,6 +75,7 @@ export default function AdsPage() {
   const BACKGROUND_PRESETS = lang === "nl" ? BACKGROUND_PRESETS_NL : BACKGROUND_PRESETS_EN;
 
   const [brand, setBrand] = useState<Brand | null>(null);
+  const [dna, setDna] = useState<BrandDna | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -89,6 +90,8 @@ export default function AdsPage() {
   const [batchTemplates, setBatchTemplates] = useState<string[]>(["headline", "offer-promotion", "testimonial", "vs-them", "ugc-lifestyle"]);
   const [userPlan, setUserPlan] = useState<string>("trial");
   const [backgroundIntent, setBackgroundIntent] = useState("");
+  const [awarenessLevel, setAwarenessLevel] = useState("problem-aware");
+  const [selectedDesire, setSelectedDesire] = useState<string | null>(null);
 
   // Generation progress
   const [generating, setGenerating] = useState(false);
@@ -116,6 +119,7 @@ export default function AdsPage() {
       const json = await brandRes.json();
       const prods = await productsRes.json();
       setBrand(json.brand);
+      setDna(json.brand_dna ?? null);
       setProducts(Array.isArray(prods) ? prods : []);
       setLoading(false);
       if (!json.brand_dna) {
@@ -170,6 +174,8 @@ export default function AdsPage() {
         num_variants: numImages,
         template_numbers: selectedTemplates,
         background_intent: backgroundIntent.trim() || null,
+        awareness_level: awarenessLevel,
+        selected_desire: selectedDesire,
       }),
     });
 
@@ -230,7 +236,7 @@ export default function AdsPage() {
       }
     };
     poll();
-  }, [id, selectedProductIds, selectedTemplates, numImages, resolution, model, selectedInspo, backgroundIntent]);
+  }, [id, selectedProductIds, selectedTemplates, numImages, resolution, model, selectedInspo, backgroundIntent, awarenessLevel, selectedDesire]);
 
   const handleGenerateBatch = useCallback(async () => {
     if (selectedProductIds.length === 0 || batchTemplates.length === 0) return;
@@ -463,6 +469,44 @@ export default function AdsPage() {
                     </button>
                   </div>
                 </div>
+
+                {/* Awareness level */}
+                <div>
+                  <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                    {lang === "nl" ? "Bewustzijnsniveau" : "Awareness level"}
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { value: "unaware",        labelEn: "Unaware",        labelNl: "Onbewust" },
+                      { value: "problem-aware",  labelEn: "Problem aware",  labelNl: "Probleembewust" },
+                      { value: "solution-aware", labelEn: "Solution aware", labelNl: "Oplossingsbewust" },
+                      { value: "product-aware",  labelEn: "Product aware",  labelNl: "Productbewust" },
+                      { value: "most-aware",     labelEn: "Most aware",     labelNl: "Koopklaar" },
+                    ].map((lvl) => (
+                      <button key={lvl.value} onClick={() => setAwarenessLevel(lvl.value)}
+                        className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${awarenessLevel === lvl.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                        {lang === "nl" ? lvl.labelNl : lvl.labelEn}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Customer desire */}
+                {(dna?.data?.customer_desires ?? []).length > 0 && dna && (
+                  <div>
+                    <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                      {lang === "nl" ? "Klantenverlangen" : "Customer desire"} <span className="font-normal text-gray-400 dark:text-gray-500">{t("ads.optional")}</span>
+                    </p>
+                    <div className="flex flex-wrap gap-2">
+                      {(dna.data.customer_desires as string[]).map((d) => (
+                        <button key={d} onClick={() => setSelectedDesire(selectedDesire === d ? null : d)}
+                          className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${selectedDesire === d ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Inspo */}
                 <InspoPicker brandId={id} type="ad" selected={selectedInspo} onSelect={setSelectedInspo} />
