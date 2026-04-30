@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { BrandDnaData } from "@/types";
+import type { BrandDnaData, CreativeStrategy } from "@/types";
 
 export interface BatchAdConcept {
   template_name: string;
@@ -42,11 +42,13 @@ export async function generateBatchCampaign({
   products,
   templateNames,
   batchSize,
+  creativeStrategy,
 }: {
   brandDna: BrandDnaData;
   products: ProductInfo[];
   templateNames: string[];
   batchSize: number;
+  creativeStrategy?: CreativeStrategy | null;
 }): Promise<BatchAdConcept[]> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -84,7 +86,28 @@ Schema per object:
   "angle_description": "<one sentence describing the unique angle/emotion>"
 }`;
 
-  const userMessage = `${brandDnaToText(brandDna)}
+  let strategyAppend = "";
+  if (creativeStrategy) {
+    const parts: string[] = ["", "---", "CREATIVE STRATEGY:"];
+    if (creativeStrategy.creative_angles.length > 0) {
+      parts.push(`Available Creative Angles — distribute concepts across these angles:`);
+      creativeStrategy.creative_angles.forEach(a => parts.push(`  - ${a.label}: ${a.description} (hook frame: "${a.hook_frame}")`));
+    }
+    if (creativeStrategy.content_pillars.length > 0) {
+      parts.push(`Content Pillars — use each at least once:`);
+      creativeStrategy.content_pillars.forEach(p => parts.push(`  - ${p.label}: ${p.description}`));
+    }
+    if (creativeStrategy.hook_library.length > 0) {
+      parts.push(`Hook Library (proven examples — create variants, never copy):`);
+      creativeStrategy.hook_library.slice(0, 5).forEach((h, i) => parts.push(`  ${i + 1}. "${h.hook}"`));
+    }
+    if (creativeStrategy.forbidden_elements.length > 0) {
+      parts.push(`FORBIDDEN — never include: ${creativeStrategy.forbidden_elements.join(", ")}`);
+    }
+    strategyAppend = parts.join("\n");
+  }
+
+  const userMessage = `${brandDnaToText(brandDna)}${strategyAppend}
 
 PRODUCTS:
 ${productList}

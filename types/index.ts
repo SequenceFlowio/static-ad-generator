@@ -97,6 +97,50 @@ export interface GenerationJob {
   error: string | null;
   created_at: string;
   generation_detail: GenerationDetail | null;
+  performance_score: number | null;
+  is_winner: boolean;
+}
+
+// ─── Creative Strategy Layer ────────────────────────────────────────────────
+
+export interface CreativeAngle {
+  key: string;           // slug — e.g. "hero-transformation"
+  label: string;         // display name — e.g. "Hero Transformation"
+  description: string;   // one sentence: what emotional arc this angle uses
+  hook_frame: string;    // sentence starter / framing device for copy
+}
+
+export interface ContentPillar {
+  key: string;
+  label: string;
+  description: string;   // topic territory — "educational", "social proof", etc.
+  visual_note: string;   // visual direction guidance for this pillar
+}
+
+export interface HookEntry {
+  hook: string;          // the actual hook text
+  angle_key: string;     // which creative angle this belongs to
+  pillar_key: string;    // which content pillar this belongs to
+  performance_note: string | null;
+}
+
+export interface VisualStyle {
+  key: string;
+  label: string;
+  description: string;   // visual composition / mood notes
+  reference_note: string | null;  // optional reference to an image or concept
+}
+
+export interface CreativeStrategy {
+  id: string;
+  brand_id: string;
+  name: string;
+  creative_angles: CreativeAngle[];
+  content_pillars: ContentPillar[];
+  hook_library: HookEntry[];
+  visual_styles: VisualStyle[];
+  forbidden_elements: string[];  // things that must never appear in prompts
+  created_at: string;
 }
 
 export type Resolution = "1K" | "2K" | "4K";

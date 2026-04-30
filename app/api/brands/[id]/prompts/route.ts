@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { generatePrompts } from "@/lib/prompt-generator";
+import type { CreativeStrategy } from "@/types";
 
 // POST — generate all prompts for a product
 export async function POST(
@@ -18,6 +19,8 @@ export async function POST(
     template_numbers = [],
     awareness_level = "problem-aware",
     selected_desire = null,
+    active_angle_key = null,
+    active_pillar_key = null,
   } = body;
 
   // Support both single product_id (legacy) and product_ids array
@@ -35,7 +38,7 @@ export async function POST(
 
   const db = getServerSupabase();
 
-  const [brandRes, dnaRes] = await Promise.all([
+  const [brandRes, dnaRes, strategyRes] = await Promise.all([
     db.from("brands").select("*").eq("id", id).single(),
     db
       .from("brand_dna")
@@ -44,6 +47,7 @@ export async function POST(
       .order("generated_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    db.from("creative_strategies").select("*").eq("brand_id", id).maybeSingle(),
   ]);
 
   if (brandRes.error || !brandRes.data) {
@@ -82,7 +86,10 @@ export async function POST(
       background_intent,
       template_numbers,
       awareness_level,
-      selected_desire
+      selected_desire,
+      (strategyRes.data as CreativeStrategy | null) ?? null,
+      active_angle_key,
+      active_pillar_key
     );
 
     // Store prompts_original alongside prompts so user can reset edits

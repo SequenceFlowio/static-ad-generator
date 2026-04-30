@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import { TEMPLATES } from "./templates";
-import type { BrandDnaData, PromptsJson } from "@/types";
+import type { BrandDnaData, PromptsJson, CreativeStrategy } from "@/types";
 import { getWinningAds, formatWinningAdsBlock } from "./winning-ads";
 
 const PROMPT_GENERATION_INSTRUCTIONS = `
@@ -115,6 +115,56 @@ function inferNiche(targetAudience: string): string {
   return "other";
 }
 
+function buildStrategyBlock(strategy: CreativeStrategy | null, angleKey: string | null, pillarKey: string | null): string {
+  if (!strategy) return "";
+
+  const parts: string[] = ["---", "", "CREATIVE STRATEGY:"];
+
+  if (angleKey) {
+    const angle = strategy.creative_angles.find(a => a.key === angleKey);
+    if (angle) {
+      parts.push(`Active Creative Angle: ${angle.label}`);
+      parts.push(`  Description: ${angle.description}`);
+      parts.push(`  Hook frame: ${angle.hook_frame}`);
+    }
+  }
+
+  if (pillarKey) {
+    const pillar = strategy.content_pillars.find(p => p.key === pillarKey);
+    if (pillar) {
+      parts.push(`Active Content Pillar: ${pillar.label}`);
+      parts.push(`  Description: ${pillar.description}`);
+      parts.push(`  Visual note: ${pillar.visual_note}`);
+    }
+  }
+
+  // Inject hook library entries matching active angle/pillar
+  const matchingHooks = strategy.hook_library.filter(h =>
+    (!angleKey || h.angle_key === angleKey) &&
+    (!pillarKey || h.pillar_key === pillarKey)
+  ).slice(0, 3);
+
+  if (matchingHooks.length > 0) {
+    parts.push(`Hook Library (proven hooks for this angle — create variants, do not copy):`);
+    matchingHooks.forEach((h, i) => parts.push(`  ${i + 1}. "${h.hook}"${h.performance_note ? ` (${h.performance_note})` : ""}`));
+  }
+
+  // Active visual style matching pillar
+  if (pillarKey) {
+    const vs = strategy.visual_styles.find(v => v.key === pillarKey);
+    if (vs) {
+      parts.push(`Visual Style: ${vs.label} — ${vs.description}${vs.reference_note ? ` (ref: ${vs.reference_note})` : ""}`);
+    }
+  }
+
+  if (strategy.forbidden_elements.length > 0) {
+    parts.push(`FORBIDDEN — never include in any prompt: ${strategy.forbidden_elements.join(", ")}`);
+  }
+
+  parts.push("");
+  return parts.join("\n");
+}
+
 export async function generatePrompts(
   brandDna: BrandDnaData,
   productName: string,
@@ -125,7 +175,10 @@ export async function generatePrompts(
   backgroundIntent: string | null = null,
   templateNumbers: number[] = [],
   awarenessLevel: string = "problem-aware",
-  selectedDesire: string | null = null
+  selectedDesire: string | null = null,
+  creativeStrategy: CreativeStrategy | null = null,
+  activeAngleKey: string | null = null,
+  activePillarKey: string | null = null
 ): Promise<PromptsJson> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -160,8 +213,11 @@ needs_product_images: ${t.needs_product_images}
 ${t.prompt_template}`
   ).join("\n\n---\n\n");
 
+  const strategyBlock = buildStrategyBlock(creativeStrategy, activeAngleKey, activePillarKey);
+
   const userMessage = `Brand Data:
 ${brandDnaToText(brandDna, selectedDesire)}
+${strategyBlock}
 
 ---
 

@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { BrandDnaData } from "@/types";
+import type { BrandDnaData, CreativeStrategy } from "@/types";
 import type { Platform } from "./content-templates";
 import { getPlatformAspectRatio } from "./content-templates";
 import { buildNanoBananaPrompt, CONTENT_TEMPLATE_CAMERA_PRESETS } from "./prompt-utils";
@@ -154,6 +154,44 @@ function serializeImagePromptJson(json: ImagePromptJson, aspectRatio: string): s
   return parts.filter(Boolean).join(" ");
 }
 
+function buildStrategyBlock(strategy: CreativeStrategy | null | undefined, angleKey: string | null | undefined, pillarKey: string | null | undefined): string {
+  if (!strategy) return "";
+  const parts: string[] = ["---", "", "CREATIVE STRATEGY:"];
+
+  if (angleKey) {
+    const angle = strategy.creative_angles.find(a => a.key === angleKey);
+    if (angle) {
+      parts.push(`Active Creative Angle: ${angle.label} — ${angle.description}`);
+      parts.push(`Hook frame: ${angle.hook_frame}`);
+    }
+  }
+
+  if (pillarKey) {
+    const pillar = strategy.content_pillars.find(p => p.key === pillarKey);
+    if (pillar) {
+      parts.push(`Active Content Pillar: ${pillar.label} — ${pillar.description}`);
+      parts.push(`Visual note: ${pillar.visual_note}`);
+    }
+  }
+
+  const matchingHooks = strategy.hook_library.filter(h =>
+    (!angleKey || h.angle_key === angleKey) &&
+    (!pillarKey || h.pillar_key === pillarKey)
+  ).slice(0, 3);
+
+  if (matchingHooks.length > 0) {
+    parts.push(`Hook Library (create variants — do not copy verbatim):`);
+    matchingHooks.forEach((h, i) => parts.push(`  ${i + 1}. "${h.hook}"${h.performance_note ? ` (${h.performance_note})` : ""}`));
+  }
+
+  if (strategy.forbidden_elements.length > 0) {
+    parts.push(`FORBIDDEN — never include: ${strategy.forbidden_elements.join(", ")}`);
+  }
+
+  parts.push("");
+  return parts.join("\n");
+}
+
 function brandDnaToText(dna: BrandDnaData): string {
   return `
 BRAND: ${dna.name}
@@ -186,6 +224,9 @@ export async function generateContentPost({
   customerQuote,
   variationIndex,
   totalCount,
+  creativeStrategy,
+  activeAngleKey,
+  activePillarKey,
 }: {
   brandDna: BrandDnaData;
   templateName: string;
@@ -197,6 +238,9 @@ export async function generateContentPost({
   customerQuote?: string | null;
   variationIndex?: number;
   totalCount?: number;
+  creativeStrategy?: CreativeStrategy | null;
+  activeAngleKey?: string | null;
+  activePillarKey?: string | null;
 }): Promise<ContentGenerationResult> {
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
@@ -280,7 +324,10 @@ JSON Schema:
     ? VARIATION_AXES[(variationIndex ?? 0) % VARIATION_AXES.length]
     : null;
 
+  const strategyBlock = buildStrategyBlock(creativeStrategy, activeAngleKey, activePillarKey);
+
   const userMessage = `${brandDnaToText(brandDna)}
+${strategyBlock}
 
 ---
 

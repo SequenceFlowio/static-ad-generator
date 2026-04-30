@@ -7,7 +7,7 @@ import Image from "next/image";
 import InspoPicker from "@/components/InspoPicker";
 import InspoLibrary from "@/components/InspoLibrary";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
-import type { Brand, BrandDna, Product, KieModel } from "@/types";
+import type { Brand, BrandDna, Product, KieModel, CreativeStrategy } from "@/types";
 import { MODEL_CONFIGS } from "@/types";
 import { useLanguage } from "@/components/LanguageProvider";
 
@@ -92,6 +92,9 @@ export default function AdsPage() {
   const [backgroundIntent, setBackgroundIntent] = useState("");
   const [awarenessLevel, setAwarenessLevel] = useState("problem-aware");
   const [selectedDesire, setSelectedDesire] = useState<string | null>(null);
+  const [strategy, setStrategy] = useState<CreativeStrategy | null>(null);
+  const [activeAngleKey, setActiveAngleKey] = useState<string | null>(null);
+  const [activePillarKey, setActivePillarKey] = useState<string | null>(null);
 
   // Generation progress
   const [generating, setGenerating] = useState(false);
@@ -111,9 +114,10 @@ export default function AdsPage() {
 
   useEffect(() => {
     async function load() {
-      const [brandRes, productsRes] = await Promise.all([
+      const [brandRes, productsRes, stratRes] = await Promise.all([
         fetch(`/api/brands/${id}`),
         fetch(`/api/brands/${id}/products`),
+        fetch(`/api/brands/${id}/creative-strategy`),
       ]);
       if (!brandRes.ok) { router.push("/stores"); return; }
       const json = await brandRes.json();
@@ -121,6 +125,10 @@ export default function AdsPage() {
       setBrand(json.brand);
       setDna(json.brand_dna ?? null);
       setProducts(Array.isArray(prods) ? prods : []);
+      if (stratRes.ok) {
+        const stratJson = await stratRes.json();
+        setStrategy(stratJson.strategy ?? null);
+      }
       setLoading(false);
       if (!json.brand_dna) {
         router.push(`/brands/${id}`);
@@ -176,6 +184,8 @@ export default function AdsPage() {
         background_intent: backgroundIntent.trim() || null,
         awareness_level: awarenessLevel,
         selected_desire: selectedDesire,
+        active_angle_key: activeAngleKey,
+        active_pillar_key: activePillarKey,
       }),
     });
 
@@ -236,7 +246,7 @@ export default function AdsPage() {
       }
     };
     poll();
-  }, [id, selectedProductIds, selectedTemplates, numImages, resolution, model, selectedInspo, backgroundIntent, awarenessLevel, selectedDesire]);
+  }, [id, selectedProductIds, selectedTemplates, numImages, resolution, model, selectedInspo, backgroundIntent, awarenessLevel, selectedDesire, activeAngleKey, activePillarKey]);
 
   const handleGenerateBatch = useCallback(async () => {
     if (selectedProductIds.length === 0 || batchTemplates.length === 0) return;
@@ -316,10 +326,16 @@ export default function AdsPage() {
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">{t("ads.title")}</h1>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{brand.name}</p>
         </div>
-        <Link href={`/brands/${id}/gallery`}
-          className="rounded-full bg-[#C7F56F] px-4 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
-          {t("ads.viewGallery")}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href={`/brands/${id}/strategy`}
+            className="rounded-full border border-gray-200 dark:border-gray-700 px-4 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 transition-colors">
+            {lang === "nl" ? "Strategie" : "Strategy"}
+          </Link>
+          <Link href={`/brands/${id}/gallery`}
+            className="rounded-full bg-[#C7F56F] px-4 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
+            {t("ads.viewGallery")}
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
@@ -505,6 +521,56 @@ export default function AdsPage() {
                         </button>
                       ))}
                     </div>
+                  </div>
+                )}
+
+                {/* Creative strategy — angle + pillar selectors */}
+                {strategy && (strategy.creative_angles.length > 0 || strategy.content_pillars.length > 0) && (
+                  <div className="space-y-4">
+                    {strategy.creative_angles.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                          {lang === "nl" ? "Creatieve invalshoek" : "Creative angle"}{" "}
+                          <span className="font-normal text-gray-400 dark:text-gray-500">{t("ads.optional")}</span>
+                          {" · "}
+                          <Link href={`/brands/${id}/strategy`} className="text-[#C7F56F] hover:underline text-[10px]">
+                            {lang === "nl" ? "strategie beheren" : "manage strategy"}
+                          </Link>
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {strategy.creative_angles.map((angle) => (
+                            <button
+                              key={angle.key}
+                              title={angle.description}
+                              onClick={() => setActiveAngleKey(activeAngleKey === angle.key ? null : angle.key)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activeAngleKey === angle.key ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
+                            >
+                              {angle.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {strategy.content_pillars.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+                          {lang === "nl" ? "Contentpijler" : "Content pillar"}{" "}
+                          <span className="font-normal text-gray-400 dark:text-gray-500">{t("ads.optional")}</span>
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {strategy.content_pillars.map((pillar) => (
+                            <button
+                              key={pillar.key}
+                              title={pillar.description}
+                              onClick={() => setActivePillarKey(activePillarKey === pillar.key ? null : pillar.key)}
+                              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${activePillarKey === pillar.key ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"}`}
+                            >
+                              {pillar.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
