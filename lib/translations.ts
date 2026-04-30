@@ -4,6 +4,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   // Sidebar nav
   "nav.home": { en: "Home", nl: "Home" },
   "nav.stores": { en: "Stores", nl: "Winkels" },
+  "nav.generate": { en: "Generate", nl: "Generate" },
   "nav.adGen": { en: "Ad Generator", nl: "Advertenties" },
   "nav.contentGen": { en: "Content Generator", nl: "Content" },
   "nav.products": { en: "Products", nl: "Producten" },

@@ -31,21 +31,11 @@ const NAV_ITEMS = [
     ),
   },
   {
-    labelKey: "nav.adGen",
-    href: "/ad-gen",
+    labelKey: "nav.generate",
+    href: "/generation",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-        <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-      </svg>
-    ),
-  },
-  {
-    labelKey: "nav.contentGen",
-    href: "/content-gen",
-    icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
       </svg>
     ),
   },
@@ -319,8 +309,14 @@ export default function Sidebar() {
       }
       return false;
     }
-    if (href === "/ad-gen") return pathname.startsWith("/ad-gen") || !!pathname.match(/\/brands\/[^/]+\/ads/);
-    if (href === "/content-gen") return pathname.startsWith("/content-gen") || !!pathname.match(/\/brands\/[^/]+\/content($|\/)/);
+    if (href === "/generation") {
+      return pathname.startsWith("/generation")
+        || pathname.startsWith("/ad-gen")
+        || pathname.startsWith("/content-gen")
+        || !!pathname.match(/\/brands\/[^/]+\/ads/)
+        || !!pathname.match(/\/brands\/[^/]+\/content($|\/)/)
+        || !!pathname.match(/\/brands\/[^/]+\/strategy/);
+    }
     if (href === "/products") return pathname.startsWith("/products") || !!pathname.match(/\/brands\/[^/]+\/products/);
     return pathname.startsWith(href);
   }
