@@ -177,6 +177,27 @@ export interface GenerateRequest {
   aspect_ratio?: string; // global override — applied to all selected templates
 }
 
+// ─── Video Jobs ─────────────────────────────────────────────────────────────
+
+export type VideoJobStatus = "pending" | "generating_scenes" | "generating_video" | "done" | "failed";
+
+export interface VideoJob {
+  id: string;
+  brand_id: string;
+  product_id: string | null;
+  status: VideoJobStatus;
+  video_url: string | null;
+  video_prompt: string | null;
+  script: string | null;
+  scene_image_urls: string[];
+  reference_image_urls: string[];
+  duration: number;
+  aspect_ratio: string;
+  video_style: string;
+  error_msg: string | null;
+  created_at: string;
+}
+
 export interface SseEvent {
   type: "start" | "done" | "error" | "complete";
   template_number?: number;

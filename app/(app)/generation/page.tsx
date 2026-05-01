@@ -20,7 +20,7 @@ export default function GenerationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {/* Ads card */}
           <Link href="/generation/ads" className="group">
             <div className="flex h-full flex-col rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111] p-7 transition-all hover:border-[#C7F56F] hover:shadow-md cursor-pointer">
@@ -92,6 +92,47 @@ export default function GenerationPage() {
               <div className="mt-6">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] group-hover:bg-[#b8e85e] transition-colors">
                   {lang === "nl" ? "Content genereren" : "Generate Content"}
+                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                  </svg>
+                </span>
+              </div>
+            </div>
+          </Link>
+          {/* Video card */}
+          <Link href="/generation/video" className="group">
+            <div className="flex h-full flex-col rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111] p-7 transition-all hover:border-[#C7F56F] hover:shadow-md cursor-pointer">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#C7F56F]/10">
+                <svg className="h-6 w-6 text-[#1a1a1a] dark:text-[#C7F56F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.069A1 1 0 0121 8.879V15.12a1 1 0 01-1.447.91L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-1">
+                  <h2 className="text-lg font-bold text-gray-900 dark:text-white">Video</h2>
+                  <span className="rounded-full bg-[#C7F56F]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1a1a1a] dark:text-[#C7F56F]">NEW</span>
+                </div>
+                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
+                  {lang === "nl"
+                    ? "15-sec UGC en lifestyle videos voor TikTok en Reels"
+                    : "15-sec UGC and lifestyle videos for TikTok and Reels"}
+                </p>
+                <ul className="mt-4 space-y-1.5">
+                  {[
+                    lang === "nl" ? "Seedance 2 videogeneratie" : "Seedance 2 video generation",
+                    lang === "nl" ? "Multi-scene in 1 clip" : "Multi-scene in one clip",
+                    lang === "nl" ? "UGC · Lifestyle · Product Hero" : "UGC · Lifestyle · Product Hero",
+                  ].map((item) => (
+                    <li key={item} className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
+                      <span className="flex h-1.5 w-1.5 rounded-full bg-[#C7F56F] flex-shrink-0" />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="mt-6">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] group-hover:bg-[#b8e85e] transition-colors">
+                  {lang === "nl" ? "Video genereren" : "Generate Video"}
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>

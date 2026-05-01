@@ -84,6 +84,31 @@ async function pollTask(taskId: string): Promise<string[]> {
   throw new Error(`kie.ai task ${taskId} timed out after ${POLL_TIMEOUT_MS / 1000}s`);
 }
 
+export async function generateVideo({
+  prompt,
+  aspect_ratio,
+  duration,
+  reference_image_urls,
+}: {
+  prompt: string;
+  aspect_ratio: string;
+  duration: number; // 4-15 seconds
+  reference_image_urls: string[]; // up to 9 total
+}): Promise<string[]> {
+  const payload = {
+    model: "bytedance/seedance-2",
+    input: {
+      prompt,
+      aspect_ratio,
+      duration: Math.min(15, Math.max(4, duration)),
+      reference_image_urls: reference_image_urls.slice(0, 9),
+    },
+  };
+
+  const taskId = await createTask(payload);
+  return await pollTask(taskId);
+}
+
 export async function generateImages({
   prompt,
   aspect_ratio,
