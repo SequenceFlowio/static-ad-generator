@@ -84,7 +84,6 @@ function QuickContentPanel({
   const [overlayMessage, setOverlayMessage] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
-  const [sessionId, setSessionId] = useState<string | null>(null);
 
   const PLATFORM_LABELS: Record<Platform, string> = {
     instagram: "Instagram",
@@ -101,7 +100,8 @@ function QuickContentPanel({
     setOverlayMessage(lang === "nl" ? "Copy genereren..." : "Generating copy...");
 
     const config = resolveContentConfig(contentGoal);
-    const selectedProduct = products.find(p => config.templateName === "about-product" || config.templateName === "using-product");
+    const needsProduct = config.templateName === "about-product" || config.templateName === "using-product";
+    const selectedProduct = needsProduct ? products[0] : null;
 
     const contentRes = await fetch(`/api/brands/${brand.id}/content`, {
       method: "POST",
@@ -125,7 +125,6 @@ function QuickContentPanel({
     }
 
     const session = await contentRes.json();
-    setSessionId(session.id);
     setOverlayProgress(55);
     setOverlayMessage(lang === "nl" ? "Afbeelding genereren..." : "Generating image...");
 
@@ -261,7 +260,6 @@ export default function GenerationContentPage() {
   const [strategy, setStrategy] = useState<CreativeStrategy | null>(null);
   const [mode, setMode] = useState<Mode>("quick");
   const [loadingBrand, setLoadingBrand] = useState(false);
-  const [contentSessions, setContentSessions] = useState<unknown[]>([]);
 
   async function handleSelectBrand(brand: Brand) {
     setSelectedBrand(brand);
@@ -282,8 +280,8 @@ export default function GenerationContentPage() {
     setLoadingBrand(false);
   }
 
-  function handleContentCreated(session: unknown) {
-    setContentSessions(prev => [session, ...prev]);
+  function handleContentCreated(_session: unknown) {
+    // session lands in content gallery — no local state needed
   }
 
   return (

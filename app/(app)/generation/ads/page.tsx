@@ -7,7 +7,6 @@ import GeneratingOverlay from "@/components/GeneratingOverlay";
 import { useLanguage } from "@/components/LanguageProvider";
 import { resolveAdConfig, AD_GOALS, type AdGoal } from "@/lib/resolve-creative-config";
 import type { Brand, BrandDna, Product, CreativeStrategy, KieModel } from "@/types";
-import { MODEL_CONFIGS } from "@/types";
 
 type Mode = "quick" | "advanced";
 
