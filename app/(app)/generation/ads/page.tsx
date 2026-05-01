@@ -83,9 +83,11 @@ function QuickAdsPanel({
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [done, setDone] = useState(false);
+  const [numVariants, setNumVariants] = useState(2);
+  const [quality, setQuality] = useState<"fast" | "quality">("fast");
 
   const isPaid = userPlan !== "trial" && userPlan !== "free";
-  const resolution = isPaid ? "4K" : "1K";
+  const resolution = quality === "quality" ? (isPaid ? "4K" : "2K") : "1K";
   const model: KieModel = "nano-banana-2";
 
   function toggleProduct(id: string) {
@@ -111,7 +113,7 @@ function QuickAdsPanel({
       body: JSON.stringify({
         product_ids: selectedProductIds,
         product_id: selectedProductIds[0],
-        num_variants: 2,
+        num_variants: numVariants,
         template_numbers: config.templateNumbers,
         awareness_level: config.awarenessLevel,
         active_angle_key: activeAngleKey,
@@ -136,7 +138,7 @@ function QuickAdsPanel({
       body: JSON.stringify({
         template_numbers: config.templateNumbers,
         resolution,
-        num_images: 2,
+        num_images: numVariants,
         prompt_set_id: prompt_set.id,
         model,
         inspo_image_urls: [],
@@ -167,7 +169,7 @@ function QuickAdsPanel({
       } catch { setTimeout(poll, 5000); }
     };
     poll();
-  }, [brand.id, selectedProductIds, goal, activeAngleKey, resolution, lang]);
+  }, [brand.id, selectedProductIds, goal, activeAngleKey, resolution, numVariants, lang]);
 
   return (
     <div className="space-y-6">
@@ -257,6 +259,51 @@ function QuickAdsPanel({
         </div>
       )}
 
+      {/* Quality + Variants */}
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            {lang === "nl" ? "Kwaliteit" : "Quality"}
+          </p>
+          <div className="flex gap-2">
+            {([
+              { value: "fast", label: lang === "nl" ? "Snel" : "Fast", sub: "1K" },
+              { value: "quality", label: lang === "nl" ? "Kwaliteit" : "Quality", sub: isPaid ? "4K" : "2K" },
+            ] as const).map(opt => (
+              <button
+                key={opt.value}
+                onClick={() => setQuality(opt.value)}
+                className={`flex-1 rounded-xl border-2 py-2 px-3 text-left transition-colors ${
+                  quality === opt.value ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                <p className={`text-xs font-semibold ${quality === opt.value ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>{opt.label}</p>
+                <p className="text-[10px] text-gray-400 dark:text-gray-500">{opt.sub}</p>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            {lang === "nl" ? "Varianten" : "Variants"}
+          </p>
+          <div className="flex gap-2">
+            {[1, 2, 4].map(n => (
+              <button
+                key={n}
+                onClick={() => setNumVariants(n)}
+                className={`flex-1 rounded-xl border-2 py-2 text-xs font-semibold transition-colors ${
+                  numVariants === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
       {/* What gets auto-set */}
       <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 px-4 py-3 text-xs text-gray-400 dark:text-gray-500 space-y-0.5">
         <p className="font-medium text-gray-500 dark:text-gray-400 mb-1">
@@ -264,7 +311,7 @@ function QuickAdsPanel({
         </p>
         <p>Templates: {resolveAdConfig(goal).templateNumbers.map(n => ["Headline","Offer","Testimonial","Vs Them","UGC"][n-1]).join(", ")}</p>
         <p>Awareness: {resolveAdConfig(goal).awarenessLevel}</p>
-        <p>Variants: 2 per template</p>
+        <p>{lang === "nl" ? "Varianten" : "Variants"}: {numVariants} · {lang === "nl" ? "Resolutie" : "Resolution"}: {resolution}</p>
       </div>
 
       {error && <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>}

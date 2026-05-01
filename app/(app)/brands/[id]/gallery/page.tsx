@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import type { GenerationJob, GenerationDetail } from "@/types";
 
 interface DetailSelection {
@@ -159,12 +160,16 @@ export default function GalleryPage() {
                       className={`group relative cursor-pointer rounded-xl overflow-hidden border-2 transition-all ${isActive ? "border-[#C7F56F]" : "border-transparent"}`}
                       onClick={() => setDetail(isActive ? null : { job, imageIndex: i })}
                     >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
+                      <Image
                         src={url}
                         alt={`${job.template_name} v${i + 1}`}
+                        width={600}
+                        height={800}
+                        quality={75}
+                        sizes="(max-width: 640px) 50vw, 33vw"
                         className="w-full rounded-[10px] border border-gray-200 dark:border-gray-700 object-cover"
                         loading="lazy"
+                        unoptimized={url.startsWith("http")}
                       />
                       <div className="absolute inset-0 flex items-end justify-between rounded-[10px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity p-2 gap-2">
                         <button
@@ -192,11 +197,15 @@ export default function GalleryPage() {
           <div className="sticky top-6 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 overflow-hidden">
             {/* Image preview */}
             <div className="relative bg-gray-50 dark:bg-gray-800">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
+              <Image
                 src={detailUrl}
                 alt="Selected ad"
+                width={340}
+                height={450}
+                quality={85}
+                sizes="340px"
                 className="w-full object-contain max-h-64"
+                unoptimized={detailUrl.startsWith("http")}
               />
               <button
                 onClick={() => setDetail(null)}

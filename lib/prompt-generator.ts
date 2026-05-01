@@ -19,6 +19,7 @@ CRITICAL RULES — VISUAL:
 - TYPOGRAPHY CONSISTENCY: All text elements in a single ad MUST use the same typeface family. Never mix two different typefaces (e.g. a bold sans for the headline and an italic serif for the subtitle). Use ONE typeface throughout — vary only weight (bold/regular/light) and size. The headline is large + bold. Subtitles and CTAs are the same face, smaller + regular or light weight. No italic unless the entire brand identity is italic.
 - The background_prompt MUST describe brand colors by their VISUAL APPEARANCE — e.g. "warm off-white background", "deep charcoal text", "bright lime green accent". NEVER write hex codes (#xxxxxx) in the background_prompt — image generators render hex strings as literal text on the image.
 - Use the provided hex codes only to determine the color's visual description (e.g. #C7F56F → "bright lime green", #1a1a1a → "near-black charcoal", #FFFFFF → "clean white").
+- STRICT PRODUCT ACCURACY: Render ONLY the exact products visible in the reference images. Do NOT add, invent, or modify any product components, accessories, or items not present in the reference images. If the product photo shows one pan, render one pan — do not add a spatula, lid, or any other utensil.
 - The background_prompt MUST STRICTLY follow reference images — do NOT invent props, objects, or surfaces not present in the reference images
 - background_prompt must reflect the backgroundIntent — use their described scene/props as the visual foundation
 - Replace every [BRACKETED PLACEHOLDER] with brand-specific details
