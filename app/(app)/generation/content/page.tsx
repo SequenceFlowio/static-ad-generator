@@ -280,9 +280,8 @@ export default function GenerationContentPage() {
     setLoadingBrand(false);
   }
 
-  function handleContentCreated(_session: unknown) {
-    // session lands in content gallery — no local state needed
-  }
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  function handleContentCreated(_session: { id: string }) {}
 
   return (
     <div>
