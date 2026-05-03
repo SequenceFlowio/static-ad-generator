@@ -198,6 +198,38 @@ export interface VideoJob {
   created_at: string;
 }
 
+// ─── Video Sessions (multi-step wizard) ─────────────────────────────────────
+
+export interface SceneScript {
+  index: number;          // 1-based
+  title: string;          // short scene name e.g. "Opening hook"
+  visual_description: string; // what happens visually — shown to user
+  nano_prompt: string;    // full Nano Banana 2 prompt for this frame
+  voiceover: string;      // spoken dialogue or on-screen caption text
+  duration_s: number;     // seconds (15 / num_scenes)
+  image_url: string | null; // set after frame generation or upload
+}
+
+export type VideoPhase = "script" | "frames" | "prompt" | "generating_video" | "done" | "failed";
+
+export interface VideoSession {
+  id: string;
+  brand_id: string;
+  product_id: string | null;
+  video_style: string;
+  platform: string;
+  aspect_ratio: string;
+  num_scenes: number;
+  duration: number;
+  phase: VideoPhase;
+  scenes: SceneScript[];
+  seedance_prompt: string | null;
+  video_url: string | null;
+  error_msg: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface SseEvent {
   type: "start" | "done" | "error" | "complete";
   template_number?: number;
