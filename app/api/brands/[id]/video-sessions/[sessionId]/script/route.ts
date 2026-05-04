@@ -46,7 +46,7 @@ export async function PATCH(
     const videoSession = session as VideoSession & { product_id: string | null };
 
     const [dnaRes, productRes] = await Promise.all([
-      db.from("brand_dnas").select("data").eq("brand_id", brandId).single(),
+      db.from("brand_dna").select("data").eq("brand_id", brandId).single(),
       videoSession.product_id
         ? db.from("products").select("id, name, description, url, image_urls, brand_id, created_at").eq("id", videoSession.product_id).single()
         : Promise.resolve({ data: null }),

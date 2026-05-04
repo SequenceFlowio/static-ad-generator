@@ -109,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const { product_id, video_style, platform, duration, includes_person } = body;
 
   // Load brand DNA
-  const { data: dnaRow } = await db.from("brand_dnas").select("data").eq("brand_id", brandId).single();
+  const { data: dnaRow } = await db.from("brand_dna").select("data").eq("brand_id", brandId).single();
   if (!dnaRow) return NextResponse.json({ error: "Brand DNA not found" }, { status: 404 });
 
   // Load product

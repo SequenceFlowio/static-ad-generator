@@ -39,7 +39,7 @@ export async function POST(
 
   // Load brand DNA + product
   const [dnaRes, productRes] = await Promise.all([
-    db.from("brand_dnas").select("data").eq("brand_id", brandId).single(),
+    db.from("brand_dna").select("data").eq("brand_id", brandId).single(),
     db.from("products").select("id, name, description, url, image_urls, brand_id, created_at").eq("id", product_id).single(),
   ]);
 
