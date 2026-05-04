@@ -29,10 +29,13 @@ export async function POST(
     duration: number;
     includes_person: boolean;
     product_image_index: number;
+    active_desire?: string;
+    awareness_level?: string;
+    active_angle_key?: string;
     notes?: string;
   };
 
-  const { product_id, video_style, platform, num_scenes, duration, includes_person, product_image_index, notes } = body;
+  const { product_id, video_style, platform, num_scenes, duration, includes_person, product_image_index, active_desire, awareness_level, active_angle_key, notes } = body;
 
   // Load brand DNA + product
   const [dnaRes, productRes] = await Promise.all([
@@ -48,6 +51,19 @@ export async function POST(
   const aspectRatio = getVideoAspectRatio();
 
   // Generate script
+  // Get active angle label if provided
+  let activeAngleLabel: string | undefined;
+  if (active_angle_key) {
+    // Load strategy to get angle label (best effort)
+    const { data: stratRow } = await db.from("creative_strategies")
+      .select("creative_angles").eq("brand_id", brandId).single();
+    if (stratRow?.creative_angles) {
+      const angles = stratRow.creative_angles as Array<{ key: string; label: string; description: string; hook_frame: string }>;
+      const angle = angles.find((a) => a.key === active_angle_key);
+      if (angle) activeAngleLabel = `${angle.label}: ${angle.description}. Hook frame: ${angle.hook_frame}`;
+    }
+  }
+
   const scriptOutput = await generateVideoScript({
     dna,
     product,
@@ -57,6 +73,9 @@ export async function POST(
     numScenes: num_scenes,
     duration,
     includesPerson: includes_person,
+    activeDesire: active_desire,
+    awarenessLevel: awareness_level,
+    activeAngleDescription: activeAngleLabel,
     notes,
   });
 

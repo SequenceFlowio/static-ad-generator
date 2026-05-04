@@ -33,6 +33,9 @@ export async function generateVideoScript({
   includesPerson,
   notes,
   existingScenes,
+  activeDesire,
+  awarenessLevel,
+  activeAngleDescription,
 }: {
   dna: BrandDnaData;
   product: Product;
@@ -43,7 +46,10 @@ export async function generateVideoScript({
   duration: number;
   includesPerson: boolean;
   notes?: string;
-  existingScenes?: SceneScript[]; // provided when regenerating with refinement
+  existingScenes?: SceneScript[];
+  activeDesire?: string;
+  awarenessLevel?: string;
+  activeAngleDescription?: string;
 }): Promise<ScriptGeneratorOutput> {
   const aspectRatio = getVideoAspectRatio();
   const durationPerScene = Math.round((duration / numScenes) * 10) / 10;
@@ -92,11 +98,34 @@ OUTPUT: Valid JSON only, no markdown.
 ${dna.tagline ? `Tagline: ${dna.tagline}` : ""}
 ${dna.target_audience ? `Target audience: ${dna.target_audience}` : ""}
 ${dna.brand_personality ? `Personality: ${dna.brand_personality}` : ""}
-${dna.customer_desires.length > 0 ? `Customer desires: ${dna.customer_desires.join(", ")}` : ""}
 Colors: ${[dna.accent_color, dna.background_color, dna.lettertype_color].filter(Boolean).join(", ")}
 
 Product: ${product.name}
 ${product.description ? `Description: ${product.description}` : ""}`;
+
+  // Focused desire — use specific desire over full list
+  if (activeDesire) {
+    userContent += `\n\nFOCUS DESIRE: "${activeDesire}" — every scene must connect to this desire. Make the viewer feel this desire more acutely and position the product as the answer.`;
+  } else if (dna.customer_desires.length > 0) {
+    userContent += `\nCustomer desires: ${dna.customer_desires.join(", ")}`;
+  }
+
+  // Awareness level
+  if (awarenessLevel) {
+    const awarenessInstructions: Record<string, string> = {
+      "unaware":        "The viewer does NOT know they have a problem. Use pattern interrupts and pure curiosity — no product mention until at least scene 3.",
+      "problem-aware":  "The viewer knows the problem but not the solution. Lead with pain/frustration in the hook. Empathy first, product second.",
+      "solution-aware": "The viewer knows solutions exist and is comparing. Focus on why THIS product beats alternatives. Specific proof and differentiators.",
+      "product-aware":  "The viewer knows the product but hasn't bought. Use social proof, specific results, urgency. Address objections directly.",
+      "most-aware":     "The viewer is ready to buy. Lead with the offer, deal, or limited-time hook. Be direct. CTA in every scene.",
+    };
+    userContent += `\n\nAWARENESS LEVEL: ${awarenessLevel}\n${awarenessInstructions[awarenessLevel] ?? ""}`;
+  }
+
+  // Creative angle
+  if (activeAngleDescription) {
+    userContent += `\n\nCREATIVE ANGLE: ${activeAngleDescription} — structure the narrative arc of all scenes around this angle.`;
+  }
 
   if (isRefinement && existingScenes) {
     userContent += `\n\nEXISTING SCRIPT (refine this based on the notes below):
@@ -109,7 +138,7 @@ Apply these notes while keeping the overall ${numScenes}-scene structure. Only c
   } else {
     userContent += `\n\nGenerate a fresh ${numScenes}-scene script. Hook immediately — first 2 seconds must stop the scroll.`;
     if (notes) {
-      userContent += `\n\nDirectorial notes: ${notes}`;
+      userContent += `\n\nExtra directorial notes: ${notes}`;
     }
   }
 

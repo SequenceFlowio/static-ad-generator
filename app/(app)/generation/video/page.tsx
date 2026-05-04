@@ -4,8 +4,17 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
-import type { Brand, BrandDna, Product, SceneScript, VideoSession } from "@/types";
+import type { Brand, BrandDna, Product, SceneScript, VideoSession, CreativeStrategy, CreativeAngle } from "@/types";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
+
+const AWARENESS_LEVELS = [
+  { value: "unaware",        label: "Unaware",        labelNl: "Onbewust",         desc: "Geen probleem in beeld — pure curiosity hook", descNl: "Geen probleem in beeld — pure curiosity hook" },
+  { value: "problem-aware",  label: "Problem-aware",  labelNl: "Probleembewust",   desc: "Herkent het probleem, zoekt nog oplossing", descNl: "Herkent het probleem, zoekt nog oplossing" },
+  { value: "solution-aware", label: "Solution-aware", labelNl: "Oplossingsbewust", desc: "Weet dat oplossingen bestaan, vergelijkt", descNl: "Weet dat oplossingen bestaan, vergelijkt" },
+  { value: "product-aware",  label: "Product-aware",  labelNl: "Productbewust",    desc: "Kent het product, overtuigd nog niet", descNl: "Kent het product, overtuigd nog niet" },
+  { value: "most-aware",     label: "Most-aware",     labelNl: "Klaar om te kopen", desc: "Direct aanbod en urgentie werkt", descNl: "Direct aanbod en urgentie werkt" },
+] as const;
+type AwarenessLevel = typeof AWARENESS_LEVELS[number]["value"];
 
 // ─── Brand Picker ─────────────────────────────────────────────────────────────
 
@@ -93,9 +102,11 @@ const PLATFORMS: Array<{ value: VideoPlatform; label: string; icon: string }> = 
 ];
 
 function SetupStep({
-  products, onStart,
+  products, desires, angles, onStart,
 }: {
   products: Product[];
+  desires: string[];
+  angles: CreativeAngle[];
   onStart: (cfg: SetupConfig) => void;
 }) {
   const { lang } = useLanguage();
@@ -105,6 +116,9 @@ function SetupStep({
   const [platform, setPlatform] = useState<VideoPlatform>("tiktok");
   const [numScenes, setNumScenes] = useState(5);
   const [includesPerson, setIncludesPerson] = useState(true);
+  const [activeDesire, setActiveDesire] = useState<string | null>(desires[0] ?? null);
+  const [awarenessLevel, setAwarenessLevel] = useState<AwarenessLevel>("problem-aware");
+  const [activeAngleKey, setActiveAngleKey] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
 
   const selectedProduct = products.find(p => p.id === productId);
@@ -222,10 +236,74 @@ function SetupStep({
         </div>
       </div>
 
+      {/* Customer desire */}
+      {desires.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            {lang === "nl" ? "Customer desire" : "Customer desire"}
+            <span className="ml-1 font-normal text-gray-400">{lang === "nl" ? "(script wordt hierop gefocust)" : "(script will focus on this)"}</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {desires.map(d => (
+              <button key={d} onClick={() => setActiveDesire(activeDesire === d ? null : d)}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors text-left ${
+                  activeDesire === d ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+                }`}>
+                {d}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Awareness level */}
+      <div>
+        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {lang === "nl" ? "Awareness level" : "Awareness level"}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {AWARENESS_LEVELS.map(a => (
+            <button key={a.value} onClick={() => setAwarenessLevel(a.value)}
+              title={lang === "nl" ? a.descNl : a.desc}
+              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                awarenessLevel === a.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+              }`}>
+              {lang === "nl" ? a.labelNl : a.label}
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
+          {lang === "nl"
+            ? AWARENESS_LEVELS.find(a => a.value === awarenessLevel)?.descNl
+            : AWARENESS_LEVELS.find(a => a.value === awarenessLevel)?.desc}
+        </p>
+      </div>
+
+      {/* Creative angle */}
+      {angles.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            {lang === "nl" ? "Creatieve invalshoek" : "Creative angle"}
+            <span className="ml-1 font-normal text-gray-400">{lang === "nl" ? "(optioneel)" : "(optional)"}</span>
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {angles.map(a => (
+              <button key={a.key} onClick={() => setActiveAngleKey(activeAngleKey === a.key ? null : a.key)}
+                title={a.description}
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
+                  activeAngleKey === a.key ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+                }`}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Notes */}
       <div>
         <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Notities voor de AI (optioneel)" : "Notes for AI (optional)"}
+          {lang === "nl" ? "Extra notities (optioneel)" : "Extra notes (optional)"}
         </p>
         <textarea
           value={notes}
@@ -237,7 +315,7 @@ function SetupStep({
       </div>
 
       <button
-        onClick={() => onStart({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, notes })}
+        onClick={() => onStart({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes })}
         disabled={!productId}
         className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40"
       >
@@ -254,6 +332,9 @@ interface SetupConfig {
   platform: VideoPlatform;
   numScenes: number;
   includesPerson: boolean;
+  activeDesire: string | null;
+  awarenessLevel: AwarenessLevel;
+  activeAngleKey: string | null;
   notes: string;
 }
 
@@ -775,7 +856,7 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
 
 // ─── Main Wizard ──────────────────────────────────────────────────────────────
 
-function VideoWizard({ brand, products }: { brand: Brand; products: Product[] }) {
+function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; products: Product[]; dna: BrandDna | null; strategy: CreativeStrategy | null }) {
   const [step, setStep] = useState(0);
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [scenes, setScenes] = useState<SceneScript[]>([]);
@@ -805,6 +886,9 @@ function VideoWizard({ brand, products }: { brand: Brand; products: Product[] })
         duration: 15,
         includes_person: cfg.includesPerson,
         product_image_index: cfg.productImageIndex,
+        active_desire: cfg.activeDesire || undefined,
+        awareness_level: cfg.awarenessLevel,
+        active_angle_key: cfg.activeAngleKey || undefined,
         notes: cfg.notes || undefined,
       }),
     });
@@ -897,7 +981,14 @@ function VideoWizard({ brand, products }: { brand: Brand; products: Product[] })
         <div className="mb-4 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>
       )}
 
-      {step === 0 && <SetupStep products={products} onStart={handleStart} />}
+      {step === 0 && (
+        <SetupStep
+          products={products}
+          desires={dna?.data?.customer_desires ?? []}
+          angles={strategy?.creative_angles ?? []}
+          onStart={handleStart}
+        />
+      )}
 
       {step === 1 && sessionId && (
         <ScriptStep
@@ -941,20 +1032,26 @@ export default function GenerationVideoPage() {
   const { lang } = useLanguage();
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [dna, setDna] = useState<BrandDna | null>(null);
+  const [strategy, setStrategy] = useState<CreativeStrategy | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingBrand, setLoadingBrand] = useState(false);
 
   async function handleSelectBrand(brand: Brand) {
     setSelectedBrand(brand);
     setLoadingBrand(true);
-    const [brandRes, prodsRes] = await Promise.all([
+    const [brandRes, prodsRes, stratRes] = await Promise.all([
       fetch(`/api/brands/${brand.id}`),
       fetch(`/api/brands/${brand.id}/products`),
+      fetch(`/api/brands/${brand.id}/creative-strategy`),
     ]);
     const brandJson = await brandRes.json();
     const prods = await prodsRes.json();
     setDna(brandJson.brand_dna ?? null);
     setProducts(Array.isArray(prods) ? prods : []);
+    if (stratRes.ok) {
+      const s = await stratRes.json();
+      setStrategy(s.strategy ?? null);
+    }
     setLoadingBrand(false);
   }
 
@@ -1009,12 +1106,12 @@ export default function GenerationVideoPage() {
                 </div>
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{selectedBrand.name}</span>
               </div>
-              <button onClick={() => { setSelectedBrand(null); setDna(null); setProducts([]); }}
+              <button onClick={() => { setSelectedBrand(null); setDna(null); setStrategy(null); setProducts([]); }}
                 className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 {lang === "nl" ? "Wijzigen" : "Change"}
               </button>
             </div>
-            <VideoWizard brand={selectedBrand} products={products} />
+            <VideoWizard brand={selectedBrand} products={products} dna={dna} strategy={strategy} />
           </div>
         )}
       </div>
