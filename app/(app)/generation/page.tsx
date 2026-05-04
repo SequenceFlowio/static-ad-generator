@@ -8,7 +8,7 @@ export default function GenerationPage() {
 
   return (
     <div className="min-h-[60vh] flex flex-col items-center justify-center px-4 py-16">
-      <div className="w-full max-w-2xl">
+      <div className="w-full max-w-5xl">
         <div className="mb-10 text-center">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
             {lang === "nl" ? "Wat wil je genereren?" : "What do you want to generate?"}
