@@ -6,7 +6,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export type VideoStyle = "ugc" | "lifestyle" | "product-hero";
 export type VideoPlatform = "tiktok" | "instagram-reels" | "youtube-shorts";
 
-export function getVideoAspectRatio(_platform: VideoPlatform): string {
+export function getVideoAspectRatio(): string {
   return "9:16"; // all supported platforms are vertical
 }
 
@@ -45,7 +45,7 @@ export async function generateVideoScript({
   notes?: string;
   existingScenes?: SceneScript[]; // provided when regenerating with refinement
 }): Promise<ScriptGeneratorOutput> {
-  const aspectRatio = getVideoAspectRatio(platform);
+  const aspectRatio = getVideoAspectRatio();
   const durationPerScene = Math.round((duration / numScenes) * 10) / 10;
   const isRefinement = !!existingScenes && !!notes;
 

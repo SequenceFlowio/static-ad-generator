@@ -45,7 +45,7 @@ export async function POST(
 
   const dna = dnaRes.data.data as BrandDnaData;
   const product = productRes.data as Product;
-  const aspectRatio = getVideoAspectRatio(platform);
+  const aspectRatio = getVideoAspectRatio();
 
   // Generate script
   const scriptOutput = await generateVideoScript({
