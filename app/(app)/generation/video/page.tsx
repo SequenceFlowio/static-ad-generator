@@ -448,7 +448,6 @@ function FrameCard({
     e.target.value = "";
   }
 
-  const isLoading = !scene.image_url && !busy || busy;
   const hasImage = !!scene.image_url && !busy;
 
   return (

@@ -6,7 +6,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 export type VideoStyle = "ugc" | "lifestyle" | "product-hero";
 export type VideoPlatform = "tiktok" | "instagram-reels" | "youtube-shorts";
 
-export function getVideoAspectRatio(platform: VideoPlatform): string {
+export function getVideoAspectRatio(_platform: VideoPlatform): string {
   return "9:16"; // all supported platforms are vertical
 }
 
@@ -24,6 +24,7 @@ export interface ScriptGeneratorOutput {
 export async function generateVideoScript({
   dna,
   product,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   productImageIndex,
   videoStyle,
   platform,
