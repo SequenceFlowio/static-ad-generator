@@ -1,5 +1,5 @@
-import OpenAI from "openai";
 import type { BrandDnaData, CreativeStrategy } from "@/types";
+import { generateText } from "./llm";
 
 export interface BatchAdConcept {
   template_name: string;
@@ -50,11 +50,6 @@ export async function generateBatchCampaign({
   batchSize: number;
   creativeStrategy?: CreativeStrategy | null;
 }): Promise<BatchAdConcept[]> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
-
-  const client = new OpenAI({ apiKey });
-
   const productList = products
     .map((p) => `- ${p.name} (id: ${p.id})${p.description ? `: ${p.description}` : ""}`)
     .join("\n");
@@ -114,18 +109,14 @@ ${productList}
 
 Generate exactly ${batchSize} diverse ad concepts. Every concept must have a different angle — no repetition. Cover all customer desires, different emotional appeals, different visual scenes.`;
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o",
+  const content = await generateText({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
     temperature: 0.9,
-    response_format: { type: "json_object" },
+    responseFormat: { type: "json_object" },
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error("No content returned from OpenAI.");
 
   // GPT wraps the array in an object — unwrap it
   const parsed = JSON.parse(content) as { concepts?: BatchAdConcept[] } | BatchAdConcept[];
@@ -134,7 +125,7 @@ Generate exactly ${batchSize} diverse ad concepts. Every concept must have a dif
     : (parsed as { concepts?: BatchAdConcept[] }).concepts ?? [];
 
   if (!Array.isArray(concepts) || concepts.length === 0) {
-    throw new Error("Invalid batch campaign JSON returned by OpenAI.");
+    throw new Error("Invalid batch campaign JSON returned by the LLM.");
   }
 
   return concepts.slice(0, batchSize);

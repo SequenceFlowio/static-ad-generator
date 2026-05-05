@@ -1,7 +1,5 @@
-import OpenAI from "openai";
 import type { BrandDnaData, Product } from "@/types";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { generateText } from "./llm";
 
 export type VideoStyle = "ugc" | "lifestyle" | "product-hero";
 export type VideoPlatform = "tiktok" | "instagram-reels" | "youtube-shorts";
@@ -106,17 +104,15 @@ ${product.description ? `Description: ${product.description}` : ""}
 
 Generate a ${duration}-second ${videoStyle} video for ${platform}. The video must hook immediately — first 2 seconds need to stop the scroll.`;
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const raw = await generateText({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
     temperature: 0.8,
-    response_format: { type: "json_object" },
+    responseFormat: { type: "json_object" },
   });
 
-  const raw = completion.choices[0].message.content ?? "{}";
   const parsed = JSON.parse(raw) as VideoPromptOutput;
   return parsed;
 }

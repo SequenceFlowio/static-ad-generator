@@ -32,7 +32,7 @@ export async function GET(
   return NextResponse.json(data ?? []);
 }
 
-// POST /api/brands/[id]/content — create session + call OpenAI
+// POST /api/brands/[id]/content — create session + call the text-generation LLM
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -88,7 +88,7 @@ export async function POST(
     productDescription = product?.description ?? null;
   }
 
-  // Generate image prompt + caption via OpenAI
+  // Generate image prompt + caption via the shared LLM wrapper
   const result = await generateContentPost({
     brandDna: dnaRow.data,
     templateName: template_name,

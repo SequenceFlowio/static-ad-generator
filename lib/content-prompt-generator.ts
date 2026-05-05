@@ -1,9 +1,9 @@
-import OpenAI from "openai";
 import type { BrandDnaData, CreativeStrategy } from "@/types";
 import type { Platform } from "./content-templates";
 import { getPlatformAspectRatio } from "./content-templates";
 import { buildNanoBananaPrompt, CONTENT_TEMPLATE_CAMERA_PRESETS } from "./prompt-utils";
 import { getWinningAds, formatWinningAdsBlock } from "./winning-ads";
+import { generateText } from "./llm";
 
 export interface ContentGenerationResult {
   image_prompt: string;
@@ -42,7 +42,7 @@ const STYLE_PREFIX: Record<string, string> = {
   ui_card: "Graphic design asset. Typography-led layout. Flat or minimal background. No photography elements.",
 };
 
-// Fixed constraints per template — OpenAI fills in brand-specific details within these boundaries
+// Fixed constraints per template — the LLM fills in brand-specific details within these boundaries
 const TEMPLATE_SCHEMAS: Record<string, Partial<ImagePromptJson>> = {
   "tips-tricks": {
     style: "ui_card",
@@ -242,11 +242,6 @@ export async function generateContentPost({
   activeAngleKey?: string | null;
   activePillarKey?: string | null;
 }): Promise<ContentGenerationResult> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
-
-  const client = new OpenAI({ apiKey });
-
   const platformTone = PLATFORM_TONE[platform];
   const aspectRatio = getPlatformAspectRatio(platform);
   const templateSchema = TEMPLATE_SCHEMAS[templateName];
@@ -357,18 +352,14 @@ The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
       : ""
   }`;
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o",
+  const content = await generateText({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
     temperature: 0.75,
-    response_format: { type: "json_object" },
+    responseFormat: { type: "json_object" },
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error("No content returned from OpenAI.");
 
   const parsed = JSON.parse(content) as {
     image_prompt_json: ImagePromptJson;
@@ -377,7 +368,7 @@ The caption must be in ${brandDna.language ?? "English"} with ${platformTone}.${
   };
 
   if (!parsed.image_prompt_json || !parsed.caption) {
-    throw new Error("Invalid content JSON structure returned by OpenAI.");
+    throw new Error("Invalid content JSON structure returned by the LLM.");
   }
 
   // Serialize structured JSON → plain English prompt for kie.ai

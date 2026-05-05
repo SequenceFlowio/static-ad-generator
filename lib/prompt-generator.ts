@@ -1,7 +1,7 @@
-import OpenAI from "openai";
 import { TEMPLATES } from "./templates";
 import type { BrandDnaData, PromptsJson, CreativeStrategy } from "@/types";
 import { getWinningAds, formatWinningAdsBlock } from "./winning-ads";
+import { generateText } from "./llm";
 
 const PROMPT_GENERATION_INSTRUCTIONS = `
 You are a prompt engineer specializing in AI image generation for DTC brands.
@@ -181,11 +181,6 @@ export async function generatePrompts(
   activeAngleKey: string | null = null,
   activePillarKey: string | null = null
 ): Promise<PromptsJson> {
-  const apiKey = process.env.OPENAI_API_KEY;
-  if (!apiKey) throw new Error("OPENAI_API_KEY is not set.");
-
-  const client = new OpenAI({ apiKey });
-
   // Filter to only selected templates; default to all if none specified
   const selectedTemplates = templateNumbers.length > 0
     ? TEMPLATES.filter((t) => templateNumbers.includes(t.template_number))
@@ -258,22 +253,18 @@ ${winningAdsSection}
 
 Generate the prompts JSON for all ${selectedTemplates.length} templates. Each template needs exactly ${numVariants} hook_variants. Remember: describe typography as STYLE (e.g. "bold geometric sans-serif") — do NOT write font names. Describe brand colors visually — do NOT write any hex codes (#xxxxxx) in background_prompt. Output ONLY the JSON object with a "prompts" array.`;
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o",
+  const content = await generateText({
     messages: [
       { role: "system", content: PROMPT_GENERATION_INSTRUCTIONS },
       { role: "user", content: userMessage },
     ],
     temperature: 0.7,
-    response_format: { type: "json_object" },
+    responseFormat: { type: "json_object" },
   });
-
-  const content = response.choices[0]?.message?.content;
-  if (!content) throw new Error("No content returned from OpenAI.");
 
   const parsed = JSON.parse(content) as { prompts: PromptsJson["prompts"] };
   if (!parsed.prompts || !Array.isArray(parsed.prompts)) {
-    throw new Error("Invalid prompts JSON structure returned by OpenAI.");
+    throw new Error("Invalid prompts JSON structure returned by the LLM.");
   }
 
   return {

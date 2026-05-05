@@ -1,12 +1,5 @@
-import OpenAI from "openai";
 import type { BrandDnaData } from "@/types";
-
-export function getOpenAIClient() {
-  if (!process.env.OPENAI_API_KEY) {
-    throw new Error("OPENAI_API_KEY environment variable is not set.");
-  }
-  return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-}
+import { generateText } from "./llm";
 
 const BRAND_RESEARCH_SYSTEM_PROMPT = `
 You are a Senior Brand Strategist. Reverse-engineer a brand's visual and verbal identity by searching the web and analyzing their website.
@@ -45,28 +38,13 @@ export async function researchBrand(
   brandUrl: string,
   manualOverrides?: Partial<BrandDnaData>
 ): Promise<BrandDnaData> {
-  const client = getOpenAIClient();
-
-  const response = await client.responses.create({
-    model: "gpt-4o",
-    instructions: BRAND_RESEARCH_SYSTEM_PROMPT,
-    input: `Research this brand:\n\nBrand Name: ${brandName}\nBrand URL: ${brandUrl}\n\nSearch extensively. Return the JSON only.`,
-    tools: [{ type: "web_search_preview" }],
+  const text = await generateText({
+    messages: [
+      { role: "system", content: BRAND_RESEARCH_SYSTEM_PROMPT },
+      { role: "user", content: `Research this brand:\n\nBrand Name: ${brandName}\nBrand URL: ${brandUrl}\n\nSearch extensively. Return the JSON only.` },
+    ],
+    webSearch: true,
   });
-
-  const text = response.output
-    .filter((item) => item.type === "message")
-    .flatMap((item) => {
-      if (item.type === "message") {
-        return item.content
-          .filter((c) => c.type === "output_text")
-          .map((c) => (c.type === "output_text" ? c.text : ""));
-      }
-      return [];
-    })
-    .join("");
-
-  if (!text) throw new Error("No response from OpenAI.");
 
   // Strip markdown code fences if model wrapped the JSON anyway
   const cleaned = text.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "").trim();

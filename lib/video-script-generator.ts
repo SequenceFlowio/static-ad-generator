@@ -1,7 +1,5 @@
-import OpenAI from "openai";
 import type { BrandDnaData, Product, SceneScript, VideoVisualBible } from "@/types";
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+import { generateText } from "./llm";
 
 export type VideoStyle = "ugc" | "lifestyle" | "product-hero";
 export type VideoPlatform = "tiktok" | "instagram-reels" | "youtube-shorts";
@@ -349,17 +347,15 @@ Do NOT use a generic problem→solution→product arc. The structure above is th
     }
   }
 
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+  const raw = await generateText({
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userContent },
     ],
     temperature: 0.8,
-    response_format: { type: "json_object" },
+    responseFormat: { type: "json_object" },
   });
 
-  const raw = completion.choices[0].message.content ?? "{}";
   const parsed = JSON.parse(raw) as RawScriptOutput;
 
   const bible = parsed.visual_bible;
