@@ -220,7 +220,7 @@ export interface SceneScript {
   character_in_frame: boolean; // whether a person appears in this frame
 }
 
-export type VideoPhase = "script" | "frames" | "prompt" | "generating_video" | "done" | "failed";
+export type VideoPhase = "references" | "script" | "frames" | "prompt" | "generating_video" | "done" | "failed";
 
 export interface VideoSession {
   id: string;
@@ -232,6 +232,9 @@ export interface VideoSession {
   num_scenes: number;
   duration: number;
   phase: VideoPhase;
+  includes_person: boolean;
+  character_ref_url: string | null;
+  environment_ref_url: string | null;
   scenes: SceneScript[];
   seedance_prompt: string | null;
   visual_bible: VideoVisualBible | null;

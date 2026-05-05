@@ -7,14 +7,26 @@ import type { SceneScript, VideoSession } from "@/types";
 
 export const maxDuration = 300;
 
-async function generateAllFrames(sessionId: string, brandId: string, scenes: SceneScript[], aspectRatio: string, productImageUrl: string | null) {
+async function generateAllFrames(
+  sessionId: string,
+  brandId: string,
+  scenes: SceneScript[],
+  aspectRatio: string,
+  productImageUrl: string | null,
+  characterRefUrl: string | null,
+  environmentRefUrl: string | null,
+) {
   const db = getServerSupabase();
 
   const results = await Promise.allSettled(
     scenes.map(async (scene) => {
       try {
-        // Pass product image as reference when product appears in this scene
         const refUrls: string[] = [];
+        // Character ref for scenes with a person
+        if (scene.character_in_frame && characterRefUrl) refUrls.push(characterRefUrl);
+        // Environment ref for all scenes (sets the visual backdrop)
+        if (environmentRefUrl) refUrls.push(environmentRefUrl);
+        // Product ref for scenes where product appears
         if (scene.product_in_frame && productImageUrl) refUrls.push(productImageUrl);
 
         const urls = await generateImages({
@@ -71,7 +83,7 @@ export async function POST(
   const videoSession = session as VideoSession;
   const scenes = (videoSession.scenes ?? []) as SceneScript[];
 
-  // Load product image for use as reference in product-in-frame scenes
+  // Load product image for product-in-frame scenes
   let productImageUrl: string | null = null;
   if (videoSession.product_id) {
     const { data: productRow } = await db.from("products")
@@ -79,6 +91,9 @@ export async function POST(
     const imageUrls = (productRow?.image_urls ?? []) as string[];
     productImageUrl = imageUrls[0] ?? null;
   }
+
+  const characterRefUrl = videoSession.character_ref_url ?? null;
+  const environmentRefUrl = videoSession.environment_ref_url ?? null;
 
   // Mark scenes as generating (clear image_urls so UI shows loading)
   const clearScenes = scenes.map(s => ({ ...s, image_url: null }));
@@ -88,7 +103,7 @@ export async function POST(
     updated_at: new Date().toISOString(),
   }).eq("id", sessionId);
 
-  waitUntil(generateAllFrames(sessionId, brandId, scenes, videoSession.aspect_ratio, productImageUrl));
+  waitUntil(generateAllFrames(sessionId, brandId, scenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl));
 
   return NextResponse.json({ ok: true });
 }

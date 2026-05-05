@@ -1,0 +1,1386 @@
+SequenceFlow Static Ad Generator - Webapp Documentation for LLM Handoff
+======================================================================
+
+Purpose of this document
+------------------------
+
+This file describes the Static Ad Generator webapp in enough detail for another
+LLM to understand, modify, or recreate the core behavior. The most important
+area is image generation: how the app creates prompts, how user/brand/product
+data is injected into those prompts, which AI models are used, how reference
+images are passed, and how results are stored.
+
+The app is a Next.js 14 TypeScript web application for DTC brands and creative
+agencies. Users create a brand profile, research/generate Brand DNA, add
+products and reference images, generate ad prompts, and then render static ad
+images through kie.ai image models. It also has a social content generator that
+creates image prompts and captions for platform-specific posts.
+
+
+Tech stack and major services
+-----------------------------
+
+Runtime/framework:
+- Next.js 14 app router
+- React 18
+- TypeScript
+- Tailwind CSS
+- Vercel functions for long-running generation routes
+
+Main AI services:
+- OpenAI API, mostly model "gpt-4o"
+- OpenAI Responses API with web_search_preview for brand/product research
+- OpenAI Chat Completions API with JSON mode for prompt/copy generation
+- kie.ai image generation API for actual image rendering
+
+Database/storage:
+- Supabase Postgres
+- Supabase Auth/session through @supabase/ssr
+- Supabase Storage public buckets
+
+Payments/quotas:
+- Stripe subscriptions
+- Internal monthly usage table in Supabase
+
+Important environment variables:
+- OPENAI_API_KEY
+- KIE_API_KEY
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
+- SUPABASE_SERVICE_ROLE_KEY
+- Stripe variables are used elsewhere for checkout/subscription handling.
+
+
+Important files
+---------------
+
+Core AI and image-generation files:
+- lib/openai.ts
+  - Creates OpenAI client.
+  - Performs brand research with web search.
+- lib/prompt-generator.ts
+  - Generates static ad prompt sets.
+  - Produces background_prompt plus hook_variants per ad template.
+- lib/content-prompt-generator.ts
+  - Generates social content image prompts and captions.
+  - Produces structured image_prompt_json, serializes it, then optionally adds
+    cinematic camera/lens details.
+- lib/batch-campaign-generator.ts
+  - Generates many ad concepts at once for batch campaigns.
+- lib/kie.ts
+  - Wrapper around kie.ai createTask and polling endpoints.
+  - Sends prompts/reference images to Nano Banana 2 or Seedream 4.5.
+- lib/prompt-utils.ts
+  - Camera/lens maps and prompt enrichment utilities.
+- lib/templates.ts
+  - Five static ad templates.
+- lib/content-templates.ts
+  - Seven social content templates and platform aspect ratios.
+- lib/winning-ads.ts and data/winning-ads.json
+  - Pulls winning ad examples into prompt generation as inspiration.
+
+Main API routes:
+- app/api/brands/[id]/research/route.ts
+  - Generates or updates Brand DNA.
+- app/api/brands/[id]/products/scrape/route.ts
+  - Extracts product name/description from a URL.
+- app/api/brands/[id]/products/route.ts
+  - Product CRUD.
+- app/api/brands/[id]/products/[productId]/images/route.ts
+  - Product-specific image upload/delete.
+- app/api/brands/[id]/prompts/route.ts
+  - Generates and stores static ad prompt sets.
+- app/api/brands/[id]/generate/route.ts
+  - Turns a prompt set into kie.ai image jobs.
+- app/api/brands/[id]/jobs/route.ts
+  - Client polling endpoint for generation job status.
+- app/api/brands/[id]/content/route.ts
+  - Generates social content prompt/caption sessions.
+- app/api/brands/[id]/content/[sessionId]/generate/route.ts
+  - Renders a content session image through kie.ai.
+- app/api/brands/[id]/batch-generate/route.ts
+  - SSE route for bulk campaign planning and rendering.
+
+Major UI workflow components:
+- components/pipeline/Phase1Research.tsx
+- components/pipeline/Phase2Prompts.tsx
+- components/pipeline/Phase3Generate.tsx
+- components/content/ContentGenerator.tsx
+- components/content/ContentGrid.tsx
+- components/InspoPicker.tsx
+
+
+High-level user workflow
+------------------------
+
+1. User creates/selects a brand.
+2. User runs Brand DNA research.
+   - The app sends brand name and URL to OpenAI.
+   - OpenAI searches the web and returns structured JSON.
+   - User manual overrides can replace AI fields.
+3. User creates/selects one or more products.
+4. User uploads product reference images.
+   - Images are saved in Supabase Storage.
+   - Product rows store public image URLs.
+5. User generates prompts.
+   - OpenAI receives Brand DNA, product data, selected templates, awareness
+     level, selected customer desire, and user intent.
+   - It returns JSON containing background_prompt and hook_variants.
+6. User may edit generated prompts.
+7. User generates images.
+   - For each template and hook variant, the app combines:
+     enriched background prompt + "Text in the ad: {hook_variant}"
+   - Reference images are attached.
+   - kie.ai renders image(s).
+   - Job rows are updated with output URLs.
+8. User views generated ads in the gallery/jobs UI.
+
+
+Core data model
+---------------
+
+Brand:
+- id
+- slug
+- name
+- url
+- created_at
+
+Brand DNA:
+- Stored in brand_dna.data as JSON.
+- Latest row is used.
+- Fields:
+  - name
+  - tagline
+  - brand_story
+  - target_audience
+  - brand_personality
+  - voice_adjectives: string[]
+  - positioning
+  - competitive_differentiation
+  - customer_desires: string[]
+  - hook_examples: string[]
+  - primary_font
+  - secondary_font
+  - accent_color
+  - lettertype_color
+  - background_color
+  - language
+  - logo_url
+
+Product:
+- id
+- brand_id
+- name
+- description
+- url
+- image_urls: string[]
+- created_at
+
+PromptSet:
+- id
+- brand_id
+- product_id
+- product_name
+- prompts_json
+- generated_at
+
+prompts_json shape:
+{
+  "brand": "...",
+  "product": "...",
+  "generated_at": "...",
+  "num_variants": 2,
+  "hook_intent": "... or null",
+  "background_intent": "... or null",
+  "prompts": [
+    {
+      "template_number": 1,
+      "template_name": "headline",
+      "aspect_ratio": "3:4",
+      "needs_product_images": true,
+      "notes": "...",
+      "background_prompt": "...",
+      "hook_variants": [
+        "Headline: ... | Subtitle: ... | CTA: ..."
+      ]
+    }
+  ],
+  "prompts_original": [...]
+}
+
+GenerationJob:
+- id
+- brand_id
+- prompt_set_id
+- template_number
+- template_name
+- resolution
+- num_images
+- status: "pending" | "running" | "done" | "failed"
+- image_urls: string[] | null
+- error
+- generation_detail:
+  - model
+  - background_prompt
+  - hook_variants
+
+Content session:
+- id
+- brand_id
+- product_id
+- template_name
+- platform
+- topic_hint
+- selected_desire
+- image_prompt
+- caption
+- image_url
+- status: "draft" | "generating" | "done" | "failed"
+- created_at
+
+
+Image generation models
+-----------------------
+
+The actual image renderer is kie.ai, not OpenAI.
+
+Supported image models in this codebase:
+
+1. "nano-banana-2"
+   - UI label: Quality
+   - Used as the default/high-quality model.
+   - Supports resolutions: 1K, 2K, 4K.
+   - Payload field for references: image_input.
+   - Payload includes:
+     - model
+     - input.prompt
+     - input.aspect_ratio
+     - input.num_images
+     - input.output_format = "png"
+     - input.resolution
+     - input.image_input if references exist.
+   - The app enriches prompts for this model with camera/lens language for
+     photorealistic templates.
+
+2. "seedream/4.5-edit"
+   - UI label: Fast & Efficient.
+   - Supports resolutions: 2K and 4K.
+   - Uses quality instead of resolution:
+     - "2K" -> "basic"
+     - "4K" -> "high"
+   - Payload field for references: image_urls.
+   - image_urls is always sent, even if empty.
+   - The app does not apply the same Nano Banana cinematic prompt enrichment.
+
+kie.ai wrapper details:
+- Base URL: https://api.kie.ai
+- Create endpoint: POST /api/v1/jobs/createTask
+- Poll endpoint: GET /api/v1/jobs/recordInfo?taskId={taskId}
+- Authorization: Bearer KIE_API_KEY
+- Poll interval: 3000 ms
+- Poll timeout: 300000 ms / 5 minutes
+- Success result is parsed from data.resultJson as:
+  { "resultUrls": ["https://..."] }
+
+
+Reference image behavior
+------------------------
+
+Static ad generation references:
+- The app builds a refImages array per template.
+- Brand logo:
+  - Included if logo_url exists.
+  - Excluded for "ugc-lifestyle" because UGC ads should not use a logo badge.
+- Product images:
+  - Included only if promptItem.needs_product_images is true.
+  - For multi-product generation, the first two image URLs from each selected
+    product are added, max six total by route behavior.
+- Inspo images:
+  - Optional user-selected inspiration images.
+  - At most two are added.
+- lib/kie.ts also slices final reference_image_urls to max 14.
+
+Social content generation references:
+- Adds brand logo if available.
+- Adds up to four product images if the content session has a product.
+- Adds up to two inspo images.
+- Always uses "nano-banana-2", resolution "2K", num_images 1.
+
+Batch campaign generation references:
+- Adds logo for non-UGC templates.
+- Adds first two product images for the concept's product.
+- Adds up to two inspo images.
+- Always uses "nano-banana-2".
+
+
+Prompt generation overview
+--------------------------
+
+The app separates prompt creation from image rendering.
+
+OpenAI is used to write:
+- The visual prompt.
+- The overlay copy/hook variants.
+- Social captions.
+- Batch concept plans.
+
+kie.ai is used to render:
+- Final static ad images.
+- Final social content images.
+
+The most important distinction:
+- background_prompt describes the visual image/scene/product placement and does
+  NOT include final overlay copy.
+- hook_variants contains the text that should appear in the ad.
+- During rendering the final prompt is:
+
+  {enrichedBackground}
+
+  Text in the ad: {hookVariant}
+
+This lets the same background prompt produce multiple variants with different
+headlines/subtitles/CTAs.
+
+
+Brand research prompt
+---------------------
+
+File: lib/openai.ts
+Function: researchBrand()
+Model/API: OpenAI Responses API, model "gpt-4o", tool web_search_preview.
+
+System instructions summary:
+- Act as a Senior Brand Strategist.
+- Reverse-engineer visual/verbal identity using search and website analysis.
+- Focus on observable brand story, target audience, positioning, palette, and
+  typography if publicly documented.
+- Output only valid JSON.
+- Search queries include:
+  - "[Brand] brand story"
+  - "[Brand] brand colors palette"
+  - "[Brand] font typeface"
+  - "[Brand] brand guidelines"
+  - "[Brand] target audience"
+  - "[Brand] about us"
+- Fetch/analyze brand URL.
+- Search 2-3 competitors.
+
+Required JSON fields:
+{
+  "name": "Brand name",
+  "tagline": "Brand tagline or null",
+  "brand_story": "1-2 sentence brand origin or mission story, or null",
+  "target_audience": "Who the brand is for, or null",
+  "brand_personality": "Brand personality in 1-2 sentences, or null",
+  "voice_adjectives": ["adj1", "adj2", "adj3", "adj4", "adj5"],
+  "positioning": "1-2 sentence positioning or null",
+  "competitive_differentiation": "How this brand differs or null",
+  "customer_desires": ["3-5 short phrases"],
+  "primary_font": "Font name if publicly documented or null",
+  "secondary_font": "Secondary font name or null",
+  "accent_color": "#hexcode or null",
+  "lettertype_color": "#hexcode or null",
+  "background_color": "#hexcode or null"
+}
+
+Important post-processing:
+- Markdown code fences are stripped if present.
+- voice_adjectives, customer_desires, hook_examples are normalized to arrays.
+- language defaults to "English".
+- Manual user overrides win over AI output if not empty/null.
+
+
+Static ad prompt generation
+---------------------------
+
+File: lib/prompt-generator.ts
+Function: generatePrompts()
+Endpoint: POST /api/brands/[id]/prompts
+Model/API: OpenAI Chat Completions, model "gpt-4o", JSON object mode.
+Temperature: 0.7.
+
+Inputs:
+- brandDna
+- productName
+- productDescription
+- brandName
+- numVariants, default 2
+- hookIntent
+- backgroundIntent
+- templateNumbers
+- awarenessLevel, default "problem-aware"
+- selectedDesire
+
+Endpoint request body:
+{
+  "product_id": "uuid",
+  "product_ids": ["uuid"],
+  "num_variants": 2,
+  "hook_intent": "...",
+  "background_intent": "...",
+  "template_numbers": [1, 2, 5],
+  "awareness_level": "problem-aware",
+  "selected_desire": "..."
+}
+
+If product_ids is supplied, products are combined:
+- combinedProductName = product names joined by comma.
+- combinedProductDescription = each product name + description joined by blank
+  lines.
+- The first product is stored as prompt_set.product_id for compatibility.
+
+The route stores:
+- prompts_json
+- prompts_original, a copy of the generated prompts, so edited prompts can be
+  reset.
+
+
+Static ad prompt system prompt
+------------------------------
+
+The prompt generator tells OpenAI:
+
+Role:
+- "You are a prompt engineer specializing in AI image generation for DTC brands."
+
+Task:
+- For each ad template, generate two things:
+  1. background_prompt
+     - Full visual/scene/product-placement prompt for image generator.
+     - Describes background, scene, product placement, lighting, colors, brand
+       aesthetic.
+     - Does NOT include text overlay copy.
+  2. hook_variants
+     - Array of N short overlay copy strings.
+     - Each contains headline, optional subtitle, and CTA.
+     - Variants must differ meaningfully in angle, tone, or message.
+
+Language rule:
+- ALL hook_variants must be written in brandDna.language.
+- background_prompt must always be written in English.
+
+Critical visual rules:
+- background_prompt must describe typography style visually.
+- Do not write font names like Poppins, Inter, Neue Haas, Canela.
+- Use one typeface family per ad.
+- Do not mix a bold sans headline with italic serif subtitle.
+- Vary only weight and size.
+- background_prompt must describe colors visually.
+- Never write hex codes in background_prompt.
+- Use hex codes only to infer natural language colors:
+  - #C7F56F -> bright lime green
+  - #1a1a1a -> near-black charcoal
+  - #FFFFFF -> clean white
+- Strictly follow reference images.
+- Do not invent props, objects, or surfaces not present in reference images.
+- background_prompt must reflect backgroundIntent.
+- Replace every bracketed placeholder with brand-specific details.
+- Keep template_number and template_name exactly as provided.
+- Output only valid JSON.
+
+Critical copy rules for hook_variants:
+- Every hook variant must satisfy:
+  1. Avatar Match
+     - Names the situation, frustration, or identity of the customer.
+  2. Open Loop
+     - Uses a question, "how to", surprising fact, or incomplete statement.
+  3. Clear Benefit
+     - Benefit is obvious before the reader finishes.
+- If selectedDesire is provided, every hook must be built around that desire and
+  nothing else.
+- Do not blend in other desires or generic brand messaging.
+- Every hook variant must use a different angle, sentence structure, emotional
+  trigger, or entry point.
+
+Awareness-level copy calibration:
+- unaware:
+  - Pattern interrupt.
+  - No product mention.
+  - Pure curiosity.
+- problem-aware:
+  - Lead with pain/frustration the ICP knows well.
+- solution-aware:
+  - Focus on why this solution beats alternatives.
+- product-aware:
+  - Proof, results, social validation.
+- most-aware:
+  - Direct offer, urgency, concrete deal.
+
+Required JSON schema:
+{
+  "prompts": [
+    {
+      "template_number": 1,
+      "template_name": "headline",
+      "aspect_ratio": "3:4",
+      "needs_product_images": true,
+      "notes": "Any notes",
+      "background_prompt": "Full visual prompt...",
+      "hook_variants": [
+        "Headline: ... | Subtitle: ... | CTA: ..."
+      ]
+    }
+  ]
+}
+
+
+Static ad prompt user message composition
+-----------------------------------------
+
+The user message sent to OpenAI includes:
+
+1. Brand Data block:
+- brand name
+- ad copy language
+- tagline
+- brand story
+- target audience
+- brand personality
+- voice adjectives
+- positioning
+
+2. Copy Strategy:
+- selected customer desire, or fallback instruction to infer strongest desire.
+- hook examples, if present, with instruction to create variants.
+
+3. Visual System:
+- primary_font
+  - Use as ONLY typeface in ads.
+  - Describe style, not literal name.
+- secondary_font
+  - For print/branding reference only.
+  - Do not mix with primary font in one ad.
+- accent_color
+  - Describe visually, never write hex.
+- lettertype_color
+  - Describe visually.
+- background_color
+  - Describe visually.
+
+4. Product:
+- product name
+- product description
+
+5. User Intent:
+- hook/copy intent
+- background/scene intent
+
+6. Awareness Level:
+- awareness_level
+- matching hook calibration notes
+- visual direction for the awareness level
+
+7. Number of hook variants.
+
+8. Templates to fill:
+- Selected templates from lib/templates.ts.
+
+9. Winning ad references:
+- The app infers a niche from target_audience:
+  - skincare, food, homewares, fashion, supplements, fitness, tech, pet, beauty,
+    other.
+- It pulls up to two matching examples per template from data/winning-ads.json.
+- These are included as inspiration for composition, mood, and hook structure.
+- The model is told not to copy them.
+
+
+Awareness visual direction mapping
+----------------------------------
+
+Used in lib/prompt-generator.ts:
+
+unaware:
+"Editorial lifestyle aesthetic. No dominant product. Scene-first, aspirational.
+Product present but incidental. Soft, organic composition."
+
+problem-aware:
+"Relatable real-world scene. Slight tension or imperfection visible. Product as
+relief, not hero. Grounded and honest lighting."
+
+solution-aware:
+"Product clearly visible and prominent. Benefit-oriented framing. Clean
+composition that makes the solution obvious at a glance."
+
+product-aware:
+"Sharp product detail. Proof-forward framing. Social signal elements (stars,
+count, result). Clinical clarity, no ambiguity."
+
+most-aware:
+"Offer dominant. Deal/urgency visible in layout. Product large and clear.
+Direct, no lifestyle softening. High contrast."
+
+
+Static ad templates
+-------------------
+
+File: lib/templates.ts
+
+Template 1: headline
+- aspect_ratio: 3:4
+- needs_product_images: true
+- Concept:
+  - Clean product hero shot static ad.
+  - Product centered against solid brand background.
+  - Bold headline at top.
+  - Subheadline below.
+  - Product packaging shot straight-on or slight 15-degree angle.
+  - Soft studio or natural window lighting.
+  - Brand logo bottom-right.
+  - CTA pill badge in accent color.
+  - Ultra-sharp commercial product photography.
+  - No distracting props.
+
+Template 2: offer-promotion
+- aspect_ratio: 3:4
+- needs_product_images: true
+- Concept:
+  - Bold promotional ad.
+  - Split layout:
+    - left 60% product photo
+    - right 40% solid accent-color panel
+  - Large offer headline on right panel.
+  - Smaller urgency/benefit subtext.
+  - Tiny legal line at bottom.
+  - High contrast, thumb-size legibility.
+
+Template 3: testimonial
+- aspect_ratio: 1:1
+- needs_product_images: false
+- Concept:
+  - Clean testimonial ad card.
+  - Solid brand background.
+  - Large quote mark at top-left.
+  - First-person review text.
+  - Five gold star rating icons.
+  - Customer name/handle.
+  - Brand logo centered at bottom.
+  - Thin accent border line at bottom.
+  - Typography is hero.
+  - No product image, no busy background.
+
+Template 4: vs-them
+- aspect_ratio: 3:4
+- needs_product_images: true
+- Concept:
+  - Us-vs-them comparison ad.
+  - Two-column layout divided by vertical line.
+  - Left column competitor/old way with red X icons.
+  - Right column brand with green check icons.
+  - Four or five comparison rows.
+  - Product floats in bottom-right overlapping grid.
+  - Clean, confident, scannable.
+
+Template 5: ugc-lifestyle
+- aspect_ratio: 9:16
+- needs_product_images: true
+- Concept:
+  - UGC-style lifestyle photo ad.
+  - Product sits naturally in scene, casually placed.
+  - Soft natural light, color grade, slight film grain.
+  - Top of image has large bold hook text directly over photo.
+  - No background box, overlay panel, text container, logo, watermark, or badge.
+  - CTA is small rounded pill directly below hook.
+  - All text uses same typeface.
+  - Shot-on-iPhone aesthetic, not commercial shoot.
+
+
+Rendering static ads
+--------------------
+
+File: app/api/brands/[id]/generate/route.ts
+Endpoint: POST /api/brands/[id]/generate
+Max duration: 300 seconds.
+
+Request body:
+{
+  "template_numbers": [1, 2, 5],
+  "resolution": "2K",
+  "prompt_set_id": "uuid",
+  "model": "nano-banana-2",
+  "aspect_ratio": "4:5 optional global override",
+  "inspo_image_urls": ["https://..."],
+  "product_ids": ["uuid"]
+}
+
+Steps:
+1. Authenticate user.
+2. Load brand and latest Brand DNA.
+3. Load prompt_set by prompt_set_id.
+4. Filter prompt set to selected templates.
+5. Load product images.
+   - product_ids can override prompt_set.product_id.
+6. Calculate image count:
+   - totalImages = sum of hook_variants.length for selected prompts.
+7. Deduct credits:
+   - If model is nano-banana-2, images count as quality.
+   - If model is seedream/4.5-edit, images count as efficiency.
+8. Insert generation_jobs rows with status "pending".
+9. Start runGeneration() in background using Vercel waitUntil.
+10. Return job_ids and prompt_set_id immediately.
+
+runGeneration() behavior:
+- For each selected promptItem:
+  - Set job status to "running".
+  - Build reference images.
+  - Determine aspect ratio:
+    - aspectRatioOverride if provided
+    - otherwise promptItem.aspect_ratio
+  - If model is "nano-banana-2", enrich background prompt for supported ad
+    templates with buildNanoBananaPrompt().
+  - Generate all hook variants in parallel.
+  - For each hook variant:
+    - combinedPrompt = enrichedBackground + "\n\nText in the ad: " + hookVariant
+    - call generateImages()
+  - Flatten returned URLs.
+  - Set job status "done" and image_urls.
+- If the template-level job fails:
+  - Set status "failed" and error message.
+- If one hook variant fails:
+  - That variant returns [] and the rest can still complete.
+
+Important: static ad output URLs are saved directly from kie.ai into
+generation_jobs.image_urls. In the main generate route, the code does not
+download and re-upload static ad images to Supabase Storage. Batch/content routes
+do re-upload results.
+
+
+Nano Banana cinematic prompt enrichment
+---------------------------------------
+
+File: lib/prompt-utils.ts
+Function: buildNanoBananaPrompt()
+
+This is only applied for "nano-banana-2" and only for templates with camera
+presets.
+
+It appends:
+- shot on a {camera description}
+- using a {lens description} at {focalLength}mm
+- perspective label
+- aperture
+- depth-of-field effect
+- cinematic lighting
+- natural color science
+- high dynamic range
+- professional photography, ultra-detailed, 8K resolution
+
+Camera map:
+- Modular 8K Digital -> modular 8K digital cinema camera
+- Full-Frame Cine Digital -> full-frame digital cinema camera
+- Grand Format 70mm Film -> grand format 70mm film camera
+- Studio Digital S35 -> Super 35 studio digital camera
+- Classic 16mm Film -> classic 16mm film camera
+- Premium Large Format Digital -> premium large-format digital cinema camera
+
+Lens map:
+- Creative Tilt Lens -> creative tilt lens effect
+- Compact Anamorphic -> compact anamorphic lens
+- Extreme Macro -> extreme macro lens
+- 70s Cinema Prime -> 1970s cinema prime lens
+- Classic Anamorphic -> classic anamorphic lens
+- Premium Modern Prime -> premium modern prime lens
+- Warm Cinema Prime -> warm-toned cinema prime lens
+- Swirl Bokeh Portrait -> swirl bokeh portrait lens
+- Vintage Prime -> vintage prime lens
+- Halation Diffusion -> halation diffusion filter
+- Clinical Sharp Prime -> ultra-sharp clinical prime lens
+
+Focal perspective map:
+- 8mm -> ultra-wide perspective
+- 14mm -> wide-angle perspective
+- 24mm -> wide-angle dynamic perspective
+- 35mm -> natural cinematic perspective
+- 50mm -> standard portrait perspective
+- 85mm -> classic portrait perspective
+
+Aperture effect map:
+- f/1.4 -> shallow depth of field, creamy bokeh
+- f/4 -> balanced depth of field
+- f/11 -> deep focus clarity, sharp foreground to background
+
+Ad template camera presets:
+- headline:
+  - Full-Frame Cine Digital
+  - Premium Modern Prime
+  - 85mm
+  - f/1.4
+- offer-promotion:
+  - Full-Frame Cine Digital
+  - Premium Modern Prime
+  - 85mm
+  - f/1.4
+- ugc-lifestyle:
+  - Modular 8K Digital
+  - Classic Anamorphic
+  - 35mm
+  - f/4
+- testimonial and vs-them:
+  - no cinematic enhancement, because they are graphic/typographic layouts.
+
+
+Social content generator
+------------------------
+
+Files:
+- lib/content-prompt-generator.ts
+- lib/content-templates.ts
+- app/api/brands/[id]/content/route.ts
+- app/api/brands/[id]/content/[sessionId]/generate/route.ts
+
+Purpose:
+- Generate social media content posts, not just ads.
+- Produces both:
+  - image prompt for kie.ai
+  - full social caption
+
+Content templates:
+1. tips-tricks
+   - Educational post with three tips.
+   - No product required.
+2. about-brand
+   - Brand story, values, mission.
+   - No product required.
+3. about-product
+   - Product spotlight.
+   - Product required.
+4. using-product
+   - How-to/in-use moment.
+   - Product required.
+5. testimonial
+   - Customer quote card.
+   - No product required.
+6. lifestyle
+   - Product/brand naturally placed in aspirational scene.
+   - Product optional.
+7. before-after
+   - Transformation story.
+   - Product optional.
+
+Platforms and aspect ratios:
+- instagram -> 4:5
+- facebook -> 1:1
+- linkedin -> 1:1
+- pinterest -> 2:3
+
+Platform caption tone:
+- instagram:
+  - aspirational and punchy
+  - 150-200 words max
+  - 15-20 relevant hashtags
+- facebook:
+  - conversational and community-driven
+  - 150-200 words max
+  - 5-8 hashtags
+- linkedin:
+  - professional and insight-driven
+  - 200-300 words
+  - 3-5 hashtags
+  - no emojis
+- pinterest:
+  - descriptive and keyword-rich
+  - 100-150 words max
+  - 10-15 hashtags
+
+
+Social content prompt generation system
+---------------------------------------
+
+File: lib/content-prompt-generator.ts
+Function: generateContentPost()
+Model/API: OpenAI Chat Completions, model "gpt-4o", JSON object mode.
+Temperature: 0.75.
+
+Role:
+- "You are a social media content strategist and art director specialising in
+  DTC brand content."
+
+Task:
+- Generate two things:
+  1. image_prompt_json
+     - Structured JSON describing visual for kie.ai.
+     - Fill all fields based on brand visual system and template constraints.
+  2. caption
+     - Full social media caption.
+     - Written in brand language.
+     - Includes opening hook, body, CTA, hashtags.
+     - Calibrated to platform.
+
+Image prompt JSON rules:
+- scene:
+  - Specific place/action/objects.
+- subject:
+  - Primary subject, not vague.
+- product_placement:
+  - How product appears in frame.
+- composition:
+  - Exact layout rule, appropriate to canvas.
+- lighting:
+  - Specific lighting type.
+- camera:
+  - Specific camera description.
+- color_palette:
+  - Natural language colors only.
+  - Never write hex codes.
+- typography.headline:
+  - Describe style, not font name.
+- overlay.allowed:
+  - Must match template schema.
+- overlay.type:
+  - Specific text/design overlay if allowed.
+- mood:
+  - Specific feeling.
+- realism:
+  - Must match template schema.
+- grain_noise:
+  - Only for ugc_raw.
+
+Language rules:
+- caption must be in brandDna.language.
+- image_prompt_json fields must be English.
+
+Caption structure:
+- Opening hook:
+  - Avatar Match + Open Loop + Clear Benefit.
+- Body:
+  - Tips/story/quote/transformation/etc.
+- CTA:
+  - One clear action.
+- Hashtags:
+  - Platform appropriate.
+
+Required output schema:
+{
+  "image_prompt_json": {
+    "style": "editorial|clean_ad|ugc_raw|ui_card",
+    "scene": "...",
+    "subject": "...",
+    "product_placement": "...",
+    "composition": "...",
+    "lighting": "...",
+    "camera": "...",
+    "color_palette": "...",
+    "typography": { "headline": "...", "body": "..." },
+    "text_density": "none|low|medium|high",
+    "overlay": { "allowed": true, "type": "..." },
+    "mood": "...",
+    "realism": "photorealistic|stylized|graphic_design",
+    "grain_noise": "none|slight|heavy"
+  },
+  "caption": "Full caption text with hashtags...",
+  "caption_note": "One sentence explaining the angle used"
+}
+
+After OpenAI returns image_prompt_json, the app serializes it into one plain
+English prompt string for kie.ai. The serializer adds:
+- style prefix
+- canvas aspect ratio
+- scene
+- subject
+- product placement
+- composition
+- lighting
+- camera, unless camera is "none (graphic design)"
+- color palette
+- typography
+- overlay/no-overlay instruction
+- mood
+- film grain/noise if any
+
+If the content template has a camera preset, the app then applies
+buildNanoBananaPrompt() to add cinematic camera/lens details.
+
+
+Social content template schemas
+-------------------------------
+
+These are fixed constraints that OpenAI must respect.
+
+tips-tricks:
+- style: ui_card
+- realism: graphic_design
+- camera: none (graphic design)
+- text_density: high
+- overlay: bold headline at top + 3 numbered tips with icons below, clean list
+  layout
+- composition: centered vertical layout with clear section hierarchy
+- lighting: flat, no shadows
+- mood: educational and useful
+
+about-brand:
+- style: editorial
+- realism: photorealistic
+- camera: medium telephoto, shallow depth of field
+- text_density: low
+- overlay: minimal brand tagline or short headline at bottom
+- composition: rule of thirds, subject left or right, breathing room
+- lighting: soft natural window light or golden hour outdoor
+- mood: warm, human, authentic
+
+about-product:
+- style: clean_ad
+- realism: photorealistic
+- camera: studio product shot, overhead or 45-degree angle, sharp focus
+- text_density: low
+- overlay: product name + short benefit headline
+- composition: centered hero product on clean background
+- lighting: flat studio lighting or soft box
+- mood: clean, premium, confident
+
+using-product:
+- style: ugc_raw
+- realism: photorealistic
+- camera: smartphone handheld, slight motion, natural framing
+- text_density: none
+- overlay: not allowed
+- composition: action-first, product in hand or in use
+- lighting: natural available light
+- mood: real, accessible, relatable
+- grain_noise: slight
+
+testimonial:
+- style: ui_card
+- realism: graphic_design
+- camera: none (graphic design)
+- text_density: medium
+- overlay: quote card, large quote text, customer name/avatar at bottom, subtle
+  brand logo
+- composition: centered card layout, generous padding, typographic hierarchy
+- lighting: flat
+- mood: trustworthy, warm, credible
+
+lifestyle:
+- style: editorial
+- realism: photorealistic
+- camera: medium telephoto shallow depth of field, cinematic
+- text_density: none
+- overlay: not allowed
+- composition: scene-first, product present but not dominant
+- lighting: golden hour or soft diffused natural light
+- mood: aspirational and effortless
+
+before-after:
+- style: clean_ad
+- realism: photorealistic
+- camera: controlled, consistent angle both sides
+- text_density: none
+- overlay: before/after labels only
+- composition: vertical split 50/50, same framing and scale
+- lighting: matched, flat, even
+- mood: transformative and clear
+
+Content template camera presets:
+- about-brand:
+  - Full-Frame Cine Digital, Warm Cinema Prime, 50mm, f/1.4
+- about-product:
+  - Full-Frame Cine Digital, Premium Modern Prime, 85mm, f/1.4
+- using-product:
+  - Modular 8K Digital, Classic Anamorphic, 35mm, f/4
+- lifestyle:
+  - Full-Frame Cine Digital, Warm Cinema Prime, 50mm, f/1.4
+- before-after:
+  - Studio Digital S35, Clinical Sharp Prime, 50mm, f/11
+- tips-tricks and testimonial:
+  - no cinematic enhancement.
+
+
+Rendering social content images
+-------------------------------
+
+Endpoint: POST /api/brands/[id]/content/[sessionId]/generate
+
+Steps:
+1. Authenticate user.
+2. Load content session.
+3. Require session.image_prompt.
+4. Load brand slug for storage path.
+5. Load Brand DNA logo URL.
+6. Set content_sessions.status to "generating".
+7. Determine aspect ratio from platform.
+8. Build references:
+   - logo
+   - up to four product images
+   - up to two inspo images
+9. Call generateImages():
+   - prompt: session.image_prompt
+   - aspect_ratio: platform aspect ratio
+   - resolution: "2K"
+   - num_images: 1
+   - model: "nano-banana-2"
+10. Download first returned kie.ai URL.
+11. Upload image to Supabase Storage bucket "generated-ads".
+12. Save public URL in content_sessions.image_url.
+13. Mark status "done".
+
+Storage path:
+{brandSlugOrId}/content/{sessionId}-{timestamp}.png
+
+
+Batch campaign generator
+------------------------
+
+Files:
+- lib/batch-campaign-generator.ts
+- app/api/brands/[id]/batch-generate/route.ts
+
+Purpose:
+- Create and render 10, 20, or 50 ad concepts in one operation.
+- Uses SSE to stream status/progress/complete messages to the client.
+
+Endpoint request:
+{
+  "product_ids": ["uuid"],
+  "template_names": ["headline", "ugc-lifestyle"],
+  "batch_size": 10,
+  "resolution": "2K",
+  "inspo_image_urls": ["https://..."]
+}
+
+OpenAI batch concept generation:
+- Model: "gpt-4o"
+- Temperature: 0.9
+- JSON object mode
+- Output parsed as either:
+  - { "concepts": [...] }
+  - or direct array, though JSON object mode usually wraps it.
+
+Batch concept schema:
+{
+  "template_name": "<one of the available templates>",
+  "product_id": "<product id>",
+  "background_prompt": "<full visual scene description in English for kie.ai>",
+  "hook_text": "<ad copy/headline/subtitle/CTA in brand language>",
+  "angle_description": "<one sentence describing unique angle/emotion>"
+}
+
+Batch prompt rules:
+- Exactly batch_size unique concepts.
+- Unique angle, opening hook, visual direction, emotional appeal.
+- Roughly even distribution across templates.
+- Products distributed across concepts.
+- No repeated hook angle or visual scene.
+- hook_text must have Avatar Match + Open Loop + Clear Benefit.
+- background_prompt in English.
+- Colors described visually, never hex.
+- background_prompt must not include text overlays.
+- hook_text language = brandDna.language.
+
+Batch rendering:
+- Concepts generated first.
+- Images generated in chunks of 5 to reduce rate-limit pressure.
+- For each concept:
+  - references = logo for non-UGC + first two product images + two inspo images
+  - prompt = background_prompt + "\n\nText in the ad: " + hook_text
+  - aspect_ratio currently hardcoded to "4:5"
+  - model "nano-banana-2"
+  - num_images 1
+- Result image is downloaded and uploaded to Supabase Storage:
+  - bucket: generated-ads
+  - path: {brandSlug}/batch/{timestamp}-{random}.png
+- A generation_jobs row is inserted with:
+  - prompt_set_id null
+  - status done
+  - image_urls [publicUrl]
+  - generation_detail includes batch true and angle_description.
+
+
+Credits and usage
+-----------------
+
+File: lib/credits.ts
+
+Quality model:
+- nano-banana-2
+- Counts against quality usage.
+- UI credit cost per image is 2.
+
+Efficiency model:
+- seedream/4.5-edit
+- Counts against efficiency usage.
+- UI credit cost per image is 1.
+
+Plan limits:
+- trial/free:
+  - quality 10
+  - efficiency 20
+  - total pool 20
+- starter:
+  - quality 150
+  - efficiency 250
+  - total pool 550
+- pro:
+  - quality 350
+  - efficiency 600
+  - total pool 1300
+- agency:
+  - effectively unlimited
+
+Static ad generation deducts:
+- sum of all selected hook variants.
+
+Content generation currently deducts:
+- 1 efficiency image when creating the content session through
+  POST /api/brands/[id]/content.
+- The follow-up render route does not perform a second deduction in the current
+  code.
+
+
+Storage buckets
+---------------
+
+Expected public Supabase buckets:
+- product-images
+- generated-ads
+- inspo-images
+
+Product images:
+- Uploaded through product image routes.
+- Stored on product.image_urls.
+- Used as references for image generation.
+
+Generated content images:
+- Content and batch routes re-upload kie.ai output to generated-ads.
+- Main static ad route stores kie.ai URLs directly in generation_jobs.image_urls.
+
+
+Important implementation details and caveats
+-------------------------------------------
+
+1. OpenAI does not create the final images.
+   - OpenAI writes prompts/copy/plans.
+   - kie.ai renders the images.
+
+2. The app relies on JSON-mode OpenAI outputs.
+   - If JSON shape is wrong, routes throw errors.
+   - Brand research strips code fences because Responses API may still wrap JSON.
+
+3. Hex colors are stored in Brand DNA but should never be sent literally inside
+   final visual prompts.
+   - Prompt instructions repeatedly tell the model to convert hex values to
+     visual descriptions.
+
+4. Font names are stored in Brand DNA but should not be sent literally inside
+   image prompts.
+   - Prompt instructions tell OpenAI to translate font names into style
+     descriptions like "bold geometric sans-serif".
+
+5. There are two categories of prompt:
+   - visual/background prompt in English
+   - customer-facing copy in brand language
+
+6. Reference images matter.
+   - The app tells OpenAI to follow references and avoid inventing props/surfaces.
+   - The actual kie.ai call receives the reference URLs separately.
+
+7. The "ugc-lifestyle" template intentionally excludes the logo reference.
+   - This keeps UGC style from becoming a branded graphic ad.
+
+8. Static ad variants are parallelized per template.
+   - Each hook variant becomes a separate kie.ai task.
+   - One failed variant does not fail the whole template job.
+
+9. Batch campaign generation does not use the five numbered template definitions
+   directly.
+   - It receives template_names and asks OpenAI to plan concepts.
+   - Rendering uses a fixed 4:5 aspect ratio.
+
+10. content_sessions and generation_jobs are separate flows.
+    - Content sessions store caption + one image_url.
+    - Generation jobs store one or more image URLs for ads.
+
+11. The repo contains Open-Higgsfield-AI-main.
+    - Some prompt-utils camera/lens constants were ported from it.
+    - The main Static Ad Generator webapp does not appear to run from that
+      folder.
+
+
+Example end-to-end static ad generation
+---------------------------------------
+
+Input data:
+- Brand DNA says:
+  - name: "Noctis"
+  - language: "English"
+  - target audience: "Home cooks who want restaurant-quality tools"
+  - customer desire: "look like a pro at home"
+  - primary font: "Inter"
+  - accent color: "#C7F56F"
+  - background color: "#FFFFFF"
+- Product:
+  - name: "Noctis Chef Knife"
+  - description: "A balanced German steel chef knife..."
+- Template:
+  - headline
+- Awareness:
+  - problem-aware
+- Num variants:
+  - 2
+
+OpenAI prompt generation should return something conceptually like:
+{
+  "template_number": 1,
+  "template_name": "headline",
+  "aspect_ratio": "3:4",
+  "needs_product_images": true,
+  "background_prompt": "Clean commercial product hero shot of the Noctis Chef Knife centered on a clean white studio background, soft natural window light from the left, subtle shadow beneath the knife, near-black charcoal typography area at top, bright lime green CTA accent, bold geometric sans-serif visual style, premium but approachable kitchen-tool aesthetic, no distracting props.",
+  "hook_variants": [
+    "Headline: Why home cooks are quietly upgrading this one knife | Subtitle: Restaurant-level prep starts with a cleaner cut | CTA: Try Noctis",
+    "Headline: Still fighting your knife at dinner time? | Subtitle: Get smoother prep and sharper-looking plates at home | CTA: Shop Now"
+  ]
+}
+
+Before kie.ai, if using nano-banana-2, the app enriches the background prompt:
+"... shot on a full-frame digital cinema camera, using a premium modern prime
+lens at 85mm (classic portrait perspective), aperture f/1.4, shallow depth of
+field, creamy bokeh, cinematic lighting, natural color science, high dynamic
+range, professional photography, ultra-detailed, 8K resolution"
+
+For each hook variant, kie.ai receives:
+
+{enriched background prompt}
+
+Text in the ad: Headline: Why home cooks are quietly upgrading this one knife | Subtitle: Restaurant-level prep starts with a cleaner cut | CTA: Try Noctis
+
+References passed to kie.ai:
+- brand logo, unless UGC template
+- product image URLs
+- optional inspo image URLs
+
+kie.ai returns resultUrls, and the app saves them to the generation job.
+
+
+How another LLM should reason about making changes
+--------------------------------------------------
+
+If changing image style:
+- Start in lib/prompt-generator.ts for static ads.
+- Start in lib/content-prompt-generator.ts for content posts.
+- Start in lib/prompt-utils.ts for camera/lens enrichment.
+- Start in lib/templates.ts or lib/content-templates.ts for template-level
+  composition constraints.
+
+If changing models:
+- Update lib/kie.ts for payload format and polling.
+- Update types/index.ts MODEL_CONFIGS and KieModel type.
+- Update lib/credits.ts model categorization.
+- Update UI selectors where model choices are displayed.
+
+If changing reference image handling:
+- Static ads: app/api/brands/[id]/generate/route.ts.
+- Social content: app/api/brands/[id]/content/[sessionId]/generate/route.ts.
+- Batch: app/api/brands/[id]/batch-generate/route.ts.
+
+If changing hook strategy:
+- Static ads: PROMPT_GENERATION_INSTRUCTIONS in lib/prompt-generator.ts.
+- Social content: systemPrompt in lib/content-prompt-generator.ts.
+- Batch campaigns: systemPrompt in lib/batch-campaign-generator.ts.
+
+If changing Brand DNA fields:
+- Update types/index.ts.
+- Update lib/openai.ts research output schema.
+- Update brandDnaToText() helpers in:
+  - lib/prompt-generator.ts
+  - lib/content-prompt-generator.ts
+  - lib/batch-campaign-generator.ts
+- Update UI forms/cards that display or edit Brand DNA.
+

@@ -1,13 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
-import { generateVideoScript, getVideoAspectRatio } from "@/lib/video-script-generator";
+import { getVideoAspectRatio } from "@/lib/video-script-generator";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
-import type { BrandDnaData, Product } from "@/types";
 
-export const maxDuration = 60;
+export const maxDuration = 30;
 
-// POST — create session + generate initial script
+// POST — create session (phase: references — script generated in separate step)
 export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -28,58 +27,11 @@ export async function POST(
     num_scenes: number;
     duration: number;
     includes_person: boolean;
-    product_image_index: number;
-    active_desire?: string;
-    awareness_level?: string;
-    active_angle_key?: string;
-    notes?: string;
   };
 
-  const { product_id, video_style, platform, num_scenes, duration, includes_person, product_image_index, active_desire, awareness_level, active_angle_key, notes } = body;
-
-  // Load brand DNA + product
-  const [dnaRes, productRes] = await Promise.all([
-    db.from("brand_dna").select("data").eq("brand_id", brandId).single(),
-    db.from("products").select("id, name, description, url, image_urls, brand_id, created_at").eq("id", product_id).single(),
-  ]);
-
-  if (!dnaRes.data) return NextResponse.json({ error: "Brand DNA not found" }, { status: 404 });
-  if (!productRes.data) return NextResponse.json({ error: "Product not found" }, { status: 404 });
-
-  const dna = dnaRes.data.data as BrandDnaData;
-  const product = productRes.data as Product;
+  const { product_id, video_style, platform, num_scenes, duration, includes_person } = body;
   const aspectRatio = getVideoAspectRatio();
 
-  // Generate script
-  // Get active angle label if provided
-  let activeAngleLabel: string | undefined;
-  if (active_angle_key) {
-    // Load strategy to get angle label (best effort)
-    const { data: stratRow } = await db.from("creative_strategies")
-      .select("creative_angles").eq("brand_id", brandId).single();
-    if (stratRow?.creative_angles) {
-      const angles = stratRow.creative_angles as Array<{ key: string; label: string; description: string; hook_frame: string }>;
-      const angle = angles.find((a) => a.key === active_angle_key);
-      if (angle) activeAngleLabel = `${angle.label}: ${angle.description}. Hook frame: ${angle.hook_frame}`;
-    }
-  }
-
-  const scriptOutput = await generateVideoScript({
-    dna,
-    product,
-    productImageIndex: product_image_index,
-    videoStyle: video_style,
-    platform,
-    numScenes: num_scenes,
-    duration,
-    includesPerson: includes_person,
-    activeDesire: active_desire,
-    awarenessLevel: awareness_level,
-    activeAngleDescription: activeAngleLabel,
-    notes,
-  });
-
-  // Create session
   const { data: session, error } = await db.from("video_sessions").insert({
     brand_id: brandId,
     product_id,
@@ -88,10 +40,10 @@ export async function POST(
     aspect_ratio: aspectRatio,
     num_scenes,
     duration,
-    phase: "script",
-    scenes: scriptOutput.scenes,
-    seedance_prompt: scriptOutput.seedance_prompt,
-    visual_bible: scriptOutput.visual_bible ?? null,
+    includes_person,
+    phase: "references",
+    scenes: [],
+    seedance_prompt: null,
   }).select("*").single();
 
   if (error || !session) {

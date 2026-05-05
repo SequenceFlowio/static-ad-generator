@@ -16,6 +16,34 @@ const AWARENESS_LEVELS = [
 ] as const;
 type AwarenessLevel = typeof AWARENESS_LEVELS[number]["value"];
 
+// ─── Suggestion prompts ───────────────────────────────────────────────────────
+
+const CHARACTER_SUGGESTIONS = [
+  "Woman, early 30s, warm natural skin, medium brown hair, wearing a beige linen shirt and cream pants, approachable smile",
+  "Man, late 20s, athletic build, casual gray tee and dark jeans, clean grooming, confident",
+  "Woman, mid-20s, curly dark hair, natural no-makeup look, wearing a white oversized tee, expressive",
+  "Woman, 35-45, refined style, soft blonde highlights, light neutral outfit, warm and polished",
+  "Man, 30s, dark skin tone, friendly expression, casual navy hoodie, relaxed energy",
+  "Woman, late 20s, fair skin, straight black hair, minimal stylish outfit, modern aesthetic",
+  "Man, early 30s, light stubble, creative casual style, rolled sleeves, relaxed confidence",
+  "Woman, 20s, petite, Scandinavian look, natural makeup, soft earth tones, calm presence",
+  "Man, 40s, distinguished salt-and-pepper stubble, relaxed open-collar shirt, approachable authority",
+  "Woman, 28-35, fitness-focused, athletic wear, healthy glow, motivational energy",
+];
+
+const ENVIRONMENT_SUGGESTIONS = [
+  "Modern minimalist kitchen, warm oak lower cabinets, white marble countertop, large window, warm morning light",
+  "Cozy living room, natural linen couch, warm wood floor, soft indirect lighting, indoor plants",
+  "Bright spa-like bathroom, white subway tiles, clean surfaces, soft diffused light from above",
+  "Neutral home office, light wooden desk, warm lamp, organized minimal background",
+  "Outdoor garden patio, warm golden afternoon light, natural greenery, relaxed summer feel",
+  "Light airy bedroom, neutral linen bedding, sheer curtains, soft morning window light",
+  "Open-plan modern apartment, high ceilings, white walls, minimal Scandinavian furniture, natural light",
+  "Urban rooftop terrace, city skyline background, warm golden hour lighting",
+  "Scandinavian-style interior, light pine wood, muted sage and cream tones, calm atmosphere",
+  "Clean studio setup, neutral light gray gradient backdrop, professional soft-box lighting",
+];
+
 // ─── Brand Picker ─────────────────────────────────────────────────────────────
 
 function BrandPicker({ onSelect }: { onSelect: (b: Brand) => void }) {
@@ -63,13 +91,13 @@ function BrandPicker({ onSelect }: { onSelect: (b: Brand) => void }) {
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
-const STEPS = ["Setup", "Script", "Frames", "Prompt", "Video"];
+const STEPS = ["Setup", "Referenties", "Script", "Frames", "Prompt", "Video"];
 
 function StepBar({ current }: { current: number }) {
   return (
-    <div className="flex items-center gap-0 mb-8">
+    <div className="flex items-center gap-0 mb-8 overflow-x-auto pb-1">
       {STEPS.map((label, i) => (
-        <div key={label} className="flex items-center">
+        <div key={label} className="flex items-center flex-shrink-0">
           <div className={`flex items-center gap-1.5 ${i <= current ? "text-gray-900 dark:text-white" : "text-gray-400 dark:text-gray-600"}`}>
             <div className={`flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold ${
               i < current ? "bg-[#C7F56F] text-[#1a1a1a]" : i === current ? "bg-[#C7F56F]/20 text-gray-800 dark:text-white border-2 border-[#C7F56F]" : "bg-gray-100 dark:bg-gray-800 text-gray-400"
@@ -79,7 +107,7 @@ function StepBar({ current }: { current: number }) {
             <span className="text-xs font-medium hidden sm:inline">{label}</span>
           </div>
           {i < STEPS.length - 1 && (
-            <div className={`mx-2 h-px w-8 sm:w-12 ${i < current ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`} />
+            <div className={`mx-2 h-px w-6 sm:w-10 flex-shrink-0 ${i < current ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`} />
           )}
         </div>
       ))}
@@ -101,13 +129,26 @@ const PLATFORMS: Array<{ value: VideoPlatform; label: string; icon: string }> = 
   { value: "youtube-shorts", label: "Shorts", icon: "▶️" },
 ];
 
+interface SetupConfig {
+  productId: string;
+  productImageIndex: number;
+  videoStyle: VideoStyle;
+  platform: VideoPlatform;
+  numScenes: number;
+  includesPerson: boolean;
+  activeDesire: string | null;
+  awarenessLevel: AwarenessLevel;
+  activeAngleKey: string | null;
+  notes: string;
+}
+
 function SetupStep({
-  products, desires, angles, onStart,
+  products, desires, angles, onNext,
 }: {
   products: Product[];
   desires: string[];
   angles: CreativeAngle[];
-  onStart: (cfg: SetupConfig) => void;
+  onNext: (cfg: SetupConfig) => void;
 }) {
   const { lang } = useLanguage();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
@@ -142,12 +183,10 @@ function SetupStep({
         </div>
       </div>
 
-      {/* Product reference image */}
       {productImages.length > 1 && (
         <div>
           <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
             {lang === "nl" ? "Productreferentie foto" : "Product reference photo"}
-            <span className="ml-1 text-gray-400 font-normal">{lang === "nl" ? "(wordt als @ImageN meegegeven aan Seedance)" : "(passed as @ImageN to Seedance)"}</span>
           </p>
           <div className="flex gap-2">
             {productImages.slice(0, 6).map((url, i) => (
@@ -240,13 +279,13 @@ function SetupStep({
       {desires.length > 0 && (
         <div>
           <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Customer desire" : "Customer desire"}
+            Customer desire
             <span className="ml-1 font-normal text-gray-400">{lang === "nl" ? "(script wordt hierop gefocust)" : "(script will focus on this)"}</span>
           </p>
           <div className="flex flex-wrap gap-2">
             {desires.map(d => (
               <button key={d} onClick={() => setActiveDesire(activeDesire === d ? null : d)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors text-left ${
+                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                   activeDesire === d ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
                 }`}>
                 {d}
@@ -258,13 +297,10 @@ function SetupStep({
 
       {/* Awareness level */}
       <div>
-        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Awareness level" : "Awareness level"}
-        </p>
+        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Awareness level</p>
         <div className="flex flex-wrap gap-2">
           {AWARENESS_LEVELS.map(a => (
             <button key={a.value} onClick={() => setAwarenessLevel(a.value)}
-              title={lang === "nl" ? a.descNl : a.desc}
               className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
                 awarenessLevel === a.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
               }`}>
@@ -315,30 +351,336 @@ function SetupStep({
       </div>
 
       <button
-        onClick={() => onStart({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes })}
+        onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes })}
         disabled={!productId}
         className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40"
       >
-        {lang === "nl" ? "Script genereren →" : "Generate Script →"}
+        {lang === "nl" ? "Volgende →" : "Next →"}
       </button>
     </div>
   );
 }
 
-interface SetupConfig {
-  productId: string;
-  productImageIndex: number;
-  videoStyle: VideoStyle;
-  platform: VideoPlatform;
-  numScenes: number;
-  includesPerson: boolean;
-  activeDesire: string | null;
-  awarenessLevel: AwarenessLevel;
-  activeAngleKey: string | null;
-  notes: string;
+// ─── Step 1: References ───────────────────────────────────────────────────────
+
+interface RefState {
+  tab: "upload" | "generate";
+  prompt: string;
+  url: string | null;
+  loading: boolean;
 }
 
-// ─── Step 1: Script ───────────────────────────────────────────────────────────
+function RefPanel({
+  type, label, suggestions, state, brandId, sessionId, onChange,
+}: {
+  type: "character" | "environment";
+  label: string;
+  suggestions: string[];
+  state: RefState;
+  brandId: string;
+  sessionId: string;
+  onChange: (s: RefState) => void;
+}) {
+  const { lang } = useLanguage();
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function randomSuggestion() {
+    const current = state.prompt;
+    const others = suggestions.filter(s => s !== current);
+    const pick = others[Math.floor(Math.random() * others.length)];
+    onChange({ ...state, prompt: pick });
+  }
+
+  async function handleGenerate() {
+    if (!state.prompt.trim()) return;
+    onChange({ ...state, loading: true });
+    const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/references`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ type, prompt: state.prompt }),
+    });
+    if (res.ok) {
+      const { url } = await res.json() as { url: string };
+      onChange({ ...state, loading: false, url });
+    } else {
+      onChange({ ...state, loading: false });
+    }
+  }
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    onChange({ ...state, loading: true });
+    const fd = new FormData();
+    fd.append("file", file);
+    fd.append("type", type);
+    const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/references`, {
+      method: "PATCH",
+      body: fd,
+    });
+    if (res.ok) {
+      const { url } = await res.json() as { url: string };
+      onChange({ ...state, loading: false, url });
+    } else {
+      onChange({ ...state, loading: false });
+    }
+    e.target.value = "";
+  }
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
+        <span className="text-base">{type === "character" ? "👤" : "🏠"}</span>
+        <span className="text-sm font-semibold text-gray-800 dark:text-white">{label}</span>
+        {/* Tabs */}
+        <div className="ml-auto flex gap-1">
+          {(["generate", "upload"] as const).map(t => (
+            <button key={t} onClick={() => onChange({ ...state, tab: t })}
+              className={`rounded-md px-3 py-1 text-xs font-medium transition-colors ${
+                state.tab === t ? "bg-[#C7F56F] text-[#1a1a1a]" : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}>
+              {t === "generate" ? (lang === "nl" ? "Genereren" : "Generate") : (lang === "nl" ? "Uploaden" : "Upload")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="p-4 space-y-3">
+        {/* Current image preview or placeholder */}
+        {state.url ? (
+          <div className="relative rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800 aspect-[9/16] max-w-[120px]">
+            <Image src={state.url} alt={label} fill className="object-cover" unoptimized />
+            <button
+              onClick={() => onChange({ ...state, url: null })}
+              className="absolute top-1 right-1 flex h-5 w-5 items-center justify-center rounded-full bg-black/60 text-white text-[10px] hover:bg-black/80"
+            >
+              ✕
+            </button>
+          </div>
+        ) : state.loading ? (
+          <div className="flex h-20 items-center justify-center gap-2">
+            <svg className="h-4 w-4 animate-spin text-[#C7F56F]" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+            </svg>
+            <span className="text-xs text-gray-400">{lang === "nl" ? "Genereren..." : "Generating..."}</span>
+          </div>
+        ) : null}
+
+        {state.tab === "generate" && (
+          <>
+            {/* Suggestion chips + random button */}
+            <div className="flex items-center gap-2">
+              <p className="text-xs text-gray-500 dark:text-gray-400 flex-1">
+                {lang === "nl" ? "Prompt of kies een suggestie:" : "Prompt or pick a suggestion:"}
+              </p>
+              <button onClick={randomSuggestion}
+                title={lang === "nl" ? "Willekeurige suggestie" : "Random suggestion"}
+                className="flex h-7 w-7 items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 text-gray-400 hover:border-[#C7F56F] hover:text-gray-700 dark:hover:text-white transition-colors text-sm">
+                ⟳
+              </button>
+            </div>
+
+            {/* Suggestion pills */}
+            <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+              {suggestions.map(s => (
+                <button key={s} onClick={() => onChange({ ...state, prompt: s })}
+                  className={`rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors text-left leading-tight ${
+                    state.prompt === s ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+                  }`}>
+                  {s.length > 55 ? s.slice(0, 55) + "…" : s}
+                </button>
+              ))}
+            </div>
+
+            {/* Prompt textarea */}
+            <textarea
+              value={state.prompt}
+              onChange={e => onChange({ ...state, prompt: e.target.value })}
+              rows={2}
+              placeholder={type === "character"
+                ? (lang === "nl" ? "Beschrijf het karakter (leeftijd, haar, kleding, stijl)..." : "Describe the character (age, hair, outfit, style)...")
+                : (lang === "nl" ? "Beschrijf de ruimte (kamer, kleuren, licht, sfeer)..." : "Describe the space (room, colors, light, mood)...")}
+              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50"
+            />
+
+            <button onClick={handleGenerate} disabled={!state.prompt.trim() || state.loading}
+              className="rounded-lg bg-[#C7F56F] px-4 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40">
+              {state.loading
+                ? (lang === "nl" ? "Genereren..." : "Generating...")
+                : (lang === "nl" ? "Referentie genereren" : "Generate reference")}
+            </button>
+          </>
+        )}
+
+        {state.tab === "upload" && (
+          <>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              {lang === "nl"
+                ? "Upload een foto als referentie. Zorg dat de achtergrond neutraal is en de persoon/ruimte duidelijk zichtbaar."
+                : "Upload a photo as reference. Make sure the background is neutral and the person/space is clearly visible."}
+            </p>
+            <button onClick={() => fileRef.current?.click()} disabled={state.loading}
+              className="flex items-center gap-2 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 px-4 py-3 text-xs text-gray-500 dark:text-gray-400 hover:border-[#C7F56F] hover:text-gray-700 dark:hover:text-white transition-colors disabled:opacity-40">
+              <span>📎</span>
+              {lang === "nl" ? "Afbeelding kiezen" : "Choose image"}
+            </button>
+            <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function ReferencesStep({
+  brandId, sessionId, includesPerson, onGenerateScript,
+}: {
+  brandId: string;
+  sessionId: string;
+  includesPerson: boolean;
+  onGenerateScript: (characterPrompt?: string, environmentPrompt?: string) => void;
+}) {
+  const { lang } = useLanguage();
+  const [character, setCharacter] = useState<RefState>({ tab: "generate", prompt: CHARACTER_SUGGESTIONS[0], url: null, loading: false });
+  const [environment, setEnvironment] = useState<RefState>({ tab: "generate", prompt: ENVIRONMENT_SUGGESTIONS[0], url: null, loading: false });
+
+  const isGenerating = character.loading || environment.loading;
+
+  return (
+    <div className="space-y-6">
+      {/* Layout: left panel + right sidebar */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_280px]">
+        {/* Left: panels */}
+        <div className="space-y-5">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+              {lang === "nl" ? "Referentieafbeeldingen" : "Reference images"}
+            </h3>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {lang === "nl"
+                ? "Genereer of upload referenties. Nano Banana gebruikt deze als visueel anker voor alle scènes."
+                : "Generate or upload references. Nano Banana uses these as a visual anchor across all scenes."}
+            </p>
+          </div>
+
+          {includesPerson && (
+            <RefPanel
+              type="character"
+              label={lang === "nl" ? "Karakter" : "Character"}
+              suggestions={CHARACTER_SUGGESTIONS}
+              state={character}
+              brandId={brandId}
+              sessionId={sessionId}
+              onChange={setCharacter}
+            />
+          )}
+
+          <RefPanel
+            type="environment"
+            label={lang === "nl" ? "Omgeving" : "Environment"}
+            suggestions={ENVIRONMENT_SUGGESTIONS}
+            state={environment}
+            brandId={brandId}
+            sessionId={sessionId}
+            onChange={setEnvironment}
+          />
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => onGenerateScript(
+                character.url ? character.prompt : undefined,
+                environment.url ? environment.prompt : undefined,
+              )}
+              disabled={isGenerating}
+              className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40"
+            >
+              {lang === "nl" ? "Script genereren →" : "Generate Script →"}
+            </button>
+            <span className="text-xs text-gray-400">
+              {lang === "nl" ? "Referenties zijn optioneel" : "References are optional"}
+            </span>
+          </div>
+        </div>
+
+        {/* Right: explainer sidebar */}
+        <div className="space-y-4">
+          <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 overflow-hidden">
+            <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+              <p className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                {lang === "nl" ? "Wat is een goede referentie?" : "What makes a good reference?"}
+              </p>
+            </div>
+
+            <div className="p-4 space-y-4">
+              {/* Character example */}
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {lang === "nl" ? "Karakter" : "Character"}
+                </p>
+                {/* Placeholder image */}
+                <div className="relative rounded-lg overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 aspect-[3/4] w-full flex items-center justify-center mb-2">
+                  <div className="text-center">
+                    <div className="text-3xl mb-1">👤</div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Placeholder</p>
+                  </div>
+                </div>
+                <ul className="space-y-1">
+                  {[
+                    lang === "nl" ? "Neutrale achtergrond" : "Neutral background",
+                    lang === "nl" ? "Gezicht + bovenlijf zichtbaar" : "Face + upper body visible",
+                    lang === "nl" ? "Goede belichting" : "Good lighting",
+                    lang === "nl" ? "1 persoon" : "1 person only",
+                  ].map(t => (
+                    <li key={t} className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                      <span className="text-[#C7F56F]">✓</span> {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="border-t border-gray-200 dark:border-gray-700" />
+
+              {/* Environment example */}
+              <div>
+                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">
+                  {lang === "nl" ? "Omgeving" : "Environment"}
+                </p>
+                <div className="relative rounded-lg overflow-hidden bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 aspect-[3/4] w-full flex items-center justify-center mb-2">
+                  <div className="text-center">
+                    <div className="text-3xl mb-1">🏠</div>
+                    <p className="text-[10px] text-gray-500 dark:text-gray-400">Placeholder</p>
+                  </div>
+                </div>
+                <ul className="space-y-1">
+                  {[
+                    lang === "nl" ? "Leeg, geen mensen" : "Empty, no people",
+                    lang === "nl" ? "Herkenbare ruimte" : "Recognizable space",
+                    lang === "nl" ? "Consistente belichting" : "Consistent lighting",
+                    lang === "nl" ? "Passend bij je brand" : "Matches your brand",
+                  ].map(t => (
+                    <li key={t} className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400">
+                      <span className="text-[#C7F56F]">✓</span> {t}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-relaxed">
+            {lang === "nl"
+              ? "De referentiebeelden worden als visueel anker meegestuurd bij elke scène-generatie. Hoe gedetailleerder de beschrijving, hoe consistenter het resultaat."
+              : "Reference images are sent as visual anchors with every scene frame generation. The more detailed your description, the more consistent the result."}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Step 2: Script ───────────────────────────────────────────────────────────
 
 function ScriptStep({
   scenes, onSave, onRegenerate, onNext,
@@ -366,7 +708,7 @@ function ScriptStep({
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-            {lang === "nl" ? "Script" : "Script"}
+            Script
             <span className="ml-2 text-xs text-gray-400 font-normal">{scenes.length} {lang === "nl" ? "scènes" : "scenes"} · 15s</span>
           </h3>
           <p className="text-xs text-gray-400 mt-0.5">
@@ -388,7 +730,7 @@ function ScriptStep({
             value={regenNotes}
             onChange={e => setRegenNotes(e.target.value)}
             rows={3}
-            placeholder={lang === "nl" ? "Bijv: maak scène 2 grappiger, begin met een probleem-hook, minder product in scène 1..." : "E.g: make scene 2 funnier, start with a problem-hook, less product in scene 1..."}
+            placeholder={lang === "nl" ? "Bijv: maak scène 2 grappiger, begin met een probleem-hook..." : "E.g: make scene 2 funnier, start with a problem-hook..."}
             className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-700 px-3 py-2 text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50"
           />
           <div className="flex gap-2">
@@ -434,7 +776,7 @@ function ScriptStep({
               </div>
               <div>
                 <p className="text-[10px] font-medium text-gray-400 dark:text-gray-500 mb-1 uppercase tracking-wide">
-                  {lang === "nl" ? "Voiceover / Caption" : "Voiceover / Caption"}
+                  Voiceover / Caption
                 </p>
                 <textarea
                   value={scene.voiceover}
@@ -476,7 +818,7 @@ function ScriptStep({
   );
 }
 
-// ─── Step 2: Frames ───────────────────────────────────────────────────────────
+// ─── Step 3: Frames ───────────────────────────────────────────────────────────
 
 function FrameCard({
   scene, brandId, sessionId, onUpdated,
@@ -533,7 +875,6 @@ function FrameCard({
 
   return (
     <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      {/* Frame number + title */}
       <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800">
         <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C7F56F]/20 text-[10px] font-bold text-gray-800 dark:text-[#C7F56F]">
           {scene.index}
@@ -542,7 +883,6 @@ function FrameCard({
         <span className="ml-auto text-[10px] text-gray-400">{scene.duration_s}s</span>
       </div>
 
-      {/* Image area */}
       <div className="relative bg-gray-50 dark:bg-gray-800 aspect-[9/16]">
         {hasImage ? (
           <Image src={scene.image_url!} alt={scene.title} fill className="object-cover" unoptimized />
@@ -563,12 +903,10 @@ function FrameCard({
         )}
       </div>
 
-      {/* Voiceover */}
       <div className="px-3 py-2 text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800 line-clamp-2">
         {scene.voiceover}
       </div>
 
-      {/* Actions */}
       <div className="flex gap-1.5 px-3 pb-3">
         <button onClick={() => setShowEdit(v => !v)} disabled={busy}
           className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 disabled:opacity-40">
@@ -581,7 +919,6 @@ function FrameCard({
         <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
       </div>
 
-      {/* Edit panel */}
       {showEdit && (
         <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-3 space-y-2.5 bg-gray-50 dark:bg-gray-800/50">
           <div className="flex gap-2">
@@ -716,7 +1053,7 @@ function FramesStep({
   );
 }
 
-// ─── Step 3: Prompt ───────────────────────────────────────────────────────────
+// ─── Step 4: Prompt ───────────────────────────────────────────────────────────
 
 function PromptStep({
   scenes, seedancePrompt, numScenes, onSave, onGenerate,
@@ -733,9 +1070,7 @@ function PromptStep({
   return (
     <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
-          {lang === "nl" ? "Seedance 2 Prompt" : "Seedance 2 Prompt"}
-        </h3>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Seedance 2 Prompt</h3>
         <p className="text-xs text-gray-400 mt-0.5">
           {lang === "nl"
             ? `@Image1–@Image${numScenes} zijn jouw scèneframes. @Image${numScenes + 1} is de productreferentie.`
@@ -743,7 +1078,6 @@ function PromptStep({
         </p>
       </div>
 
-      {/* Frame preview strip */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {scenes.sort((a, b) => a.index - b.index).map(scene => (
           <div key={scene.index} className="flex-shrink-0 text-center">
@@ -789,7 +1123,7 @@ function PromptStep({
   );
 }
 
-// ─── Step 4: Video ────────────────────────────────────────────────────────────
+// ─── Step 5: Video ────────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, { en: string; nl: string }> = {
   generating_video: { en: "Rendering with Seedance 2… this takes 3–8 minutes", nl: "Renderen met Seedance 2… dit duurt 3–8 minuten" },
@@ -833,13 +1167,11 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
           <p className="text-sm text-gray-700 dark:text-gray-200">{label}</p>
         </div>
       )}
-
       {phase === "failed" && (
         <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           {errorMsg ?? label}
         </div>
       )}
-
       {videoUrl && (
         <div className="space-y-4">
           <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
@@ -864,16 +1196,21 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
   const [numScenes, setNumScenes] = useState(5);
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [productImageIndex, setProductImageIndex] = useState(0);
+  const [includesPerson, setIncludesPerson] = useState(true);
+  const [setupConfig, setSetupConfig] = useState<SetupConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { lang } = useLanguage();
 
-  async function handleStart(cfg: SetupConfig) {
+  // Step 0 → 1: create session, store config, advance to references
+  async function handleSetupNext(cfg: SetupConfig) {
     setLoading(true);
     setError(null);
     setProductId(cfg.productId);
     setProductImageIndex(cfg.productImageIndex);
     setNumScenes(cfg.numScenes);
+    setIncludesPerson(cfg.includesPerson);
+    setSetupConfig(cfg);
 
     const res = await fetch(`/api/brands/${brand.id}/video-sessions`, {
       method: "POST",
@@ -885,11 +1222,39 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
         num_scenes: cfg.numScenes,
         duration: 15,
         includes_person: cfg.includesPerson,
-        product_image_index: cfg.productImageIndex,
-        active_desire: cfg.activeDesire || undefined,
-        awareness_level: cfg.awarenessLevel,
-        active_angle_key: cfg.activeAngleKey || undefined,
-        notes: cfg.notes || undefined,
+      }),
+    });
+
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      setError((d as { error?: string }).error ?? "Failed to create session.");
+      setLoading(false);
+      return;
+    }
+
+    const { session } = await res.json() as { session: VideoSession };
+    setSessionId(session.id);
+    setLoading(false);
+    setStep(1);
+  }
+
+  // Step 1 → 2: generate script using stored setup config + reference prompts
+  async function handleGenerateScript(characterRefPrompt?: string, environmentRefPrompt?: string) {
+    if (!sessionId || !setupConfig) return;
+    setLoading(true);
+    setError(null);
+
+    const res = await fetch(`/api/brands/${brand.id}/video-sessions/${sessionId}/script`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_image_index: setupConfig.productImageIndex,
+        active_desire: setupConfig.activeDesire || undefined,
+        awareness_level: setupConfig.awarenessLevel,
+        active_angle_key: setupConfig.activeAngleKey || undefined,
+        notes: setupConfig.notes || undefined,
+        character_ref_prompt: characterRefPrompt,
+        environment_ref_prompt: environmentRefPrompt,
       }),
     });
 
@@ -900,12 +1265,11 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
       return;
     }
 
-    const { session } = await res.json() as { session: VideoSession };
-    setSessionId(session.id);
-    setScenes(session.scenes);
-    setSeedancePrompt(session.seedance_prompt ?? "");
+    const { scenes: newScenes, seedance_prompt } = await res.json() as { scenes: SceneScript[]; seedance_prompt: string };
+    setScenes(newScenes);
+    setSeedancePrompt(seedance_prompt ?? "");
     setLoading(false);
-    setStep(1);
+    setStep(2);
   }
 
   async function handleSaveScript(updatedScenes: SceneScript[]) {
@@ -924,7 +1288,7 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
     const res = await fetch(`/api/brands/${brand.id}/video-sessions/${sessionId}/script`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ action: "regenerate", notes, includes_person: true, product_image_index: productImageIndex }),
+      body: JSON.stringify({ action: "regenerate", notes, includes_person: includesPerson, product_image_index: productImageIndex }),
     });
     if (res.ok) {
       const { scenes: newScenes, seedance_prompt } = await res.json() as { scenes: SceneScript[]; seedance_prompt: string };
@@ -957,7 +1321,7 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
       body: JSON.stringify({ product_image_url: productImageUrl }),
     });
 
-    setStep(4);
+    setStep(5);
   }
 
   if (loading) {
@@ -968,7 +1332,9 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Script genereren..." : "Generating script…"}
+          {step === 1
+            ? (lang === "nl" ? "Script genereren..." : "Generating script…")
+            : (lang === "nl" ? "Laden..." : "Loading…")}
         </p>
       </div>
     );
@@ -986,30 +1352,39 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
           products={products}
           desires={dna?.data?.customer_desires ?? []}
           angles={strategy?.creative_angles ?? []}
-          onStart={handleStart}
+          onNext={handleSetupNext}
         />
       )}
 
       {step === 1 && sessionId && (
-        <ScriptStep
-          scenes={scenes}
-          onSave={handleSaveScript}
-          onRegenerate={handleRegenScript}
-          onNext={() => setStep(2)}
+        <ReferencesStep
+          brandId={brand.id}
+          sessionId={sessionId}
+          includesPerson={includesPerson}
+          onGenerateScript={handleGenerateScript}
         />
       )}
 
       {step === 2 && sessionId && (
-        <FramesStep
+        <ScriptStep
           scenes={scenes}
-          brandId={brand.id}
-          sessionId={sessionId}
-          onScenesUpdate={setScenes}
+          onSave={handleSaveScript}
+          onRegenerate={handleRegenScript}
           onNext={() => setStep(3)}
         />
       )}
 
       {step === 3 && sessionId && (
+        <FramesStep
+          scenes={scenes}
+          brandId={brand.id}
+          sessionId={sessionId}
+          onScenesUpdate={setScenes}
+          onNext={() => setStep(4)}
+        />
+      )}
+
+      {step === 4 && sessionId && (
         <PromptStep
           scenes={scenes}
           seedancePrompt={seedancePrompt}
@@ -1019,7 +1394,7 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
         />
       )}
 
-      {step === 4 && sessionId && (
+      {step === 5 && sessionId && (
         <VideoStep brandId={brand.id} sessionId={sessionId} />
       )}
     </div>

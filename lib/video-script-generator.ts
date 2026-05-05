@@ -120,6 +120,8 @@ export async function generateVideoScript({
   activeDesire,
   awarenessLevel,
   activeAngleDescription,
+  characterRefDescription,
+  environmentRefDescription,
 }: {
   dna: BrandDnaData;
   product: Product;
@@ -134,6 +136,8 @@ export async function generateVideoScript({
   activeDesire?: string;
   awarenessLevel?: string;
   activeAngleDescription?: string;
+  characterRefDescription?: string;
+  environmentRefDescription?: string;
 }): Promise<ScriptGeneratorOutput> {
   const aspectRatio = getVideoAspectRatio();
   const durationPerScene = Math.round((duration / numScenes) * 10) / 10;
@@ -226,6 +230,17 @@ Colors: ${[dna.accent_color, dna.background_color, dna.lettertype_color].filter(
 
 Product: ${product.name}
 ${product.description ? `Description: ${product.description}` : ""}`;
+
+  // Reference image anchors — lock visual bible to pre-generated refs
+  if (characterRefDescription || environmentRefDescription) {
+    userContent += `\n\nREFERENCE IMAGES HAVE BEEN PRE-GENERATED:`;
+    if (characterRefDescription) {
+      userContent += `\nCharacter reference: "${characterRefDescription}" — your visual_bible.character MUST exactly match this description word-for-word. The frame generator will use this as a reference image.`;
+    }
+    if (environmentRefDescription) {
+      userContent += `\nEnvironment reference: "${environmentRefDescription}" — your visual_bible.environment MUST exactly match this description word-for-word. The frame generator will use this as a reference image.`;
+    }
+  }
 
   if (activeDesire) {
     userContent += `\n\nFOCUS DESIRE: "${activeDesire}" — every scene must connect to this desire. Make the viewer feel this desire more acutely and position the product as the answer.`;
