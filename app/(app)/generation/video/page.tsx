@@ -1421,7 +1421,7 @@ function VideoWizard({
 
   // Step 1 → 2: generate script using stored setup config + reference prompts
   async function handleGenerateScript(characterRefPrompt?: string, environmentRefPrompt?: string) {
-    if (!sessionId || !setupConfig) return;
+    if (!sessionId) return;
     setLoading(true);
     setError(null);
 
@@ -1429,11 +1429,11 @@ function VideoWizard({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        product_image_index: setupConfig.productImageIndex,
-        active_desire: setupConfig.activeDesire || undefined,
-        awareness_level: setupConfig.awarenessLevel,
-        active_angle_key: setupConfig.activeAngleKey || undefined,
-        notes: setupConfig.notes || undefined,
+        product_image_index: setupConfig?.productImageIndex ?? 0,
+        active_desire: setupConfig?.activeDesire || undefined,
+        awareness_level: setupConfig?.awarenessLevel ?? "problem-aware",
+        active_angle_key: setupConfig?.activeAngleKey || undefined,
+        notes: setupConfig?.notes || undefined,
         character_ref_prompt: characterRefPrompt,
         environment_ref_prompt: environmentRefPrompt,
       }),
