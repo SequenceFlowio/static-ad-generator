@@ -91,8 +91,8 @@ export default function ProductPage() {
       body: formData,
     });
     if (res.ok) {
-      const updated: Product = await res.json();
-      setProduct(updated);
+      const { image_urls } = await res.json() as { image_urls: string[] };
+      setProduct(prev => prev ? { ...prev, image_urls } : prev);
     }
     setUploadingImage(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -107,8 +107,8 @@ export default function ProductPage() {
       body: JSON.stringify({ url }),
     });
     if (res.ok) {
-      const updated: Product = await res.json();
-      setProduct(updated);
+      const { image_urls } = await res.json() as { image_urls: string[] };
+      setProduct(prev => prev ? { ...prev, image_urls } : prev);
     }
     setDeletingImageUrl(null);
   }
