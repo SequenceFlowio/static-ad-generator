@@ -26,3 +26,10 @@ yarn-error.log*
 # TypeScript
 *.tsbuildinfo
 next-env.d.ts
+
+# Local reference files
+Open-Higgsfield-AI-main/
+"Inspo ads/"
+Inspo\ ads/
+WEBAPP_LLM_DOCS.txt
+sequenceflow-ui.css
