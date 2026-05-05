@@ -55,12 +55,20 @@ export async function generateVideoScript({
   const durationPerScene = Math.round((duration / numScenes) * 10) / 10;
   const isRefinement = !!existingScenes && !!notes;
 
-  const systemPrompt = `You are a video creative director for DTC brands.
+  const systemPrompt = `You are a video creative director for DTC brands specializing in performance-driven social video.
 
 Generate a ${duration}-second ${videoStyle} video script for ${platform} (${aspectRatio} vertical).
 The video has exactly ${numScenes} scenes. Each scene is approximately ${durationPerScene} seconds.
 Person in video: ${includesPerson ? "Yes — a real creator/user appears in scenes" : "No — product and hands only, no face"}.
 Style: ${STYLE_INSTRUCTIONS[videoStyle]}
+
+CRITICAL: The script structure MUST vary based on the awareness level provided. Do not use a fixed template. Each awareness level has its own required scene order and rules. Follow them exactly.
+
+GLOBAL FORBIDDEN (apply to every script regardless of awareness level):
+- "premium quality", "high quality", "amazing", "incredible" — these are filler words, never use them
+- Forced brand introductions like "Meet [brand]" or "Introducing [product]" unless awareness level is product-aware or most-aware
+- Unnatural ad tone — voiceover must sound like a real person, not a commercial script
+- Listing features without emotional context — every benefit needs to connect to a feeling or outcome
 
 Brand language: "${dna.language}" — ALL voiceover/caption text MUST be in this language. Scene titles, visual_description, and nano_prompt MUST be in English.
 
@@ -110,21 +118,90 @@ ${product.description ? `Description: ${product.description}` : ""}`;
     userContent += `\nCustomer desires: ${dna.customer_desires.join(", ")}`;
   }
 
-  // Awareness level
+  // Awareness level — enforced scene-by-scene structure
   if (awarenessLevel) {
-    const awarenessInstructions: Record<string, string> = {
-      "unaware":        "The viewer does NOT know they have a problem. Use pattern interrupts and pure curiosity — no product mention until at least scene 3.",
-      "problem-aware":  "The viewer knows the problem but not the solution. Lead with pain/frustration in the hook. Empathy first, product second.",
-      "solution-aware": "The viewer knows solutions exist and is comparing. Focus on why THIS product beats alternatives. Specific proof and differentiators.",
-      "product-aware":  "The viewer knows the product but hasn't bought. Use social proof, specific results, urgency. Address objections directly.",
-      "most-aware":     "The viewer is ready to buy. Lead with the offer, deal, or limited-time hook. Be direct. CTA in every scene.",
+    const awarenessBlocks: Record<string, string> = {
+      "unaware": `AWARENESS LEVEL: UNAWARE
+Goal: trigger curiosity — viewer does NOT know they have a problem.
+Required scene structure (${numScenes} scenes, adapt proportionally):
+  Scene 1 — Pattern interrupt. Unexpected or striking visual/statement. No context given.
+  Scene 2 — Curiosity / confusion. Deepen the mystery or tension.
+  Scene 3 — Unexpected insight. Reframe their world slightly.
+  Scene 4 — Soft reveal. Product appears subtly, almost incidentally.
+  Scene 5 — Open loop or intrigue. Leave them wanting more.
+STRICT RULES:
+- Product must NOT be mentioned or shown before scene 4.
+- No brand name in voiceover until scene 4 at earliest.
+- No selling language, no CTAs, no benefits listed.
+- Tone: curious, slightly strange, intriguing.`,
+
+      "problem-aware": `AWARENESS LEVEL: PROBLEM AWARE
+Goal: recognition + emotional buildup — viewer knows the problem, not the solution.
+Required scene structure (${numScenes} scenes, adapt proportionally):
+  Scene 1 — Frustration hook. Open with the specific pain point. Make them feel seen immediately.
+  Scene 2 — Recognition. Deepen the problem. Specific detail that makes them nod.
+  Scene 3 — Micro-solution attempt (show what they've tried and why it failed). Still NO product.
+  Scene 4 — Product appears for the first time. Subtle, natural reveal. Not a hard intro.
+  Scene 5 — Payoff. Show the emotional result, not just the functional one.
+STRICT RULES:
+- Product is FORBIDDEN in scenes 1, 2, and 3.
+- NEVER write "Meet [brand]" or any forced brand introduction.
+- No hype or superlatives. Tone must feel empathetic and real.
+- Hook must name the specific frustration, not a generic problem.`,
+
+      "solution-aware": `AWARENESS LEVEL: SOLUTION AWARE
+Goal: show a better approach — viewer is comparing solutions.
+Required scene structure (${numScenes} scenes, adapt proportionally):
+  Scene 1 — Problem reminder. Brief, sharp. They already know it.
+  Scene 2 — Solution comparison. Acknowledge what they've probably tried.
+  Scene 3 — Why most solutions fail. Be specific about the mechanism, not vague criticism.
+  Scene 4 — Introduce product as the better way. Focus on the mechanism that makes it different.
+  Scene 5 — Result. Concrete, believable outcome.
+STRICT RULES:
+- Product allowed from scene 3 onward.
+- Focus on mechanism and differentiation, NOT hype or vague claims.
+- No "premium quality" or generic benefit language.
+- Tone: informed, confident, peer-to-peer.`,
+
+      "product-aware": `AWARENESS LEVEL: PRODUCT AWARE
+Goal: remove doubt — viewer knows the product but hasn't committed.
+Required scene structure (${numScenes} scenes, adapt proportionally):
+  Scene 1 — Direct hook about the product. No buildup needed.
+  Scene 2 — Key benefit. One specific, concrete thing.
+  Scene 3 — Proof or real usage. Show it working, not just existing.
+  Scene 4 — Reinforcement. Address the unspoken objection or hesitation.
+  Scene 5 — CTA. Clear, direct, low-friction.
+STRICT RULES:
+- Product can and should appear immediately in scene 1.
+- No long storytelling or problem buildup.
+- Every scene must earn trust or reduce friction.
+- Tone: direct, confident, social-proof-driven.`,
+
+      "most-aware": `AWARENESS LEVEL: MOST AWARE / READY TO BUY
+Goal: conversion — get them to act now.
+Required scene structure (${numScenes} scenes, adapt proportionally):
+  Scene 1 — Lead with the offer, deal, or scarcity hook.
+  Scene 2 — Urgency or incentive. Why now, not later.
+  Scene 3 — Core benefit reminder. One line, max impact.
+  Scene 4 — Social proof. Real signal (number, result, person).
+  Scene 5 — CTA. Extremely direct. Tell them exactly what to do.
+STRICT RULES:
+- No storytelling. No slow buildup. Every second must push toward action.
+- Short voiceover lines only — punchy, imperative.
+- Tone: urgent, warm but direct.`,
     };
-    userContent += `\n\nAWARENESS LEVEL: ${awarenessLevel}\n${awarenessInstructions[awarenessLevel] ?? ""}`;
+
+    userContent += `\n\n${awarenessBlocks[awarenessLevel] ?? `AWARENESS LEVEL: ${awarenessLevel}`}`;
   }
 
   // Creative angle
   if (activeAngleDescription) {
-    userContent += `\n\nCREATIVE ANGLE: ${activeAngleDescription} — structure the narrative arc of all scenes around this angle.`;
+    userContent += `\n\nCREATIVE ANGLE: ${activeAngleDescription}
+This angle defines the emotional tone, visual direction, and hook style for every scene.
+- The opening hook must be rooted in this angle — make it immediately recognizable.
+- Visual descriptions must reflect this angle's aesthetic (chaos vs calm, mismatch vs harmony, etc.).
+- The arc across all scenes must feel like a natural expression of this angle, not a bolt-on label.
+- Do NOT name the angle explicitly in voiceover. Let it come through the visuals and language.`;
   }
 
   if (isRefinement && existingScenes) {
@@ -136,7 +213,9 @@ ${notes}
 
 Apply these notes while keeping the overall ${numScenes}-scene structure. Only change what the notes ask for.`;
   } else {
-    userContent += `\n\nGenerate a fresh ${numScenes}-scene script. Hook immediately — first 2 seconds must stop the scroll.`;
+    userContent += `\n\nGenerate a fresh ${numScenes}-scene script following the awareness level structure above exactly.
+Hook immediately — first 2 seconds must stop the scroll based on the correct hook type for this awareness level.
+Do NOT default to a generic problem→solution→product arc. The structure is defined above — follow it.`;
     if (notes) {
       userContent += `\n\nExtra directorial notes: ${notes}`;
     }
