@@ -91,6 +91,7 @@ export async function POST(
     phase: "script",
     scenes: scriptOutput.scenes,
     seedance_prompt: scriptOutput.seedance_prompt,
+    visual_bible: scriptOutput.visual_bible ?? null,
   }).select("*").single();
 
   if (error || !session) {

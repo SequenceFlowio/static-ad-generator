@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import type { BrandDnaData, Product, SceneScript } from "@/types";
+import type { BrandDnaData, Product, SceneScript, VideoVisualBible } from "@/types";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -7,18 +7,102 @@ export type VideoStyle = "ugc" | "lifestyle" | "product-hero";
 export type VideoPlatform = "tiktok" | "instagram-reels" | "youtube-shorts";
 
 export function getVideoAspectRatio(): string {
-  return "9:16"; // all supported platforms are vertical
+  return "9:16";
 }
 
 const STYLE_INSTRUCTIONS: Record<VideoStyle, string> = {
-  ugc: "UGC (user-generated content). Authentic, handheld, real-person POV. Someone holding the product, talking directly to camera, showing results. Natural home/room lighting. Feels organic, unscripted.",
-  lifestyle: "Lifestyle editorial. Clean but real. Product in context of daily life. Person interacting with product naturally in a relatable setting. Warm, aspirational.",
-  "product-hero": "Product hero. Cinematic close-ups, elegant reveals, satisfying textures. Can include hands but no face required. Studio or premium location setting.",
+  ugc: "UGC (user-generated content). Authentic, handheld, real-person POV. Smartphone camera feel. Natural home/room lighting. Slightly imperfect framing — feels organic and unscripted.",
+  lifestyle: "Lifestyle editorial. Clean but real. Product in context of daily life. Warm natural light. Aspirational but relatable — not overly polished.",
+  "product-hero": "Product hero. Cinematic close-ups, elegant reveals, satisfying textures. Studio or premium location. Can include hands but no face required.",
 };
+
+const STYLE_CAMERA: Record<VideoStyle, string> = {
+  ugc: "smartphone handheld, slight natural shake, close-up POV, 9:16 vertical",
+  lifestyle: "medium telephoto shallow DOF, handheld with stabilizer, 9:16 vertical",
+  "product-hero": "studio macro / medium shot, locked off or slow push, 9:16 vertical",
+};
+
+interface SceneNanoPromptJson {
+  scene: string;
+  character_action?: string;
+  product_action?: string;
+  camera: string;
+  lighting: string;
+  focus: string;
+  mood: string;
+}
+
+interface RawSceneOutput {
+  index: number;
+  title: string;
+  visual_description: string;
+  nano_prompt_json: SceneNanoPromptJson;
+  voiceover: string;
+  duration_s: number;
+  product_in_frame: boolean;
+  character_in_frame: boolean;
+}
+
+interface RawScriptOutput {
+  visual_bible: VideoVisualBible;
+  scenes: RawSceneOutput[];
+  seedance_prompt: string;
+}
 
 export interface ScriptGeneratorOutput {
   scenes: SceneScript[];
   seedance_prompt: string;
+  visual_bible: VideoVisualBible;
+}
+
+function serializeNanoPrompt(
+  bible: VideoVisualBible,
+  scene: SceneNanoPromptJson,
+  style: VideoStyle,
+  hasCharacter: boolean,
+  hasProduct: boolean,
+  productName: string,
+): string {
+  const parts: string[] = [];
+
+  // Style prefix
+  const stylePrefixes: Record<VideoStyle, string> = {
+    ugc: "UGC smartphone aesthetic. Authentic handheld video feel. Slightly imperfect framing.",
+    lifestyle: "Editorial lifestyle photography. Clean composition. Natural and aspirational.",
+    "product-hero": "Cinematic product photography. Elegant, high-detail composition.",
+  };
+  parts.push(stylePrefixes[style]);
+
+  // Scene
+  parts.push(`Scene: ${scene.scene}.`);
+
+  // Character — always from visual bible for consistency
+  if (hasCharacter) {
+    parts.push(`Person: ${bible.character}.`);
+    if (scene.character_action) parts.push(`Action: ${scene.character_action}.`);
+  }
+
+  // Product
+  if (hasProduct) {
+    parts.push(`Product in frame: ${productName} — render product exactly as reference, do not alter shape, color, or design.`);
+    if (scene.product_action) parts.push(`Product action: ${scene.product_action}.`);
+  }
+
+  // Environment — always from visual bible for consistency
+  parts.push(`Environment: ${bible.environment}.`);
+
+  // Technical
+  parts.push(`Camera: ${scene.camera}.`);
+  parts.push(`Lighting: ${scene.lighting}.`);
+  parts.push(`Focus: ${scene.focus}.`);
+  parts.push(`Color palette: ${bible.color_palette}.`);
+  parts.push(`Mood: ${scene.mood}.`);
+
+  // Always: no text, high quality
+  parts.push("No text overlays, no captions, no watermarks in image.");
+  parts.push("Photorealistic, ultra-detailed, 8K resolution, 9:16 vertical frame.");
+
+  return parts.join(" ");
 }
 
 export async function generateVideoScript({
@@ -61,42 +145,74 @@ Generate a ${duration}-second ${videoStyle} video script for ${platform} (${aspe
 The video has exactly ${numScenes} scenes. Each scene is approximately ${durationPerScene} seconds.
 Person in video: ${includesPerson ? "Yes — a real creator/user appears in scenes" : "No — product and hands only, no face"}.
 Style: ${STYLE_INSTRUCTIONS[videoStyle]}
+Camera feel: ${STYLE_CAMERA[videoStyle]}
 
-CRITICAL: The script structure MUST vary based on the awareness level provided. Do not use a fixed template. Each awareness level has its own required scene order and rules. Follow them exactly.
+CRITICAL: The script structure MUST vary based on the awareness level provided. Do not use a fixed template.
 
-GLOBAL FORBIDDEN (apply to every script regardless of awareness level):
-- "premium quality", "high quality", "amazing", "incredible" — these are filler words, never use them
-- Forced brand introductions like "Meet [brand]" or "Introducing [product]" unless awareness level is product-aware or most-aware
-- Unnatural ad tone — voiceover must sound like a real person, not a commercial script
-- Listing features without emotional context — every benefit needs to connect to a feeling or outcome
+GLOBAL FORBIDDEN (every script, no exceptions):
+- "premium quality", "high quality", "amazing", "incredible" — filler words, never use
+- Forced brand introductions like "Meet [brand]" unless awareness level is product-aware or most-aware
+- Unnatural ad tone — voiceover must sound like a real person
+- Feature lists without emotional context
 
-Brand language: "${dna.language}" — ALL voiceover/caption text MUST be in this language. Scene titles, visual_description, and nano_prompt MUST be in English.
+CTA RULE: The LAST scene (scene ${numScenes}) must ALWAYS end with a clear, natural CTA that names the brand and/or product. Even in unaware/problem-aware scripts — the final scene is where the brand gets discovered. The CTA voiceover should feel like a natural culmination, not a forced add-on.
 
-NANO PROMPT RULES (for Nano Banana 2 image generator):
-- ${aspectRatio} vertical frame
-- Describe visual style, lighting, composition, brand colors by appearance (not hex codes), no font names
-- No text overlays in nano_prompt — those live in voiceover only
-- Keep consistent visual style and brand aesthetic across all scenes
+Brand language: "${dna.language}" — ALL voiceover/caption text MUST be in this language. All other fields (titles, descriptions, prompts) MUST be in English.
+
+VISUAL CONSISTENCY RULES — this is critical for frame generation:
+You must generate a "visual_bible" object FIRST. This defines the visual DNA that stays identical across ALL scenes:
+- character: exact person description (age range, hair, skin, outfit — specific enough to generate the same person every scene)
+- environment: exact setting (specific room details, furniture, materials, colors — same location every scene)
+- lighting: lighting style and quality (same across all scenes)
+- color_palette: visual color language (no hex codes — describe appearance)
+- camera_feel: camera style that matches the video style
+
+Then for each scene, use nano_prompt_json (structured JSON, NOT a free-form string) with these fields:
+- scene: what's happening in the frame (1-2 sentences)
+- character_action: what the person is doing (only if character_in_frame: true)
+- product_action: how the product appears/is used (only if product_in_frame: true)
+- camera: specific shot type and angle for this scene
+- lighting: any scene-specific lighting note (or "as visual bible")
+- focus: depth of field and focus point
+- mood: emotional quality of this specific frame
+
+PRODUCT TIMING — obey the awareness level rules exactly. Set product_in_frame: false for scenes where product is forbidden.
 
 SEEDANCE PROMPT RULES:
 - Reference scenes as @Image1 through @Image${numScenes}
-- The product reference photo is always @Image${numScenes + 1} — always include: "@Image${numScenes + 1} is the product reference — render it exactly as shown, do not alter product design or color"
-- Describe motion, camera movement, pacing, transitions, overall feel
-- Keep concise (under 300 words)
-- Voiceover/script text must be embedded as captions or spoken, describe this in the prompt
+- The product reference photo is always @Image${numScenes + 1} — always include: "@Image${numScenes + 1} is the product reference — render it exactly as shown"
+- Describe motion, camera movement, pacing, transitions
+- Embed voiceover/captions in the prompt
+- Keep under 300 words
 
 OUTPUT: Valid JSON only, no markdown.
 
 {
+  "visual_bible": {
+    "character": "woman, late 20s, medium brown shoulder-length hair, natural makeup, wearing oversized white linen shirt and stone-colored pants",
+    "environment": "modern minimal kitchen, warm oak lower cabinets, white marble countertop, large window left side with warm morning light, clean white walls",
+    "lighting": "soft natural morning light from left window, warm white balance, diffused — no harsh shadows",
+    "color_palette": "warm whites, natural oak tones, soft rose product accents, stone gray",
+    "camera_feel": "smartphone UGC, handheld, slight natural movement, close-up-heavy"
+  },
   "scenes": [
     {
       "index": 1,
       "title": "Short scene name",
-      "visual_description": "What happens visually in this scene",
-      "nano_prompt": "Full Nano Banana 2 prompt for the still frame",
-      "voiceover": "Exact spoken words or on-screen caption text (in ${dna.language})",
+      "visual_description": "What happens visually (shown to user, plain English)",
+      "nano_prompt_json": {
+        "scene": "frustrated person at cluttered kitchen counter with mismatched tools",
+        "character_action": "pulling mismatched spatulas from drawer, expression of annoyance",
+        "product_action": null,
+        "camera": "close-up smartphone handheld, slight shake, eye-level",
+        "lighting": "as visual bible",
+        "focus": "hands and drawer, slight background blur",
+        "mood": "relatable frustration, chaotic energy"
+      },
+      "voiceover": "Exact spoken words or caption (in ${dna.language})",
       "duration_s": ${durationPerScene},
-      "image_url": null
+      "product_in_frame": false,
+      "character_in_frame": true
     }
   ],
   "seedance_prompt": "Full Seedance 2 prompt with @Image refs..."
@@ -111,7 +227,6 @@ Colors: ${[dna.accent_color, dna.background_color, dna.lettertype_color].filter(
 Product: ${product.name}
 ${product.description ? `Description: ${product.description}` : ""}`;
 
-  // Focused desire — use specific desire over full list
   if (activeDesire) {
     userContent += `\n\nFOCUS DESIRE: "${activeDesire}" — every scene must connect to this desire. Make the viewer feel this desire more acutely and position the product as the answer.`;
   } else if (dna.customer_desires.length > 0) {
@@ -124,70 +239,68 @@ ${product.description ? `Description: ${product.description}` : ""}`;
       "unaware": `AWARENESS LEVEL: UNAWARE
 Goal: trigger curiosity — viewer does NOT know they have a problem.
 Required scene structure (${numScenes} scenes, adapt proportionally):
-  Scene 1 — Pattern interrupt. Unexpected or striking visual/statement. No context given.
+  Scene 1 — Pattern interrupt. Unexpected or striking visual/statement. No context.
   Scene 2 — Curiosity / confusion. Deepen the mystery or tension.
   Scene 3 — Unexpected insight. Reframe their world slightly.
   Scene 4 — Soft reveal. Product appears subtly, almost incidentally.
-  Scene 5 — Open loop or intrigue. Leave them wanting more.
+  Scene ${numScenes} — Natural CTA. Brand discovery feels earned, not forced.
 STRICT RULES:
-- Product must NOT be mentioned or shown before scene 4.
+- product_in_frame: false for scenes 1-3.
 - No brand name in voiceover until scene 4 at earliest.
-- No selling language, no CTAs, no benefits listed.
+- No selling language, no explicit CTAs before final scene.
 - Tone: curious, slightly strange, intriguing.`,
 
       "problem-aware": `AWARENESS LEVEL: PROBLEM AWARE
 Goal: recognition + emotional buildup — viewer knows the problem, not the solution.
 Required scene structure (${numScenes} scenes, adapt proportionally):
-  Scene 1 — Frustration hook. Open with the specific pain point. Make them feel seen immediately.
+  Scene 1 — Frustration hook. Specific pain point. Make them feel seen immediately.
   Scene 2 — Recognition. Deepen the problem. Specific detail that makes them nod.
-  Scene 3 — Micro-solution attempt (show what they've tried and why it failed). Still NO product.
-  Scene 4 — Product appears for the first time. Subtle, natural reveal. Not a hard intro.
-  Scene 5 — Payoff. Show the emotional result, not just the functional one.
+  Scene 3 — Failed attempt. Show what they've tried and why it didn't work. Still NO product.
+  Scene 4 — Natural product reveal. Subtle, organic. Not a hard intro.
+  Scene ${numScenes} — Emotional payoff + CTA. Show the result AND name the brand.
 STRICT RULES:
-- Product is FORBIDDEN in scenes 1, 2, and 3.
-- NEVER write "Meet [brand]" or any forced brand introduction.
-- No hype or superlatives. Tone must feel empathetic and real.
-- Hook must name the specific frustration, not a generic problem.`,
+- product_in_frame: false for scenes 1, 2, and 3.
+- NEVER write "Meet [brand]" or any forced brand intro.
+- No hype. Tone must feel empathetic and real.
+- Hook must name the specific frustration.`,
 
       "solution-aware": `AWARENESS LEVEL: SOLUTION AWARE
 Goal: show a better approach — viewer is comparing solutions.
 Required scene structure (${numScenes} scenes, adapt proportionally):
-  Scene 1 — Problem reminder. Brief, sharp. They already know it.
+  Scene 1 — Problem reminder. Brief, sharp.
   Scene 2 — Solution comparison. Acknowledge what they've probably tried.
-  Scene 3 — Why most solutions fail. Be specific about the mechanism, not vague criticism.
-  Scene 4 — Introduce product as the better way. Focus on the mechanism that makes it different.
-  Scene 5 — Result. Concrete, believable outcome.
+  Scene 3 — Why most solutions fail. Specific mechanism.
+  Scene 4 — Introduce product as the better way. Mechanism-focused.
+  Scene ${numScenes} — Concrete result + CTA. Specific outcome + brand name.
 STRICT RULES:
-- Product allowed from scene 3 onward.
-- Focus on mechanism and differentiation, NOT hype or vague claims.
-- No "premium quality" or generic benefit language.
+- product_in_frame allowed from scene 3.
+- Focus on mechanism and differentiation.
 - Tone: informed, confident, peer-to-peer.`,
 
       "product-aware": `AWARENESS LEVEL: PRODUCT AWARE
 Goal: remove doubt — viewer knows the product but hasn't committed.
 Required scene structure (${numScenes} scenes, adapt proportionally):
-  Scene 1 — Direct hook about the product. No buildup needed.
+  Scene 1 — Direct product hook. No buildup needed.
   Scene 2 — Key benefit. One specific, concrete thing.
-  Scene 3 — Proof or real usage. Show it working, not just existing.
-  Scene 4 — Reinforcement. Address the unspoken objection or hesitation.
-  Scene 5 — CTA. Clear, direct, low-friction.
+  Scene 3 — Proof or real usage.
+  Scene 4 — Reinforcement. Address the main objection or hesitation.
+  Scene ${numScenes} — Direct CTA. Low friction. Brand + action.
 STRICT RULES:
-- Product can and should appear immediately in scene 1.
-- No long storytelling or problem buildup.
-- Every scene must earn trust or reduce friction.
+- product_in_frame: true from scene 1.
+- No long storytelling.
 - Tone: direct, confident, social-proof-driven.`,
 
       "most-aware": `AWARENESS LEVEL: MOST AWARE / READY TO BUY
 Goal: conversion — get them to act now.
 Required scene structure (${numScenes} scenes, adapt proportionally):
   Scene 1 — Lead with the offer, deal, or scarcity hook.
-  Scene 2 — Urgency or incentive. Why now, not later.
-  Scene 3 — Core benefit reminder. One line, max impact.
-  Scene 4 — Social proof. Real signal (number, result, person).
-  Scene 5 — CTA. Extremely direct. Tell them exactly what to do.
+  Scene 2 — Urgency or incentive. Why now.
+  Scene 3 — Core benefit reminder. One punchy line.
+  Scene 4 — Social proof. Number, result, or person.
+  Scene ${numScenes} — Extremely direct CTA. Tell them exactly what to do.
 STRICT RULES:
-- No storytelling. No slow buildup. Every second must push toward action.
-- Short voiceover lines only — punchy, imperative.
+- No storytelling. Every second pushes toward action.
+- Short voiceover lines only.
 - Tone: urgent, warm but direct.`,
     };
 
@@ -198,24 +311,24 @@ STRICT RULES:
   if (activeAngleDescription) {
     userContent += `\n\nCREATIVE ANGLE: ${activeAngleDescription}
 This angle defines the emotional tone, visual direction, and hook style for every scene.
-- The opening hook must be rooted in this angle — make it immediately recognizable.
-- Visual descriptions must reflect this angle's aesthetic (chaos vs calm, mismatch vs harmony, etc.).
-- The arc across all scenes must feel like a natural expression of this angle, not a bolt-on label.
-- Do NOT name the angle explicitly in voiceover. Let it come through the visuals and language.`;
+- Opening hook must be immediately rooted in this angle.
+- Visual descriptions AND the visual_bible environment must reflect this angle's aesthetic.
+- The arc across all scenes is a natural expression of this angle.
+- Do NOT name the angle explicitly in voiceover. Show it, don't say it.`;
   }
 
   if (isRefinement && existingScenes) {
-    userContent += `\n\nEXISTING SCRIPT (refine this based on the notes below):
+    userContent += `\n\nEXISTING SCRIPT (refine based on notes below):
 ${existingScenes.map(s => `Scene ${s.index}: ${s.title}\nVisual: ${s.visual_description}\nVoiceover: ${s.voiceover}`).join("\n\n")}
 
-REFINEMENT NOTES FROM USER:
+REFINEMENT NOTES:
 ${notes}
 
-Apply these notes while keeping the overall ${numScenes}-scene structure. Only change what the notes ask for.`;
+Apply these notes while keeping the overall ${numScenes}-scene structure and visual_bible consistent. Only change what the notes ask for.`;
   } else {
     userContent += `\n\nGenerate a fresh ${numScenes}-scene script following the awareness level structure above exactly.
-Hook immediately — first 2 seconds must stop the scroll based on the correct hook type for this awareness level.
-Do NOT default to a generic problem→solution→product arc. The structure is defined above — follow it.`;
+Hook immediately — first 2 seconds stop the scroll using the correct hook type for this awareness level.
+Do NOT use a generic problem→solution→product arc. The structure above is the law.`;
     if (notes) {
       userContent += `\n\nExtra directorial notes: ${notes}`;
     }
@@ -232,11 +345,33 @@ Do NOT default to a generic problem→solution→product arc. The structure is d
   });
 
   const raw = completion.choices[0].message.content ?? "{}";
-  const parsed = JSON.parse(raw) as ScriptGeneratorOutput;
+  const parsed = JSON.parse(raw) as RawScriptOutput;
 
-  // Ensure image_url is null (not undefined) on all scenes
+  const bible = parsed.visual_bible;
+
+  // Serialize each scene's nano_prompt_json into a rich detailed string
+  const scenes: SceneScript[] = parsed.scenes.map(s => ({
+    index: s.index,
+    title: s.title,
+    visual_description: s.visual_description,
+    nano_prompt: serializeNanoPrompt(
+      bible,
+      s.nano_prompt_json,
+      videoStyle,
+      s.character_in_frame,
+      s.product_in_frame,
+      product.name,
+    ),
+    voiceover: s.voiceover,
+    duration_s: s.duration_s,
+    image_url: null,
+    product_in_frame: s.product_in_frame ?? false,
+    character_in_frame: s.character_in_frame ?? includesPerson,
+  }));
+
   return {
-    scenes: parsed.scenes.map(s => ({ ...s, image_url: s.image_url ?? null })),
+    scenes,
     seedance_prompt: parsed.seedance_prompt,
+    visual_bible: bible,
   };
 }

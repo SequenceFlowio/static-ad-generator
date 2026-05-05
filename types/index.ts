@@ -200,14 +200,24 @@ export interface VideoJob {
 
 // ─── Video Sessions (multi-step wizard) ─────────────────────────────────────
 
+export interface VideoVisualBible {
+  character: string;      // exact person description used in every scene
+  environment: string;    // exact setting/location description
+  lighting: string;       // lighting style and quality
+  color_palette: string;  // visual color language
+  camera_feel: string;    // camera style (UGC handheld, cinematic, etc.)
+}
+
 export interface SceneScript {
   index: number;          // 1-based
   title: string;          // short scene name e.g. "Opening hook"
   visual_description: string; // what happens visually — shown to user
-  nano_prompt: string;    // full Nano Banana 2 prompt for this frame
+  nano_prompt: string;    // full Nano Banana 2 prompt for this frame (serialized from JSON)
   voiceover: string;      // spoken dialogue or on-screen caption text
   duration_s: number;     // seconds (15 / num_scenes)
   image_url: string | null; // set after frame generation or upload
+  product_in_frame: boolean; // whether product should appear in this frame
+  character_in_frame: boolean; // whether a person appears in this frame
 }
 
 export type VideoPhase = "script" | "frames" | "prompt" | "generating_video" | "done" | "failed";
@@ -224,6 +234,7 @@ export interface VideoSession {
   phase: VideoPhase;
   scenes: SceneScript[];
   seedance_prompt: string | null;
+  visual_bible: VideoVisualBible | null;
   video_url: string | null;
   error_msg: string | null;
   created_at: string;
