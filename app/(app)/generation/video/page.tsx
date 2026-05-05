@@ -89,6 +89,176 @@ function BrandPicker({ onSelect }: { onSelect: (b: Brand) => void }) {
   );
 }
 
+// ─── Session helpers ─────────────────────────────────────────────────────────
+
+function phaseToStep(phase: string): number {
+  const map: Record<string, number> = {
+    references: 1, script: 2, frames: 3, prompt: 4,
+    generating_video: 5, done: 5, failed: 5,
+  };
+  return map[phase] ?? 0;
+}
+
+const PHASE_LABELS: Record<string, { nl: string; en: string; color: string }> = {
+  references:       { nl: "Referenties",  en: "References",    color: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300" },
+  script:           { nl: "Script",       en: "Script",        color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
+  frames:           { nl: "Frames",       en: "Frames",        color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
+  prompt:           { nl: "Prompt",       en: "Prompt",        color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
+  generating_video: { nl: "Genereren…",   en: "Generating…",   color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  done:             { nl: "Klaar ✓",      en: "Done ✓",        color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  failed:           { nl: "Mislukt",      en: "Failed",        color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" },
+};
+
+const STYLE_ICONS: Record<string, string> = { ugc: "📱", lifestyle: "✨", "product-hero": "🎬" };
+
+interface SessionListItem {
+  id: string;
+  phase: string;
+  video_style: string;
+  platform: string;
+  num_scenes: number;
+  duration: number;
+  created_at: string;
+  video_url: string | null;
+  product_id: string | null;
+  includes_person: boolean;
+  scenes: SceneScript[];
+}
+
+function VideoSessionPicker({
+  brand, products, onResume, onStartNew,
+}: {
+  brand: Brand;
+  products: Product[];
+  onResume: (session: VideoSession) => void;
+  onStartNew: () => void;
+}) {
+  const { lang } = useLanguage();
+  const [sessions, setSessions] = useState<SessionListItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [resumingId, setResumingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch(`/api/brands/${brand.id}/video-sessions`)
+      .then(r => r.json())
+      .then(d => { setSessions(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [brand.id]);
+
+  function productName(productId: string | null) {
+    if (!productId) return "—";
+    return products.find(p => p.id === productId)?.name ?? "—";
+  }
+
+  function relativeDate(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (h < 1) return lang === "nl" ? "Zojuist" : "Just now";
+    if (h < 24) return lang === "nl" ? `${h}u geleden` : `${h}h ago`;
+    return lang === "nl" ? `${d}d geleden` : `${d}d ago`;
+  }
+
+  async function handleResume(s: SessionListItem) {
+    setResumingId(s.id);
+    const res = await fetch(`/api/brands/${brand.id}/video-sessions/${s.id}`);
+    if (res.ok) {
+      const { session } = await res.json() as { session: VideoSession };
+      onResume(session);
+    }
+    setResumingId(null);
+  }
+
+  return (
+    <div className="space-y-5">
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            {lang === "nl" ? "Video generaties" : "Video generations"}
+          </h3>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {lang === "nl" ? "Hervat een lopende generatie of start een nieuwe." : "Resume a recent session or start a new one."}
+          </p>
+        </div>
+        <button onClick={onStartNew}
+          className="rounded-lg bg-[#C7F56F] px-4 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+          {lang === "nl" ? "+ Nieuwe video" : "+ New video"}
+        </button>
+      </div>
+
+      {loading ? (
+        <p className="text-xs text-gray-400 py-4 text-center">Loading…</p>
+      ) : sessions.length === 0 ? (
+        <div className="rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 py-10 text-center">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+            {lang === "nl" ? "Nog geen video generaties" : "No video generations yet"}
+          </p>
+          <button onClick={onStartNew}
+            className="rounded-lg bg-[#C7F56F] px-5 py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+            {lang === "nl" ? "Eerste video starten →" : "Start first video →"}
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {sessions.map(s => {
+            const phase = PHASE_LABELS[s.phase] ?? PHASE_LABELS.script;
+            const isDone = s.phase === "done";
+            const isFailed = s.phase === "failed";
+            const isGenerating = s.phase === "generating_video";
+            return (
+              <div key={s.id} className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-4 py-3">
+                {/* Style icon */}
+                <span className="text-xl flex-shrink-0">{STYLE_ICONS[s.video_style] ?? "🎬"}</span>
+
+                {/* Info */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="text-xs font-semibold text-gray-800 dark:text-white truncate">
+                      {productName(s.product_id)}
+                    </p>
+                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold flex-shrink-0 ${phase.color}`}>
+                      {lang === "nl" ? phase.nl : phase.en}
+                    </span>
+                  </div>
+                  <p className="text-[10px] text-gray-400 mt-0.5">
+                    {s.video_style} · {s.num_scenes} {lang === "nl" ? "scènes" : "scenes"} · {relativeDate(s.created_at)}
+                  </p>
+                </div>
+
+                {/* Action */}
+                {isDone && s.video_url ? (
+                  <a href={s.video_url} target="_blank" rel="noopener noreferrer"
+                    className="flex-shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-[#C7F56F]">
+                    {lang === "nl" ? "Bekijken" : "View"}
+                  </a>
+                ) : isFailed ? (
+                  <button onClick={() => handleResume(s)} disabled={!!resumingId}
+                    className="flex-shrink-0 rounded-lg border border-red-200 dark:border-red-800 px-3 py-1.5 text-[10px] font-medium text-red-500 hover:border-red-400 disabled:opacity-40">
+                    {lang === "nl" ? "Opnieuw" : "Retry"}
+                  </button>
+                ) : (
+                  <button onClick={() => handleResume(s)} disabled={!!resumingId}
+                    className="flex-shrink-0 rounded-lg bg-[#C7F56F]/20 border border-[#C7F56F]/40 px-3 py-1.5 text-[10px] font-semibold text-gray-800 dark:text-white hover:bg-[#C7F56F]/40 disabled:opacity-40">
+                    {resumingId === s.id
+                      ? "…"
+                      : isGenerating
+                        ? (lang === "nl" ? "Volgen" : "Follow")
+                        : (lang === "nl" ? "Hervatten →" : "Resume →")}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      <p className="text-[10px] text-gray-400 dark:text-gray-500">
+        {lang === "nl" ? "Sessies worden 7 dagen bewaard." : "Sessions are kept for 7 days."}
+      </p>
+    </div>
+  );
+}
+
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
 const STEPS = ["Setup", "Referenties", "Script", "Frames", "Prompt", "Video"];
@@ -1188,15 +1358,24 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
 
 // ─── Main Wizard ──────────────────────────────────────────────────────────────
 
-function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; products: Product[]; dna: BrandDna | null; strategy: CreativeStrategy | null }) {
-  const [step, setStep] = useState(0);
-  const [sessionId, setSessionId] = useState<string | null>(null);
-  const [scenes, setScenes] = useState<SceneScript[]>([]);
-  const [seedancePrompt, setSeedancePrompt] = useState("");
-  const [numScenes, setNumScenes] = useState(5);
-  const [productId, setProductId] = useState(products[0]?.id ?? "");
+function VideoWizard({
+  brand, products, dna, strategy, initialSession, onBack,
+}: {
+  brand: Brand;
+  products: Product[];
+  dna: BrandDna | null;
+  strategy: CreativeStrategy | null;
+  initialSession?: VideoSession | null;
+  onBack?: () => void;
+}) {
+  const [step, setStep] = useState(() => initialSession ? phaseToStep(initialSession.phase) : 0);
+  const [sessionId, setSessionId] = useState<string | null>(initialSession?.id ?? null);
+  const [scenes, setScenes] = useState<SceneScript[]>(initialSession?.scenes ?? []);
+  const [seedancePrompt, setSeedancePrompt] = useState(initialSession?.seedance_prompt ?? "");
+  const [numScenes, setNumScenes] = useState(initialSession?.num_scenes ?? 5);
+  const [productId, setProductId] = useState(initialSession?.product_id ?? products[0]?.id ?? "");
   const [productImageIndex, setProductImageIndex] = useState(0);
-  const [includesPerson, setIncludesPerson] = useState(true);
+  const [includesPerson, setIncludesPerson] = useState(initialSession?.includes_person ?? true);
   const [setupConfig, setSetupConfig] = useState<SetupConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1342,6 +1521,11 @@ function VideoWizard({ brand, products, dna, strategy }: { brand: Brand; product
 
   return (
     <div>
+      {onBack && (
+        <button onClick={onBack} className="mb-4 flex items-center gap-1.5 text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+          ← {lang === "nl" ? "Terug naar overzicht" : "Back to sessions"}
+        </button>
+      )}
       <StepBar current={step} />
       {error && (
         <div className="mb-4 rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">{error}</div>
@@ -1410,10 +1594,14 @@ export default function GenerationVideoPage() {
   const [strategy, setStrategy] = useState<CreativeStrategy | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingBrand, setLoadingBrand] = useState(false);
+  const [viewMode, setViewMode] = useState<"picker" | "wizard">("picker");
+  const [initialSession, setInitialSession] = useState<VideoSession | null>(null);
 
   async function handleSelectBrand(brand: Brand) {
     setSelectedBrand(brand);
     setLoadingBrand(true);
+    setViewMode("picker");
+    setInitialSession(null);
     const [brandRes, prodsRes, stratRes] = await Promise.all([
       fetch(`/api/brands/${brand.id}`),
       fetch(`/api/brands/${brand.id}/products`),
@@ -1428,6 +1616,25 @@ export default function GenerationVideoPage() {
       setStrategy(s.strategy ?? null);
     }
     setLoadingBrand(false);
+  }
+
+  function handleResume(session: VideoSession) {
+    setInitialSession(session);
+    setViewMode("wizard");
+  }
+
+  function handleStartNew() {
+    setInitialSession(null);
+    setViewMode("wizard");
+  }
+
+  function handleChangeBrand() {
+    setSelectedBrand(null);
+    setDna(null);
+    setStrategy(null);
+    setProducts([]);
+    setViewMode("picker");
+    setInitialSession(null);
   }
 
   return (
@@ -1481,12 +1688,28 @@ export default function GenerationVideoPage() {
                 </div>
                 <span className="text-sm font-semibold text-gray-900 dark:text-white">{selectedBrand.name}</span>
               </div>
-              <button onClick={() => { setSelectedBrand(null); setDna(null); setStrategy(null); setProducts([]); }}
+              <button onClick={handleChangeBrand}
                 className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
                 {lang === "nl" ? "Wijzigen" : "Change"}
               </button>
             </div>
-            <VideoWizard brand={selectedBrand} products={products} dna={dna} strategy={strategy} />
+            {viewMode === "picker" ? (
+              <VideoSessionPicker
+                brand={selectedBrand}
+                products={products}
+                onResume={handleResume}
+                onStartNew={handleStartNew}
+              />
+            ) : (
+              <VideoWizard
+                brand={selectedBrand}
+                products={products}
+                dna={dna}
+                strategy={strategy}
+                initialSession={initialSession}
+                onBack={() => setViewMode("picker")}
+              />
+            )}
           </div>
         )}
       </div>

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
 import { useLanguage } from "@/components/LanguageProvider";
 import { resolveAdConfig, AD_GOALS, type AdGoal } from "@/lib/resolve-creative-config";
@@ -355,6 +355,79 @@ function QuickAdsPanel({
   );
 }
 
+// ─── Recent Ad Jobs Strip ─────────────────────────────────────────────────────
+
+interface AdJobItem {
+  id: string;
+  status: string;
+  template_name: string | null;
+  image_urls: string[] | null;
+  created_at: string;
+  prompt_set_id: string | null;
+}
+
+function RecentAdJobs({ brandId }: { brandId: string }) {
+  const { lang } = useLanguage();
+  const [jobs, setJobs] = useState<AdJobItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/brands/${brandId}/jobs`)
+      .then(r => r.json())
+      .then(d => { setJobs(Array.isArray(d) ? d.filter((j: AdJobItem) => j.image_urls?.length).slice(0, 8) : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [brandId]);
+
+  if (loading || jobs.length === 0) return null;
+
+  function relativeDate(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (h < 1) return lang === "nl" ? "Zojuist" : "Just now";
+    if (h < 24) return lang === "nl" ? `${h}u geleden` : `${h}h ago`;
+    return lang === "nl" ? `${d}d geleden` : `${d}d ago`;
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+          {lang === "nl" ? "Recente ads" : "Recent ads"}
+        </p>
+        <Link href={`/brands/${brandId}/gallery`}
+          className="text-[10px] text-gray-400 hover:text-[#C7F56F] transition-colors">
+          {lang === "nl" ? "Gallery →" : "Gallery →"}
+        </Link>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {jobs.map(job => {
+          const imageUrl = job.image_urls?.[0];
+          return (
+            <Link key={job.id} href={`/brands/${brandId}/gallery`}
+              className="flex-shrink-0 group relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-[#C7F56F] transition-colors"
+              style={{ width: 72 }}>
+              <div className="relative bg-gray-100 dark:bg-gray-800" style={{ aspectRatio: "1/1" }}>
+                {imageUrl ? (
+                  <Image src={imageUrl} alt={job.template_name ?? "ad"} fill className="object-cover" unoptimized />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-gray-300 dark:text-gray-600">
+                    <span className="text-xl">🎯</span>
+                  </div>
+                )}
+              </div>
+              <div className="px-1.5 py-1 bg-white dark:bg-gray-900">
+                <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate">{(job.template_name ?? "ad").replace(/_/g, " ")}</p>
+                <p className="text-[9px] text-gray-400 dark:text-gray-500">{relativeDate(job.created_at)}</p>
+              </div>
+            </Link>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function GenerationAdsPage() {
@@ -455,6 +528,9 @@ export default function GenerationAdsPage() {
                 {lang === "nl" ? "Wijzigen" : "Change"}
               </button>
             </div>
+
+            {/* Recent jobs */}
+            <RecentAdJobs brandId={selectedBrand.id} />
 
             {/* Mode toggle */}
             <div className="mb-6 flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 w-fit">

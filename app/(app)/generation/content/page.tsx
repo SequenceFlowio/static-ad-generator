@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
 import ContentGenerator from "@/components/content/ContentGenerator";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -250,6 +251,77 @@ function QuickContentPanel({
   );
 }
 
+// ─── Recent Sessions Strip ────────────────────────────────────────────────────
+
+interface ContentSessionItem {
+  id: string;
+  template_name: string;
+  platform: string;
+  caption: string | null;
+  image_url: string | null;
+  created_at: string;
+  product_id: string | null;
+}
+
+function RecentContentSessions({ brandId }: { brandId: string }) {
+  const { lang } = useLanguage();
+  const [sessions, setSessions] = useState<ContentSessionItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`/api/brands/${brandId}/content`)
+      .then(r => r.json())
+      .then(d => { setSessions(Array.isArray(d) ? d.slice(0, 6) : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [brandId]);
+
+  if (loading || sessions.length === 0) return null;
+
+  function relativeDate(iso: string) {
+    const diff = Date.now() - new Date(iso).getTime();
+    const h = Math.floor(diff / 3600000);
+    const d = Math.floor(diff / 86400000);
+    if (h < 1) return lang === "nl" ? "Zojuist" : "Just now";
+    if (h < 24) return lang === "nl" ? `${h}u geleden` : `${h}h ago`;
+    return lang === "nl" ? `${d}d geleden` : `${d}d ago`;
+  }
+
+  return (
+    <div className="mb-6">
+      <div className="flex items-center justify-between mb-3">
+        <p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+          {lang === "nl" ? "Recente content" : "Recent content"}
+        </p>
+        <Link href={`/brands/${brandId}/content-gallery`}
+          className="text-[10px] text-gray-400 hover:text-[#C7F56F] transition-colors">
+          {lang === "nl" ? "Alle bekijken →" : "View all →"}
+        </Link>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1">
+        {sessions.map(s => (
+          <Link key={s.id} href={`/brands/${brandId}/content-gallery`}
+            className="flex-shrink-0 group relative rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 hover:border-[#C7F56F] transition-colors"
+            style={{ width: 72 }}>
+            <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
+              {s.image_url ? (
+                <Image src={s.image_url} alt={s.template_name} fill className="object-cover" unoptimized />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-xl text-gray-300 dark:text-gray-600">
+                  {s.platform === "instagram" ? "📷" : s.platform === "linkedin" ? "💼" : "📄"}
+                </div>
+              )}
+            </div>
+            <div className="px-1.5 py-1 bg-white dark:bg-gray-900">
+              <p className="text-[9px] text-gray-500 dark:text-gray-400 truncate">{s.template_name.replace(/-/g, " ")}</p>
+              <p className="text-[9px] text-gray-400 dark:text-gray-500">{relativeDate(s.created_at)}</p>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function GenerationContentPage() {
@@ -340,6 +412,9 @@ export default function GenerationContentPage() {
                 {lang === "nl" ? "Wijzigen" : "Change"}
               </button>
             </div>
+
+            {/* Recent sessions */}
+            <RecentContentSessions brandId={selectedBrand.id} />
 
             {/* Mode toggle */}
             <div className="mb-6 flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 w-fit">

@@ -13,8 +13,8 @@ export async function GET(
 
   const db = getServerSupabase();
 
-  // Lazy cleanup: delete generation_jobs older than 48h (fire-and-forget)
-  const cutoff = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
+  // Lazy cleanup: delete generation_jobs older than 7 days (fire-and-forget)
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
   db.from("generation_jobs").delete().lt("created_at", cutoff).then(() => {/* no-op */});
 
   let query = db

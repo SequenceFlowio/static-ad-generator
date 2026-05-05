@@ -53,7 +53,7 @@ export async function POST(
   return NextResponse.json({ session });
 }
 
-// GET — list sessions for brand
+// GET — list sessions for brand (last 7 days, lazy cleanup of older sessions)
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -64,9 +64,15 @@ export async function GET(
   const { id: brandId } = await params;
   const db = getServerSupabase();
 
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Lazy cleanup: delete sessions older than 7 days (fire-and-forget)
+  db.from("video_sessions").delete().eq("brand_id", brandId).lt("created_at", cutoff).then(() => {/* no-op */});
+
   const { data: sessions } = await db.from("video_sessions")
-    .select("id, phase, video_style, platform, num_scenes, duration, created_at, video_url")
+    .select("id, phase, video_style, platform, num_scenes, duration, created_at, video_url, product_id, includes_person, scenes")
     .eq("brand_id", brandId)
+    .gte("created_at", cutoff)
     .order("created_at", { ascending: false });
 
   return NextResponse.json(sessions ?? []);

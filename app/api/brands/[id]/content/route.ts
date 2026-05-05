@@ -15,11 +15,18 @@ export async function GET(
   try { await getAuthUser(); } catch { return NextResponse.json({ error: "Unauthorized" }, { status: 401 }); }
 
   const db = getServerSupabase();
+  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  // Lazy cleanup: delete sessions older than 7 days
+  db.from("content_sessions").delete().eq("brand_id", id).lt("created_at", cutoff).then(() => {/* no-op */});
+
   const { data, error } = await db
     .from("content_sessions")
-    .select("*")
+    .select("id, template_name, platform, caption, image_url, image_prompt, created_at, product_id")
     .eq("brand_id", id)
-    .order("created_at", { ascending: false });
+    .gte("created_at", cutoff)
+    .order("created_at", { ascending: false })
+    .limit(20);
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json(data ?? []);
