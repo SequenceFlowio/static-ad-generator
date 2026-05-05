@@ -705,16 +705,18 @@ function RefPanel({
 }
 
 function ReferencesStep({
-  brandId, sessionId, includesPerson, onGenerateScript,
+  brandId, sessionId, includesPerson, initialCharacterUrl, initialEnvironmentUrl, onGenerateScript,
 }: {
   brandId: string;
   sessionId: string;
   includesPerson: boolean;
+  initialCharacterUrl?: string | null;
+  initialEnvironmentUrl?: string | null;
   onGenerateScript: (characterPrompt?: string, environmentPrompt?: string) => void;
 }) {
   const { lang } = useLanguage();
-  const [character, setCharacter] = useState<RefState>({ tab: "generate", prompt: CHARACTER_SUGGESTIONS[0], url: null, loading: false });
-  const [environment, setEnvironment] = useState<RefState>({ tab: "generate", prompt: ENVIRONMENT_SUGGESTIONS[0], url: null, loading: false });
+  const [character, setCharacter] = useState<RefState>({ tab: "generate", prompt: CHARACTER_SUGGESTIONS[0], url: initialCharacterUrl ?? null, loading: false });
+  const [environment, setEnvironment] = useState<RefState>({ tab: "generate", prompt: ENVIRONMENT_SUGGESTIONS[0], url: initialEnvironmentUrl ?? null, loading: false });
 
   const isGenerating = character.loading || environment.loading;
 
@@ -1545,6 +1547,8 @@ function VideoWizard({
           brandId={brand.id}
           sessionId={sessionId}
           includesPerson={includesPerson}
+          initialCharacterUrl={initialSession?.character_ref_url}
+          initialEnvironmentUrl={initialSession?.environment_ref_url}
           onGenerateScript={handleGenerateScript}
         />
       )}
