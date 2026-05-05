@@ -5,7 +5,7 @@ import { generateVideoScript } from "@/lib/video-script-generator";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
 import type { BrandDnaData, Product, SceneScript, VideoSession } from "@/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 // POST — generate initial script (called after references step)
 export async function POST(
@@ -59,22 +59,28 @@ export async function POST(
     }
   }
 
-  const scriptOutput = await generateVideoScript({
-    dna,
-    product,
-    productImageIndex: body.product_image_index ?? 0,
-    videoStyle: videoSession.video_style as VideoStyle,
-    platform: videoSession.platform as VideoPlatform,
-    numScenes: videoSession.num_scenes,
-    duration: videoSession.duration,
-    includesPerson: videoSession.includes_person ?? true,
-    activeDesire: body.active_desire,
-    awarenessLevel: body.awareness_level,
-    activeAngleDescription,
-    notes: body.notes,
-    characterRefDescription: body.character_ref_prompt,
-    environmentRefDescription: body.environment_ref_prompt,
-  });
+  let scriptOutput;
+  try {
+    scriptOutput = await generateVideoScript({
+      dna,
+      product,
+      productImageIndex: body.product_image_index ?? 0,
+      videoStyle: videoSession.video_style as VideoStyle,
+      platform: videoSession.platform as VideoPlatform,
+      numScenes: videoSession.num_scenes,
+      duration: videoSession.duration,
+      includesPerson: videoSession.includes_person ?? true,
+      activeDesire: body.active_desire,
+      awarenessLevel: body.awareness_level,
+      activeAngleDescription,
+      notes: body.notes,
+      characterRefDescription: body.character_ref_prompt,
+      environmentRefDescription: body.environment_ref_prompt,
+    });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "Script generation failed";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 
   const { error } = await db.from("video_sessions").update({
     phase: "script",
@@ -84,7 +90,7 @@ export async function POST(
     updated_at: new Date().toISOString(),
   }).eq("id", sessionId);
 
-  if (error) return NextResponse.json({ error: "Failed to save script" }, { status: 500 });
+  if (error) return NextResponse.json({ error: "Failed to save script: " + error.message }, { status: 500 });
 
   return NextResponse.json({
     scenes: scriptOutput.scenes,
