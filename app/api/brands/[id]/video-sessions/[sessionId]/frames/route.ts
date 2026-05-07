@@ -18,49 +18,48 @@ async function generateAllFrames(
 ) {
   const db = getServerSupabase();
 
-  const results = await Promise.allSettled(
-    scenes.map(async (scene) => {
-      try {
-        const refUrls: string[] = [];
-        // Character ref for scenes with a person
-        if (scene.character_in_frame && characterRefUrl) refUrls.push(characterRefUrl);
-        // Environment ref for all scenes (sets the visual backdrop)
-        if (environmentRefUrl) refUrls.push(environmentRefUrl);
-        // Product ref for scenes where product appears
-        if (scene.product_in_frame && productImageUrl) refUrls.push(productImageUrl);
+  // Generate frames sequentially to avoid kie.ai rate limits.
+  // After each frame, immediately patch the DB so partial results are never lost.
+  for (const scene of scenes) {
+    try {
+      const refUrls: string[] = [];
+      if (scene.character_in_frame && characterRefUrl) refUrls.push(characterRefUrl);
+      if (environmentRefUrl) refUrls.push(environmentRefUrl);
+      if (scene.product_in_frame && productImageUrl) refUrls.push(productImageUrl);
 
-        const urls = await generateImages({
-          prompt: scene.nano_prompt,
-          aspect_ratio: aspectRatio,
-          resolution: "2K",
-          num_images: 1,
-          model: "nano-banana-2",
-          reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
-        });
-        return { index: scene.index, url: urls[0] ?? null };
-      } catch {
-        return { index: scene.index, url: null };
+      const urls = await generateImages({
+        prompt: scene.nano_prompt,
+        aspect_ratio: aspectRatio,
+        resolution: "2K",
+        num_images: 1,
+        model: "nano-banana-2",
+        reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
+      });
+
+      const url = urls[0] ?? null;
+      if (url) {
+        // Re-fetch current scenes so we don't overwrite other frames already saved
+        const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+        const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
+          s.index === scene.index ? { ...s, image_url: url } : s
+        );
+        await db.from("video_sessions").update({
+          scenes: freshScenes,
+          updated_at: new Date().toISOString(),
+        }).eq("id", sessionId);
       }
-    })
-  );
-
-  // Build updated scenes with image_urls
-  const { data: sessionRow } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
-  const currentScenes = ((sessionRow?.scenes ?? []) as SceneScript[]);
-
-  const updatedScenes = currentScenes.map((s) => {
-    const result = results.find(
-      (r) => r.status === "fulfilled" && r.value.index === s.index
-    );
-    if (result?.status === "fulfilled" && result.value.url) {
-      return { ...s, image_url: result.value.url };
+    } catch {
+      // Frame failed — continue with next scene, leave image_url as null
     }
-    return s;
-  });
+  }
+
+  // After all frames attempted, check if all have images and advance phase to "prompt"
+  const { data: finalRow } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+  const finalScenes = ((finalRow?.scenes ?? []) as SceneScript[]);
+  const allDone = finalScenes.length > 0 && finalScenes.every(s => !!s.image_url);
 
   await db.from("video_sessions").update({
-    scenes: updatedScenes,
-    phase: "frames",
+    phase: allDone ? "prompt" : "frames",
     updated_at: new Date().toISOString(),
   }).eq("id", sessionId);
 }
@@ -95,15 +94,15 @@ export async function POST(
   const characterRefUrl = videoSession.character_ref_url ?? null;
   const environmentRefUrl = videoSession.environment_ref_url ?? null;
 
-  // Mark scenes as generating (clear image_urls so UI shows loading)
-  const clearScenes = scenes.map(s => ({ ...s, image_url: null }));
+  // Only generate scenes that don't already have an image — preserve completed frames
+  const missingScenes = scenes.filter(s => !s.image_url);
+
   await db.from("video_sessions").update({
-    scenes: clearScenes,
     phase: "frames",
     updated_at: new Date().toISOString(),
   }).eq("id", sessionId);
 
-  waitUntil(generateAllFrames(sessionId, brandId, scenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl));
+  waitUntil(generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl));
 
   return NextResponse.json({ ok: true });
 }
