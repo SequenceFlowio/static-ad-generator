@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { waitUntil } from "@vercel/functions";
 import { getServerSupabase, uploadToStorage } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateImages } from "@/lib/kie";
@@ -102,7 +101,7 @@ export async function POST(
     updated_at: new Date().toISOString(),
   }).eq("id", sessionId);
 
-  waitUntil(generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl));
+  await generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl);
 
   return NextResponse.json({ ok: true });
 }
@@ -176,27 +175,24 @@ export async function PATCH(
   const clearScenes = scenes.map(s => s.index === body.scene_index ? { ...s, image_url: null } : s);
   await db.from("video_sessions").update({ scenes: clearScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
 
-  // Generate in background
-  waitUntil((async () => {
-    try {
-      const urls = await generateImages({
-        prompt,
-        aspect_ratio: videoSession.aspect_ratio,
-        resolution: "2K",
-        num_images: 1,
-        model: "nano-banana-2",
-        reference_image_urls: refUrls,
-      });
-      const url = urls[0] ?? null;
-      const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
-      const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
-        s.index === body.scene_index ? { ...s, image_url: url } : s
-      );
-      await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
-    } catch (err) {
-      console.error("Frame regeneration failed:", err);
-    }
-  })());
-
-  return NextResponse.json({ ok: true });
+  try {
+    const urls = await generateImages({
+      prompt,
+      aspect_ratio: videoSession.aspect_ratio,
+      resolution: "2K",
+      num_images: 1,
+      model: "nano-banana-2",
+      reference_image_urls: refUrls,
+    });
+    const url = urls[0] ?? null;
+    const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+    const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
+      s.index === body.scene_index ? { ...s, image_url: url } : s
+    );
+    await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
+    return NextResponse.json({ ok: true, url });
+  } catch (err) {
+    console.error("Frame regeneration failed:", err);
+    return NextResponse.json({ error: "Frame generation failed" }, { status: 500 });
+  }
 }
