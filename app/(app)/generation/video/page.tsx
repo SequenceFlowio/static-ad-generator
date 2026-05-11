@@ -123,6 +123,7 @@ interface SessionListItem {
   product_id: string | null;
   includes_person: boolean;
   scenes: SceneScript[];
+  is_pinned: boolean;
 }
 
 function VideoSessionPicker({
@@ -137,6 +138,7 @@ function VideoSessionPicker({
   const [sessions, setSessions] = useState<SessionListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [resumingId, setResumingId] = useState<string | null>(null);
+  const [pinningId, setPinningId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/brands/${brand.id}/video-sessions`)
@@ -167,6 +169,19 @@ function VideoSessionPicker({
       onResume(session);
     }
     setResumingId(null);
+  }
+
+  async function handlePin(s: SessionListItem) {
+    setPinningId(s.id);
+    const res = await fetch(`/api/brands/${brand.id}/video-sessions/${s.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pinned: !s.is_pinned }),
+    });
+    if (res.ok) {
+      setSessions(prev => prev.map(x => x.id === s.id ? { ...x, is_pinned: !s.is_pinned } : x));
+    }
+    setPinningId(null);
   }
 
   return (
@@ -224,6 +239,19 @@ function VideoSessionPicker({
                     {s.video_style} · {s.num_scenes} {lang === "nl" ? "scènes" : "scenes"} · {relativeDate(s.created_at)}
                   </p>
                 </div>
+
+                {/* Pin button */}
+                <button
+                  onClick={() => handlePin(s)}
+                  disabled={pinningId === s.id}
+                  title={s.is_pinned ? (lang === "nl" ? "Losmaken" : "Unpin") : (lang === "nl" ? "Vastzetten (nooit verwijderen)" : "Pin (never delete)")}
+                  className={`flex-shrink-0 rounded-lg border px-2 py-1.5 text-[10px] transition-colors disabled:opacity-40 ${
+                    s.is_pinned
+                      ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-800 dark:text-white"
+                      : "border-gray-200 dark:border-gray-700 text-gray-400 hover:border-gray-300"
+                  }`}>
+                  {pinningId === s.id ? "…" : "📌"}
+                </button>
 
                 {/* Action */}
                 {isDone && s.video_url ? (
