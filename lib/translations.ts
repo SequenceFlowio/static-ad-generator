@@ -8,6 +8,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   "nav.adGen": { en: "Ad Generator", nl: "Advertenties" },
   "nav.contentGen": { en: "Content Generator", nl: "Content" },
   "nav.products": { en: "Products", nl: "Producten" },
+  "nav.analytics": { en: "Analytics", nl: "Analytics" },
   "nav.tutorial": { en: "Tutorial", nl: "Tutorial" },
   "nav.feedback": { en: "Feedback", nl: "Feedback" },
   "nav.support": { en: "Support", nl: "Support" },

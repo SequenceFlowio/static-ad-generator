@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import GeneratingOverlay from "@/components/GeneratingOverlay";
@@ -67,11 +68,13 @@ function QuickAdsPanel({
   products,
   strategy,
   userPlan,
+  initialRefImage,
 }: {
   brand: Brand;
   products: Product[];
   strategy: CreativeStrategy | null;
   userPlan: string;
+  initialRefImage?: string | null;
 }) {
   const { lang } = useLanguage();
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([]);
@@ -85,6 +88,7 @@ function QuickAdsPanel({
   const [done, setDone] = useState(false);
   const [numVariants, setNumVariants] = useState(2);
   const [quality, setQuality] = useState<"fast" | "quality">("fast");
+  const [inspoImageUrls] = useState<string[]>(() => initialRefImage ? [initialRefImage] : []);
 
   const isPaid = userPlan !== "trial" && userPlan !== "free";
   const resolution = quality === "quality" ? (isPaid ? "4K" : "2K") : "1K";
@@ -141,7 +145,7 @@ function QuickAdsPanel({
         num_images: numVariants,
         prompt_set_id: prompt_set.id,
         model,
-        inspo_image_urls: [],
+        inspo_image_urls: inspoImageUrls,
         product_ids: selectedProductIds,
       }),
     });
@@ -169,7 +173,7 @@ function QuickAdsPanel({
       } catch { setTimeout(poll, 5000); }
     };
     poll();
-  }, [brand.id, selectedProductIds, goal, activeAngleKey, resolution, numVariants, lang]);
+  }, [brand.id, selectedProductIds, goal, activeAngleKey, resolution, numVariants, lang, inspoImageUrls]);
 
   return (
     <div className="space-y-6">
@@ -432,6 +436,8 @@ function RecentAdJobs({ brandId }: { brandId: string }) {
 
 export default function GenerationAdsPage() {
   const { lang } = useLanguage();
+  const searchParams = useSearchParams();
+  const initialRefImage = searchParams.get("ref_image");
   const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
   const [dna, setDna] = useState<BrandDna | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -548,6 +554,7 @@ export default function GenerationAdsPage() {
                 products={products}
                 strategy={strategy}
                 userPlan={userPlan}
+                initialRefImage={initialRefImage}
               />
             ) : (
               /* Advanced mode: full existing page */

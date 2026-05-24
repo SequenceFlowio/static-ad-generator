@@ -244,6 +244,44 @@ export interface VideoSession {
   updated_at: string;
 }
 
+// ─── Facebook Analytics ──────────────────────────────────────────────────────
+
+export interface FacebookConnection {
+  id: string;
+  brand_id: string;
+  fb_account_id: string;
+  fb_account_name: string | null;
+  token_expires_at: string | null;
+  created_at: string;
+}
+
+export interface FbAdInsights {
+  id: string;
+  brand_id: string;
+  fb_ad_id: string;
+  fb_campaign_id: string | null;
+  fb_adset_id: string | null;
+  ad_name: string | null;
+  campaign_name: string | null;
+  adset_name: string | null;
+  ad_status: string | null;
+  creative_image_url: string | null;
+  date_start: string | null;
+  date_stop: string | null;
+  spend: number;
+  impressions: number;
+  reach: number;
+  frequency: number;
+  clicks: number;
+  purchase_roas: number;
+  purchase_value: number;
+  purchases: number;
+  cpp: number;
+  ai_recommendation: "kill" | "wait" | "scale" | "vary" | null;
+  ai_reason: string | null;
+  synced_at: string;
+}
+
 export interface SseEvent {
   type: "start" | "done" | "error" | "complete";
   template_number?: number;
