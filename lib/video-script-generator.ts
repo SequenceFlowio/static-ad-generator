@@ -158,7 +158,13 @@ export async function generateVideoScript({
 
 Generate a ${duration}-second ${videoStyle} video script for ${platform} (${aspectRatio} vertical).
 The video has exactly ${numScenes} scenes. Each scene is approximately ${durationPerScene} seconds.
-Person in video: ${includesPerson ? "Yes — a real creator/user appears in scenes" : "No — product and hands only, no face"}.
+Person in video: ${
+    !includesPerson
+      ? "No — product and environment only, no person or face."
+      : videoStyle === "animation"
+        ? "Yes — a 3D animated Pixar-style character (not a real person). Describe character visually for 3D rendering."
+        : "Yes — a real creator/user appears in scenes."
+  }
 Style: ${STYLE_INSTRUCTIONS[videoStyle]}
 Camera feel: ${STYLE_CAMERA[videoStyle]}
 

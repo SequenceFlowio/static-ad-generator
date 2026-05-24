@@ -728,19 +728,39 @@ function RefPanel({
   );
 }
 
+const ANIMATION_CHARACTER_SUGGESTIONS = [
+  "Pixar-style 3D animated girl, early 20s, big expressive eyes, warm skin tone, wavy chestnut hair, wearing a cozy oversized sweater, friendly smile",
+  "Pixar-style 3D animated boy, late teens, freckles, bright blue eyes, casual hoodie, energetic and curious expression",
+  "Pixar-style 3D animated woman, 30s, elegant, sharp cheekbones, dark hair in a bun, stylish minimal outfit, confident",
+  "Pixar-style 3D animated man, 40s, warm smile, slight stubble, casual blazer, approachable authority",
+  "Pixar-style 3D animated child, 8 years old, giant eyes, messy red hair, playful mischievous grin",
+];
+
+const ANIMATION_ENVIRONMENT_SUGGESTIONS = [
+  "Pixar-style 3D animated cozy kitchen, warm pastel colors, rounded furniture, soft morning light streaming through window",
+  "Pixar-style 3D animated living room, vibrant color palette, plush couch, large windows with golden hour light, playful details",
+  "Pixar-style 3D animated magical shop interior, whimsical shelves, warm glowing lights, rich saturated colors",
+  "Pixar-style 3D animated outdoor garden, lush saturated greens, dappled sunlight, whimsical flowers and butterflies",
+  "Pixar-style 3D animated minimalist studio, clean white space, dramatic cinematic rim lighting, colorful accent props",
+];
+
 function ReferencesStep({
-  brandId, sessionId, includesPerson, initialCharacterUrl, initialEnvironmentUrl, onGenerateScript,
+  brandId, sessionId, includesPerson, videoStyle, initialCharacterUrl, initialEnvironmentUrl, onGenerateScript,
 }: {
   brandId: string;
   sessionId: string;
   includesPerson: boolean;
+  videoStyle: VideoStyle;
   initialCharacterUrl?: string | null;
   initialEnvironmentUrl?: string | null;
   onGenerateScript: (characterPrompt?: string, environmentPrompt?: string) => void;
 }) {
   const { lang } = useLanguage();
-  const [character, setCharacter] = useState<RefState>({ tab: "generate", prompt: CHARACTER_SUGGESTIONS[0], url: initialCharacterUrl ?? null, loading: false });
-  const [environment, setEnvironment] = useState<RefState>({ tab: "generate", prompt: ENVIRONMENT_SUGGESTIONS[0], url: initialEnvironmentUrl ?? null, loading: false });
+  const isAnimation = videoStyle === "animation";
+  const charSuggestions = isAnimation ? ANIMATION_CHARACTER_SUGGESTIONS : CHARACTER_SUGGESTIONS;
+  const envSuggestions = isAnimation ? ANIMATION_ENVIRONMENT_SUGGESTIONS : ENVIRONMENT_SUGGESTIONS;
+  const [character, setCharacter] = useState<RefState>({ tab: "generate", prompt: charSuggestions[0], url: initialCharacterUrl ?? null, loading: false });
+  const [environment, setEnvironment] = useState<RefState>({ tab: "generate", prompt: envSuggestions[0], url: initialEnvironmentUrl ?? null, loading: false });
 
   const isGenerating = character.loading || environment.loading;
 
@@ -765,7 +785,7 @@ function ReferencesStep({
             <RefPanel
               type="character"
               label={lang === "nl" ? "Karakter" : "Character"}
-              suggestions={CHARACTER_SUGGESTIONS}
+              suggestions={charSuggestions}
               state={character}
               brandId={brandId}
               sessionId={sessionId}
@@ -776,7 +796,7 @@ function ReferencesStep({
           <RefPanel
             type="environment"
             label={lang === "nl" ? "Omgeving" : "Environment"}
-            suggestions={ENVIRONMENT_SUGGESTIONS}
+            suggestions={envSuggestions}
             state={environment}
             brandId={brandId}
             sessionId={sessionId}
@@ -1402,6 +1422,7 @@ function VideoWizard({
   const [productId, setProductId] = useState(initialSession?.product_id ?? products[0]?.id ?? "");
   const [productImageIndex, setProductImageIndex] = useState(0);
   const [includesPerson, setIncludesPerson] = useState(initialSession?.includes_person ?? true);
+  const [videoStyle, setVideoStyle] = useState<VideoStyle>((initialSession?.video_style as VideoStyle) ?? "ugc");
   const [setupConfig, setSetupConfig] = useState<SetupConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -1415,6 +1436,7 @@ function VideoWizard({
     setProductImageIndex(cfg.productImageIndex);
     setNumScenes(cfg.numScenes);
     setIncludesPerson(cfg.includesPerson);
+    setVideoStyle(cfg.videoStyle);
     setSetupConfig(cfg);
 
     const res = await fetch(`/api/brands/${brand.id}/video-sessions`, {
@@ -1571,6 +1593,7 @@ function VideoWizard({
           brandId={brand.id}
           sessionId={sessionId}
           includesPerson={includesPerson}
+          videoStyle={videoStyle}
           initialCharacterUrl={initialSession?.character_ref_url}
           initialEnvironmentUrl={initialSession?.environment_ref_url}
           onGenerateScript={handleGenerateScript}

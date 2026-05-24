@@ -63,7 +63,7 @@ export const VIDEO_PRESETS: VideoPreset[] = [
     video_style: "animation",
     platform: "instagram-reels",
     num_scenes: 5,
-    includes_person: false,
+    includes_person: true,
   },
   {
     key: "cinematic",

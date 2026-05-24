@@ -17,7 +17,7 @@ export async function POST(
   const db = getServerSupabase();
 
   const { data: session } = await db.from("video_sessions")
-    .select("id, brand_id").eq("id", sessionId).eq("brand_id", brandId).single();
+    .select("id, brand_id, video_style").eq("id", sessionId).eq("brand_id", brandId).single();
   if (!session) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   const body = await req.json() as {
@@ -29,18 +29,24 @@ export async function POST(
     return NextResponse.json({ error: "Prompt is required" }, { status: 400 });
   }
 
+  const isAnimation = session.video_style === "animation";
+
   // Build nano banana prompt for the reference type
   let fullPrompt: string;
   if (body.type === "character") {
-    fullPrompt = `Portrait reference photo. ${body.prompt}. Neutral expression, looking slightly off-camera. Natural lighting, clean neutral background. Full upper body visible. Photorealistic, ultra-detailed, 8K, 9:16 vertical frame. No text, no logos.`;
+    fullPrompt = isAnimation
+      ? `3D character reference sheet. Pixar-style CGI animated character. ${body.prompt}. Neutral expression, front-facing pose, clean neutral background. Vibrant colors, expressive 3D design, cinematic Pixar lighting. No text, no logos.`
+      : `Portrait reference photo. ${body.prompt}. Neutral expression, looking slightly off-camera. Natural lighting, clean neutral background. Full upper body visible. Photorealistic, ultra-detailed, 8K, 9:16 vertical frame. No text, no logos.`;
   } else {
-    fullPrompt = `Environment reference photo. ${body.prompt}. No people, no faces. Clean empty space. Natural or studio lighting. Photorealistic, ultra-detailed, 8K, 9:16 vertical frame. No text, no logos.`;
+    fullPrompt = isAnimation
+      ? `3D environment concept art. Pixar-style CGI animated setting. ${body.prompt}. No people. Vibrant colors, warm cinematic lighting, playful depth. Pixar render quality. No text, no logos.`
+      : `Environment reference photo. ${body.prompt}. No people, no faces. Clean empty space. Natural or studio lighting. Photorealistic, ultra-detailed, 8K, 9:16 vertical frame. No text, no logos.`;
   }
 
   const urls = await generateImages({
     prompt: fullPrompt,
     aspect_ratio: "9:16",
-    resolution: "2K",
+    resolution: "1K",
     num_images: 1,
     model: "nano-banana-2",
   });
