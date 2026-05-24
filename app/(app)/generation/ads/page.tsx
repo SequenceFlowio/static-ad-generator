@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -434,7 +434,7 @@ function RecentAdJobs({ brandId }: { brandId: string }) {
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
-export default function GenerationAdsPage() {
+function GenerationAdsPageInner() {
   const { lang } = useLanguage();
   const searchParams = useSearchParams();
   const initialRefImage = searchParams.get("ref_image");
@@ -583,5 +583,13 @@ export default function GenerationAdsPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function GenerationAdsPage() {
+  return (
+    <Suspense>
+      <GenerationAdsPageInner />
+    </Suspense>
   );
 }
