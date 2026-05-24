@@ -319,6 +319,7 @@ export default function Sidebar() {
       return false;
     }
     if (href === "/generation") {
+      if (pathname === "/generation/analytics") return false;
       return pathname.startsWith("/generation")
         || pathname.startsWith("/ad-gen")
         || pathname.startsWith("/content-gen")
