@@ -11,7 +11,7 @@ export function getFbOAuthUrl(brandId: string, redirectUri: string): string {
   const params = new URLSearchParams({
     client_id: appId(),
     redirect_uri: redirectUri,
-    scope: "ads_read,read_insights,ads_management",
+    scope: "ads_read,ads_management",
     state: brandId,
     response_type: "code",
   });
