@@ -29,7 +29,7 @@ async function generateAllFrames(
       const urls = await generateImages({
         prompt: scene.nano_prompt,
         aspect_ratio: aspectRatio,
-        resolution: "2K",
+        resolution: "1K",
         num_images: 1,
         model: "nano-banana-2",
         reference_image_urls: refUrls.length > 0 ? refUrls : undefined,

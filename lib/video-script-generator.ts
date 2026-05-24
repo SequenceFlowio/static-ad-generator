@@ -1,7 +1,7 @@
 import type { BrandDnaData, Product, SceneScript, VideoVisualBible } from "@/types";
 import { generateText } from "./llm";
 
-export type VideoStyle = "ugc" | "lifestyle" | "product-hero";
+export type VideoStyle = "ugc" | "lifestyle" | "product-hero" | "animation" | "cinematic";
 export type VideoPlatform = "tiktok" | "instagram-reels" | "youtube-shorts";
 
 export function getVideoAspectRatio(): string {
@@ -12,12 +12,16 @@ const STYLE_INSTRUCTIONS: Record<VideoStyle, string> = {
   ugc: "UGC (user-generated content). Authentic, handheld, real-person POV. Smartphone camera feel. Natural home/room lighting. Slightly imperfect framing — feels organic and unscripted.",
   lifestyle: "Lifestyle editorial. Clean but real. Product in context of daily life. Warm natural light. Aspirational but relatable — not overly polished.",
   "product-hero": "Product hero. Cinematic close-ups, elegant reveals, satisfying textures. Studio or premium location. Can include hands but no face required.",
+  animation: "Pixar-style 3D CGI animation. Vibrant, expressive 3D characters and environments. Cinematic lighting, rich color grading. Warm, slightly stylized realism — not cartoonish. Character-driven storytelling with exaggerated but believable expressions.",
+  cinematic: "Premium cinematic brand film. Ultra-wide or anamorphic lens feel. Dramatic but controlled lighting. Sweeping camera moves. High-contrast, desaturated-warm color grade. Feels like a movie trailer for a product.",
 };
 
 const STYLE_CAMERA: Record<VideoStyle, string> = {
   ugc: "smartphone handheld, slight natural shake, close-up POV, 9:16 vertical",
   lifestyle: "medium telephoto shallow DOF, handheld with stabilizer, 9:16 vertical",
   "product-hero": "studio macro / medium shot, locked off or slow push, 9:16 vertical",
+  animation: "virtual 3D camera, smooth animated push-ins, expressive close-ups, 9:16 vertical",
+  cinematic: "anamorphic wide angle, slow cinematic push or pull, dramatic rack focus, 9:16 vertical",
 };
 
 interface SceneNanoPromptJson {
@@ -68,6 +72,8 @@ function serializeNanoPrompt(
     ugc: "UGC smartphone aesthetic. Authentic handheld video feel. Slightly imperfect framing.",
     lifestyle: "Editorial lifestyle photography. Clean composition. Natural and aspirational.",
     "product-hero": "Cinematic product photography. Elegant, high-detail composition.",
+    animation: "Pixar-style 3D CGI animation. Vibrant colors, expressive characters, cinematic lighting.",
+    cinematic: "Cinematic film still. Anamorphic lens. Dramatic lighting, premium color grade.",
   };
   parts.push(stylePrefixes[style]);
 
@@ -98,7 +104,14 @@ function serializeNanoPrompt(
 
   // Always: no text, high quality
   parts.push("No text overlays, no captions, no watermarks in image.");
-  parts.push("Photorealistic, ultra-detailed, 8K resolution, 9:16 vertical frame.");
+  const qualitySuffix: Record<VideoStyle, string> = {
+    ugc: "Photorealistic, natural grain, authentic look, 9:16 vertical frame.",
+    lifestyle: "Photorealistic, ultra-detailed, clean and aspirational, 9:16 vertical frame.",
+    "product-hero": "Photorealistic, ultra-detailed, 8K resolution, 9:16 vertical frame.",
+    animation: "Pixar 3D CGI render, ultra-detailed animation, vibrant cinematic lighting, 9:16 vertical frame.",
+    cinematic: "Cinematic photorealistic, anamorphic film look, dramatic color grade, 9:16 vertical frame.",
+  };
+  parts.push(qualitySuffix[style]);
 
   return parts.join(" ");
 }

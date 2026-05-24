@@ -6,6 +6,7 @@ import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { Brand, BrandDna, Product, SceneScript, VideoSession, CreativeStrategy, CreativeAngle } from "@/types";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
+import { VIDEO_PRESETS } from "@/lib/video-presets";
 
 const AWARENESS_LEVELS = [
   { value: "unaware",        label: "Unaware",        labelNl: "Onbewust",         desc: "Geen probleem in beeld — pure curiosity hook", descNl: "Geen probleem in beeld — pure curiosity hook" },
@@ -315,12 +316,6 @@ function StepBar({ current }: { current: number }) {
 
 // ─── Step 0: Setup ────────────────────────────────────────────────────────────
 
-const VIDEO_STYLES: Array<{ value: VideoStyle; label: string; desc: string; icon: string }> = [
-  { value: "ugc", label: "UGC", desc: "Authentic creator-style, handheld", icon: "📱" },
-  { value: "lifestyle", label: "Lifestyle", desc: "Real-world aspirational scene", icon: "✨" },
-  { value: "product-hero", label: "Product Hero", desc: "Cinematic product reveal", icon: "🎬" },
-];
-
 const PLATFORMS: Array<{ value: VideoPlatform; label: string; icon: string }> = [
   { value: "tiktok", label: "TikTok", icon: "🎵" },
   { value: "instagram-reels", label: "Reels", icon: "📸" },
@@ -351,14 +346,25 @@ function SetupStep({
   const { lang } = useLanguage();
   const [productId, setProductId] = useState(products[0]?.id ?? "");
   const [productImageIndex, setProductImageIndex] = useState(0);
-  const [videoStyle, setVideoStyle] = useState<VideoStyle>("ugc");
-  const [platform, setPlatform] = useState<VideoPlatform>("tiktok");
-  const [numScenes, setNumScenes] = useState(5);
-  const [includesPerson, setIncludesPerson] = useState(true);
+  const [selectedPresetKey, setSelectedPresetKey] = useState(VIDEO_PRESETS[0].key);
+  const [platform, setPlatform] = useState<VideoPlatform>(VIDEO_PRESETS[0].platform);
+  const [numScenes, setNumScenes] = useState(VIDEO_PRESETS[0].num_scenes);
   const [activeDesire, setActiveDesire] = useState<string | null>(desires[0] ?? null);
   const [awarenessLevel, setAwarenessLevel] = useState<AwarenessLevel>("problem-aware");
   const [activeAngleKey, setActiveAngleKey] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+
+  const selectedPreset = VIDEO_PRESETS.find(p => p.key === selectedPresetKey) ?? VIDEO_PRESETS[0];
+  const videoStyle = selectedPreset.video_style;
+  const includesPerson = selectedPreset.includes_person;
+
+  function handlePresetSelect(key: string) {
+    const preset = VIDEO_PRESETS.find(p => p.key === key);
+    if (!preset) return;
+    setSelectedPresetKey(key);
+    setPlatform(preset.platform);
+    setNumScenes(preset.num_scenes);
+  }
 
   const selectedProduct = products.find(p => p.id === productId);
   const productImages = selectedProduct?.image_urls ?? [];
@@ -402,33 +408,42 @@ function SetupStep({
         </div>
       )}
 
-      {/* Video style */}
+      {/* Video preset */}
       <div>
         <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
           {lang === "nl" ? "Videostijl" : "Video style"}
         </p>
-        <div className="grid grid-cols-3 gap-2">
-          {VIDEO_STYLES.map(s => (
-            <button key={s.value} onClick={() => setVideoStyle(s.value)}
-              className={`flex flex-col rounded-xl border-2 p-3 text-left transition-colors ${
-                videoStyle === s.value ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {VIDEO_PRESETS.map(preset => (
+            <button key={preset.key} onClick={() => handlePresetSelect(preset.key)}
+              className={`relative flex flex-col rounded-xl border-2 p-3 text-left transition-colors ${
+                selectedPresetKey === preset.key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
               }`}>
-              <span className="text-lg mb-1">{s.icon}</span>
-              <span className={`text-xs font-semibold ${videoStyle === s.value ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>{s.label}</span>
-              <span className="text-[10px] text-gray-400 mt-0.5 leading-tight">{s.desc}</span>
+              {preset.badge && (
+                <span className="absolute top-2 right-2 rounded-full bg-[#C7F56F]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#1a1a1a] dark:text-[#C7F56F]">
+                  {preset.badge}
+                </span>
+              )}
+              <span className="text-lg mb-1">{preset.icon}</span>
+              <span className={`text-xs font-semibold ${selectedPresetKey === preset.key ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>
+                {lang === "nl" ? preset.labelNl : preset.label}
+              </span>
+              <span className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                {lang === "nl" ? preset.descNl : preset.desc}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Platform + scenes + person */}
-      <div className="grid grid-cols-3 gap-4">
+      {/* Tweak platform + scenes (compact, below preset) */}
+      <div className="flex flex-wrap gap-4">
         <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Platform</p>
-          <div className="flex flex-col gap-1.5">
+          <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Platform</p>
+          <div className="flex gap-1.5">
             {PLATFORMS.map(p => (
               <button key={p.value} onClick={() => setPlatform(p.value)}
-                className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
+                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
                   platform === p.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
                 }`}>
                 {p.icon} {p.label}
@@ -438,35 +453,16 @@ function SetupStep({
         </div>
 
         <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
             {lang === "nl" ? "Scènes" : "Scenes"}
           </p>
-          <div className="flex flex-col gap-1.5">
-            {[4, 5, 6, 7, 8, 9].map(n => (
+          <div className="flex gap-1.5">
+            {[4, 5, 6, 7, 8].map(n => (
               <button key={n} onClick={() => setNumScenes(n)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold text-center transition-colors ${
+                className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
                   numScenes === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
                 }`}>
-                {n} <span className="font-normal text-gray-400">({(15 / n).toFixed(1)}s)</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Persoon" : "Person"}
-          </p>
-          <div className="flex flex-col gap-1.5">
-            {[
-              { v: true, label: lang === "nl" ? "Met persoon" : "With person" },
-              { v: false, label: lang === "nl" ? "Alleen product" : "Product only" },
-            ].map(opt => (
-              <button key={String(opt.v)} onClick={() => setIncludesPerson(opt.v)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium text-left transition-colors ${
-                  includesPerson === opt.v ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
-                }`}>
-                {opt.label}
+                {n}
               </button>
             ))}
           </div>

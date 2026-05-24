@@ -20,7 +20,7 @@ export default function GenerationPage() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           {/* Ads card */}
           <Link href="/generation/ads" className="group">
             <div className="flex h-full flex-col rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111] p-7 transition-all hover:border-[#C7F56F] hover:shadow-md cursor-pointer">
@@ -92,44 +92,6 @@ export default function GenerationPage() {
               <div className="mt-6">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] group-hover:bg-[#b8e85e] transition-colors">
                   {lang === "nl" ? "Content genereren" : "Generate Content"}
-                  <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
-                </span>
-              </div>
-            </div>
-          </Link>
-          {/* Analytics card */}
-          <Link href="/generation/analytics" className="group">
-            <div className="flex h-full flex-col rounded-2xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111] p-7 transition-all hover:border-[#C7F56F] hover:shadow-md cursor-pointer">
-              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-[#C7F56F]/10">
-                <svg className="h-6 w-6 text-[#1a1a1a] dark:text-[#C7F56F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              </div>
-              <div className="flex-1">
-                <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-1">Analytics</h2>
-                <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                  {lang === "nl"
-                    ? "Bekijk ROAS, spend en AI-aanbevelingen voor je Facebook Ads"
-                    : "View ROAS, spend and AI recommendations for your Facebook Ads"}
-                </p>
-                <ul className="mt-4 space-y-1.5">
-                  {[
-                    lang === "nl" ? "Facebook Ads koppelen" : "Connect Facebook Ads",
-                    lang === "nl" ? "Kill / scale / vary suggesties" : "Kill / scale / vary suggestions",
-                    lang === "nl" ? "Variaties genereren vanuit bestaande ads" : "Generate variations from existing ads",
-                  ].map((item) => (
-                    <li key={item} className="flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500">
-                      <span className="flex h-1.5 w-1.5 rounded-full bg-[#C7F56F] flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="mt-6">
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a] group-hover:bg-[#b8e85e] transition-colors">
-                  {lang === "nl" ? "Analytics bekijken" : "View Analytics"}
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                   </svg>
