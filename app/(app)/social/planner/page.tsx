@@ -116,7 +116,7 @@ function NewPostModal({
 
   async function handleSave(publishNow: boolean) {
     if (!imageUrl) return;
-    publishNow ? setPublishing(true) : setSaving(true);
+    if (publishNow) setPublishing(true); else setSaving(true);
     const res = await fetch(`/api/brands/${brandId}/social/posts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
