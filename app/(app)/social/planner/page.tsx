@@ -100,11 +100,12 @@ function NewPostModal({
       const { signed_url, public_url } = await res.json() as { signed_url: string; public_url: string };
 
       // Step 2: upload file directly to Supabase Storage (browser → Supabase, no Vercel hop)
-      await fetch(signed_url, {
+      const uploadRes = await fetch(signed_url, {
         method: "PUT",
         headers: { "Content-Type": file.type },
         body: file,
       });
+      if (!uploadRes.ok) throw new Error("Upload failed");
 
       setImageUrl(public_url);
     } catch {
