@@ -282,6 +282,37 @@ export interface FbAdInsights {
   synced_at: string;
 }
 
+export interface SocialPost {
+  id: string;
+  brand_id: string;
+  platforms: string[];
+  media_type: "image" | "video" | "carousel";
+  image_urls: string[];
+  video_url: string | null;
+  caption: string | null;
+  scheduled_at: string | null;
+  published_at: string | null;
+  status: "draft" | "scheduled" | "publishing" | "published" | "failed";
+  fb_post_id: string | null;
+  ig_post_id: string | null;
+  source: string;
+  source_creative_url: string | null;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface SocialSettings {
+  id?: string;
+  brand_id?: string;
+  enabled: boolean;
+  platforms: string[];
+  frequency: "daily" | "2x_week" | "3x_week";
+  post_time: string;
+  content_types: string[];
+  require_approval: boolean;
+}
+
 export interface SseEvent {
   type: "start" | "done" | "error" | "complete";
   template_number?: number;

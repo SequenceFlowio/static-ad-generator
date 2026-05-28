@@ -7,11 +7,21 @@ function appSecret() {
   return process.env.FACEBOOK_APP_SECRET!;
 }
 
+// Scopes: ads + organic page posting + Instagram publishing
+const FB_SCOPES = [
+  "ads_read",
+  "ads_management",
+  "pages_manage_posts",
+  "pages_read_engagement",
+  "instagram_basic",
+  "instagram_content_publish",
+].join(",");
+
 export function getFbOAuthUrl(brandId: string, redirectUri: string): string {
   const params = new URLSearchParams({
     client_id: appId(),
     redirect_uri: redirectUri,
-    scope: "ads_read,ads_management",
+    scope: FB_SCOPES,
     state: brandId,
     response_type: "code",
   });
@@ -262,4 +272,107 @@ export async function createAd(
   const data = await res.json();
   if (data.error) throw new Error(data.error.message);
   return { id: data.id };
+}
+
+// ─── Social / Organic publishing ─────────────────────────────────────────────
+
+/** Exchange user access token for a page-level access token (required for posting) */
+export async function getPageToken(
+  userAccessToken: string,
+  pageId: string
+): Promise<string> {
+  const res = await fetch(`${FB_BASE}/${pageId}?fields=access_token&access_token=${userAccessToken}`);
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.access_token as string;
+}
+
+/** Get the Instagram Business Account ID linked to a Facebook Page */
+export async function getInstagramUserId(
+  userAccessToken: string,
+  pageId: string
+): Promise<string | null> {
+  const res = await fetch(`${FB_BASE}/${pageId}?fields=instagram_business_account&access_token=${userAccessToken}`);
+  const data = await res.json();
+  return data.instagram_business_account?.id ?? null;
+}
+
+/** Get the first connected Facebook Page for the current user token */
+export async function getFirstPage(
+  userAccessToken: string
+): Promise<{ id: string; name: string } | null> {
+  const res = await fetch(`${FB_BASE}/me/accounts?fields=id,name&access_token=${userAccessToken}`);
+  const data = await res.json();
+  const page = data.data?.[0];
+  return page ? { id: page.id, name: page.name } : null;
+}
+
+/** Publish an image post to a Facebook Page (optionally scheduled) */
+export async function publishFacebookPost(
+  userAccessToken: string,
+  pageId: string,
+  imageUrl: string,
+  caption: string,
+  scheduledAt?: Date
+): Promise<{ post_id: string }> {
+  const pageToken = await getPageToken(userAccessToken, pageId);
+  const body: Record<string, unknown> = {
+    url: imageUrl,
+    caption,
+    access_token: pageToken,
+  };
+  if (scheduledAt) {
+    body.published = false;
+    body.scheduled_publish_time = Math.floor(scheduledAt.getTime() / 1000);
+  }
+  const res = await fetch(`${FB_BASE}/${pageId}/photos`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return { post_id: data.post_id ?? data.id };
+}
+
+/** Create an Instagram media container (step 1 of 2-step publish) */
+export async function createInstagramContainer(
+  userAccessToken: string,
+  igUserId: string,
+  imageUrl: string,
+  caption: string
+): Promise<string> {
+  const params = new URLSearchParams({
+    image_url: imageUrl,
+    caption,
+    access_token: userAccessToken,
+  });
+  const res = await fetch(`${FB_BASE}/${igUserId}/media`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.id as string;
+}
+
+/** Publish an Instagram media container (step 2 of 2-step publish) */
+export async function publishInstagramContainer(
+  userAccessToken: string,
+  igUserId: string,
+  containerId: string
+): Promise<{ ig_post_id: string }> {
+  const params = new URLSearchParams({
+    creation_id: containerId,
+    access_token: userAccessToken,
+  });
+  const res = await fetch(`${FB_BASE}/${igUserId}/media_publish`, {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: params,
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return { ig_post_id: data.id };
 }

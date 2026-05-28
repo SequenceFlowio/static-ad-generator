@@ -11,7 +11,58 @@ import TutorialModal from "@/components/TutorialModal";
 import { useLanguage } from "@/components/LanguageProvider";
 import type { Lang } from "@/lib/translations";
 
-const NAV_ITEMS = [
+const ADS_NAV = [
+  {
+    labelKey: "nav.generate",
+    href: "/generation",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+      </svg>
+    ),
+  },
+  {
+    labelKey: "nav.analytics",
+    href: "/generation/analytics",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+      </svg>
+    ),
+  },
+];
+
+const SOCIAL_NAV = [
+  {
+    labelKey: "nav.socialCreate",
+    href: "/social/create",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+      </svg>
+    ),
+  },
+  {
+    labelKey: "nav.socialPlanner",
+    href: "/social/planner",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+    ),
+  },
+  {
+    labelKey: "nav.autoPoster",
+    href: "/social/auto-poster",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+  },
+];
+
+const GLOBAL_NAV = [
   {
     labelKey: "nav.home",
     href: "/",
@@ -31,29 +82,11 @@ const NAV_ITEMS = [
     ),
   },
   {
-    labelKey: "nav.generate",
-    href: "/generation",
-    icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
-      </svg>
-    ),
-  },
-  {
     labelKey: "nav.products",
     href: "/products",
     icon: (
       <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-      </svg>
-    ),
-  },
-  {
-    labelKey: "nav.analytics",
-    href: "/generation/analytics",
-    icon: (
-      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
       </svg>
     ),
   },
@@ -309,6 +342,8 @@ export default function Sidebar() {
     router.push("/login");
   }
 
+  const isSocialMode = pathname.startsWith("/social");
+
   function isActive(href: string) {
     if (href === "/") return pathname === "/";
     if (href === "/stores") {
@@ -322,13 +357,14 @@ export default function Sidebar() {
       if (pathname === "/generation/analytics") return false;
       return pathname.startsWith("/generation")
         || pathname.startsWith("/ad-gen")
-        || pathname.startsWith("/content-gen")
         || !!pathname.match(/\/brands\/[^/]+\/ads/)
-        || !!pathname.match(/\/brands\/[^/]+\/content($|\/)/)
         || !!pathname.match(/\/brands\/[^/]+\/strategy/);
     }
     if (href === "/products") return pathname.startsWith("/products") || !!pathname.match(/\/brands\/[^/]+\/products/);
     if (href === "/generation/analytics") return pathname === "/generation/analytics";
+    if (href === "/social/create") return pathname === "/social/create";
+    if (href === "/social/planner") return pathname === "/social/planner";
+    if (href === "/social/auto-poster") return pathname === "/social/auto-poster";
     return pathname.startsWith(href);
   }
 
@@ -351,9 +387,61 @@ export default function Sidebar() {
           </Link>
         </div>
 
+        {/* Mode switcher */}
+        <div className="px-3 pt-3 pb-2">
+          <div className="flex rounded-xl bg-gray-100 dark:bg-gray-800 p-1 gap-1">
+            <Link
+              href="/generation"
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+                !isSocialMode
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Ads
+            </Link>
+            <Link
+              href="/social/create"
+              className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-xs font-semibold transition-colors ${
+                isSocialMode
+                  ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
+                  : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+              }`}
+            >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              Social
+            </Link>
+          </div>
+        </div>
+
         {/* Nav */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-          {NAV_ITEMS.map((item) => (
+        <nav className="flex-1 overflow-y-auto px-3 pb-4 space-y-0.5">
+          {/* Mode-specific nav */}
+          {(isSocialMode ? SOCIAL_NAV : ADS_NAV).map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+                isActive(item.href)
+                  ? "bg-[#C7F56F] text-[#1a1a1a] font-semibold"
+                  : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-900 dark:hover:text-white"
+              }`}
+            >
+              <span className={isActive(item.href) ? "text-[#1a1a1a]" : ""}>{item.icon}</span>
+              {t(item.labelKey)}
+            </Link>
+          ))}
+
+          {/* Divider + global nav */}
+          <div className="pt-3 pb-1">
+            <div className="h-px bg-gray-100 dark:bg-gray-800" />
+          </div>
+          {GLOBAL_NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}

@@ -171,15 +171,22 @@ export default function GalleryPage() {
                         loading="lazy"
                         unoptimized={url.startsWith("http")}
                       />
-                      <div className="absolute inset-0 flex items-end justify-between rounded-[10px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity p-2 gap-2">
+                      <div className="absolute inset-0 flex items-end justify-between rounded-[10px] bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity p-2 gap-1.5">
                         <button
                           onClick={(e) => { e.stopPropagation(); downloadImage(url, `${brandName}-${job.template_name}-v${i + 1}.png`); }}
-                          className="rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-gray-100"
+                          className="rounded-lg bg-white px-2.5 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-gray-100"
                         >
-                          Download
+                          ↓
                         </button>
+                        <Link
+                          href={`/social/planner?image_url=${encodeURIComponent(url)}`}
+                          onClick={e => e.stopPropagation()}
+                          className="rounded-lg bg-[#C7F56F] px-2.5 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
+                        >
+                          📱
+                        </Link>
                         <span className="rounded-lg bg-black/60 px-2 py-1.5 text-xs text-white">
-                          {isActive ? "Close" : "Details"}
+                          {isActive ? "✕" : "···"}
                         </span>
                       </div>
                     </div>
@@ -262,19 +269,27 @@ export default function GalleryPage() {
               <p className="text-xs text-gray-300 dark:text-gray-600">{new Date(detailJob.created_at).toLocaleString()}</p>
 
               {/* Actions */}
-              <div className="flex gap-2 pt-1">
-                <button
-                  onClick={() => downloadImage(detailUrl, `${brandName}-${detailJob.template_name}-v${detailIndex + 1}.png`)}
-                  className="flex-1 rounded-lg bg-[#C7F56F] px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]"
+              <div className="flex flex-col gap-2 pt-1">
+                <Link
+                  href={`/social/planner?image_url=${encodeURIComponent(detailUrl ?? "")}`}
+                  className="w-full rounded-lg bg-[#C7F56F] px-3 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] text-center"
                 >
-                  Download
-                </button>
-                <button
-                  onClick={() => exportJobJson(detailJob)}
-                  className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
-                >
-                  Export JSON
-                </button>
+                  📱 Post organisch →
+                </Link>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => downloadImage(detailUrl, `${brandName}-${detailJob.template_name}-v${detailIndex + 1}.png`)}
+                    className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    Download
+                  </button>
+                  <button
+                    onClick={() => exportJobJson(detailJob)}
+                    className="rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                  >
+                    JSON
+                  </button>
+                </div>
               </div>
             </div>
           </div>
