@@ -38,7 +38,7 @@ export async function PATCH(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id: brandId } = await params;
-  const { page_id, page_name } = await req.json() as { page_id: string; page_name?: string };
+  const { page_id, page_name, ig_user_id: igUserIdOverride } = await req.json() as { page_id: string; page_name?: string; ig_user_id?: string };
 
   const db = getServerSupabase();
 
@@ -49,8 +49,8 @@ export async function PATCH(
     .single();
   if (!conn) return NextResponse.json({ error: "Not connected" }, { status: 400 });
 
-  // Also fetch Instagram Business Account for this page
-  const igUserId = await getInstagramUserId(conn.access_token, page_id).catch(() => null);
+  // Use provided ig_user_id if given, otherwise try to fetch from page
+  const igUserId = igUserIdOverride ?? await getInstagramUserId(conn.access_token, page_id).catch(() => null);
 
   await db.from("facebook_connections").update({
     page_id,
