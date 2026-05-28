@@ -133,7 +133,15 @@ function NewPostModal({
     });
     const post = await res.json();
     if (publishNow && post.id) {
-      await fetch(`/api/brands/${brandId}/social/posts/${post.id}/publish`, { method: "POST" });
+      const pubRes = await fetch(`/api/brands/${brandId}/social/posts/${post.id}/publish`, { method: "POST" });
+      if (!pubRes.ok) {
+        const { error } = await pubRes.json() as { error?: string };
+        setPublishing(false);
+        setSaving(false);
+        alert(error ?? "Publiceren mislukt — probeer opnieuw.");
+        onCreated();
+        return;
+      }
     }
     setPublishing(false);
     setSaving(false);

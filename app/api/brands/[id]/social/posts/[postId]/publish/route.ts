@@ -5,6 +5,8 @@ import {
   publishFacebookPost,
   createInstagramContainer,
   publishInstagramContainer,
+  getFirstPage,
+  getInstagramUserId,
 } from "@/lib/facebook";
 
 export const maxDuration = 60;
@@ -42,28 +44,55 @@ export async function POST(
   const caption = (post.caption as string) ?? "";
   const platforms = (post.platforms as string[]) ?? ["instagram"];
 
+  // Resolve page_id live if not stored (e.g. connected before this field was added)
+  let pageId: string | null = conn.page_id ?? null;
+  let igUserId: string | null = conn.ig_user_id ?? null;
+  if (!pageId) {
+    const page = await getFirstPage(conn.access_token).catch(() => null);
+    pageId = page?.id ?? null;
+    if (pageId && !igUserId) {
+      igUserId = await getInstagramUserId(conn.access_token, pageId).catch(() => null);
+    }
+    // Persist for next time
+    if (pageId) {
+      await db.from("facebook_connections").update({
+        page_id: pageId,
+        ig_user_id: igUserId,
+        updated_at: new Date().toISOString(),
+      }).eq("brand_id", brandId);
+    }
+  }
+
   let fbPostId: string | null = null;
   let igPostId: string | null = null;
   const errors: string[] = [];
 
   // Publish to Facebook Page
-  if (platforms.includes("facebook") && conn.page_id) {
-    try {
-      const result = await publishFacebookPost(conn.access_token, conn.page_id, imageUrl, caption);
-      fbPostId = result.post_id;
-    } catch (e) {
-      errors.push(`Facebook: ${(e as Error).message}`);
+  if (platforms.includes("facebook")) {
+    if (!pageId) {
+      errors.push("Facebook: geen gekoppelde pagina gevonden — verbind opnieuw.");
+    } else {
+      try {
+        const result = await publishFacebookPost(conn.access_token, pageId, imageUrl, caption);
+        fbPostId = result.post_id;
+      } catch (e) {
+        errors.push(`Facebook: ${(e as Error).message}`);
+      }
     }
   }
 
   // Publish to Instagram
-  if (platforms.includes("instagram") && conn.ig_user_id) {
-    try {
-      const containerId = await createInstagramContainer(conn.access_token, conn.ig_user_id, imageUrl, caption);
-      const result = await publishInstagramContainer(conn.access_token, conn.ig_user_id, containerId);
-      igPostId = result.ig_post_id;
-    } catch (e) {
-      errors.push(`Instagram: ${(e as Error).message}`);
+  if (platforms.includes("instagram")) {
+    if (!igUserId) {
+      errors.push("Instagram: geen gekoppeld Instagram Business-account gevonden.");
+    } else {
+      try {
+        const containerId = await createInstagramContainer(conn.access_token, igUserId, imageUrl, caption);
+        const result = await publishInstagramContainer(conn.access_token, igUserId, containerId);
+        igPostId = result.ig_post_id;
+      } catch (e) {
+        errors.push(`Instagram: ${(e as Error).message}`);
+      }
     }
   }
 
