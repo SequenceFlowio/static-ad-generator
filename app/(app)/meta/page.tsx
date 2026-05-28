@@ -110,10 +110,11 @@ function PageSetupSection({ brandId, onSaved }: { brandId: string; onSaved: () =
   );
 }
 
-function InstagramSetupSection({ brandId, pageId, onSaved }: { brandId: string; pageId: string; onSaved: () => void }) {
+function InstagramSetupSection({ brandId, pageId, currentIgUserId, onSaved }: { brandId: string; pageId: string; currentIgUserId: string | null; onSaved: () => void }) {
   const [fetching, setFetching] = useState(false);
-  const [manualIgId, setManualIgId] = useState("");
-  const [showManual, setShowManual] = useState(false);
+  const [manualIgId, setManualIgId] = useState(currentIgUserId ?? "");
+  const [showManual, setShowManual] = useState(!!currentIgUserId);
+  const [editing, setEditing] = useState(!currentIgUserId);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -164,14 +165,31 @@ function InstagramSetupSection({ brandId, pageId, onSaved }: { brandId: string; 
 
   return (
     <div className="space-y-3">
-      <div>
-        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">Instagram koppelen</h3>
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          Nodig om posts te publiceren naar Instagram. Je Instagram account moet gekoppeld zijn aan je Facebook Pagina.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">Instagram koppelen</h3>
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            Nodig om posts te publiceren naar Instagram. Je Instagram account moet gekoppeld zijn aan je Facebook Pagina.
+          </p>
+        </div>
+        {currentIgUserId && !editing && (
+          <button
+            onClick={() => { setEditing(true); setShowManual(true); setManualIgId(currentIgUserId); setError(null); }}
+            className="shrink-0 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+          >
+            Wijzigen
+          </button>
+        )}
       </div>
 
-      {!showManual ? (
+      {currentIgUserId && !editing ? (
+        <div className="flex items-center gap-2 rounded-lg border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20 px-3 py-2">
+          <svg className="h-3.5 w-3.5 text-green-600 dark:text-green-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+          </svg>
+          <span className="text-xs font-mono text-gray-700 dark:text-gray-300 truncate">{currentIgUserId}</span>
+        </div>
+      ) : !showManual ? (
         <button
           onClick={handleAutoFetch}
           disabled={fetching}
@@ -213,9 +231,18 @@ function InstagramSetupSection({ brandId, pageId, onSaved }: { brandId: string; 
               {saving ? "Opslaan…" : "Opslaan"}
             </button>
           </div>
-          <button onClick={() => { setShowManual(false); setError(null); }} className="text-xs text-gray-400 hover:text-gray-600 underline">
-            ← Opnieuw automatisch proberen
-          </button>
+          <div className="flex items-center gap-3">
+            {!currentIgUserId && (
+              <button onClick={() => { setShowManual(false); setError(null); }} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                ← Opnieuw automatisch proberen
+              </button>
+            )}
+            {currentIgUserId && (
+              <button onClick={() => { setEditing(false); setError(null); setManualIgId(currentIgUserId); }} className="text-xs text-gray-400 hover:text-gray-600 underline">
+                Annuleren
+              </button>
+            )}
+          </div>
         </div>
       )}
 
@@ -335,17 +362,19 @@ export default function MetaPage() {
                 <span className="font-mono text-gray-700 dark:text-gray-300">{connection.page_id}</span>
               </div>
             )}
-            {connection.ig_user_id && (
-              <div className="flex items-center justify-between">
-                <span className="text-gray-500 dark:text-gray-400">Instagram</span>
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500 dark:text-gray-400">Instagram</span>
+              {connection.ig_user_id ? (
                 <span className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium">
                   <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                   Gekoppeld
                 </span>
-              </div>
-            )}
+              ) : (
+                <span className="text-amber-500 dark:text-amber-400 font-medium">Niet gekoppeld</span>
+              )}
+            </div>
             {connection.token_expires_at && (
               <div className="flex items-center justify-between">
                 <span className="text-gray-500 dark:text-gray-400">Token verloopt</span>
@@ -364,12 +393,13 @@ export default function MetaPage() {
           </div>
         )}
 
-        {/* Instagram setup if page is linked but ig_user_id is missing */}
-        {!loadingConn && connection && connection.page_id && !connection.ig_user_id && (
+        {/* Instagram setup — always shown when page is linked */}
+        {!loadingConn && connection && connection.page_id && (
           <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
             <InstagramSetupSection
               brandId={brand!.id}
               pageId={connection.page_id}
+              currentIgUserId={connection.ig_user_id ?? null}
               onSaved={() => loadConnection(brand!.id)}
             />
           </div>
