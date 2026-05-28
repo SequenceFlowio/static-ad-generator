@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
-import { generateImages } from "@/lib/kie";
+import { generateImages, withRetry } from "@/lib/kie";
 
 export const maxDuration = 120;
 
@@ -43,16 +43,18 @@ export async function POST(
       : `Environment reference photo. ${body.prompt}. No people, no faces. Clean empty space. Natural or studio lighting. Photorealistic, ultra-detailed, 8K, 9:16 vertical frame. No text, no logos.`;
   }
 
-  const urls = await generateImages({
-    prompt: fullPrompt,
-    aspect_ratio: "9:16",
-    resolution: "1K",
-    num_images: 1,
-    model: "nano-banana-2",
-  });
+  let urls: string[];
+  try {
+    urls = await withRetry(
+      () => generateImages({ prompt: fullPrompt, aspect_ratio: "9:16", resolution: "1K", num_images: 1, model: "nano-banana-2" }),
+      { maxAttempts: 3, baseDelayMs: 2000 }
+    );
+  } catch {
+    return NextResponse.json({ error: "Generation failed after 3 attempts — please try again." }, { status: 500 });
+  }
 
   const url = urls[0] ?? null;
-  if (!url) return NextResponse.json({ error: "Generation failed" }, { status: 500 });
+  if (!url) return NextResponse.json({ error: "Generation failed — no image returned." }, { status: 500 });
 
   // Save to session
   const column = body.type === "character" ? "character_ref_url" : "environment_ref_url";

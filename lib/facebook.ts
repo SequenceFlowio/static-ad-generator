@@ -7,13 +7,13 @@ function appSecret() {
   return process.env.FACEBOOK_APP_SECRET!;
 }
 
-// Scopes: ads + organic page posting + Instagram publishing
+// Scopes: ads + Instagram/Page publishing
 const FB_SCOPES = [
   "ads_read",
   "ads_management",
   "pages_manage_posts",
   "pages_read_engagement",
-  "instagram_basic",
+  "instagram_business_basic",
   "instagram_content_publish",
 ].join(",");
 

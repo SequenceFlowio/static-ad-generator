@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { waitUntil } from "@vercel/functions";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
-import { generateImages } from "@/lib/kie";
+import { generateImages, withRetry } from "@/lib/kie";
 import { checkAndDeduct, isQualityModel } from "@/lib/credits";
 import { buildNanoBananaPrompt, AD_TEMPLATE_CAMERA_PRESETS } from "@/lib/prompt-utils";
 import type { GenerateRequest, PromptItem, KieModel } from "@/types";
@@ -57,16 +57,19 @@ async function runGeneration(
         promptItem.hook_variants.map(async (hookVariant) => {
           try {
             const combinedPrompt = `${enrichedBackground}\n\nText in the ad: ${hookVariant}`;
-            return await generateImages({
-              prompt: combinedPrompt,
-              aspect_ratio: aspectRatio,
-              resolution,
-              num_images: 1,
-              reference_image_urls: refImages.length > 0 ? refImages : undefined,
-              model,
-            });
+            return await withRetry(
+              () => generateImages({
+                prompt: combinedPrompt,
+                aspect_ratio: aspectRatio,
+                resolution,
+                num_images: 1,
+                reference_image_urls: refImages.length > 0 ? refImages : undefined,
+                model,
+              }),
+              { maxAttempts: 3, baseDelayMs: 2000 }
+            );
           } catch {
-            return []; // one failed variant doesn't kill the whole job
+            return []; // one variant failing doesn't kill the whole job
           }
         })
       );

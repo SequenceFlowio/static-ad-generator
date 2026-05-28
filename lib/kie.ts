@@ -6,6 +6,25 @@ const KIE_BASE = "https://api.kie.ai";
 const POLL_INTERVAL_MS = 3000;
 const POLL_TIMEOUT_MS = 300_000; // 5 minutes
 
+// Retry wrapper: up to maxAttempts with exponential backoff starting at baseDelayMs
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  { maxAttempts = 3, baseDelayMs = 2000 }: { maxAttempts?: number; baseDelayMs?: number } = {}
+): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise(r => setTimeout(r, baseDelayMs * Math.pow(2, attempt - 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 export type KieModel = "nano-banana-2" | "seedream/4.5-edit";
 
 function getHeaders() {
@@ -105,7 +124,7 @@ export async function generateVideo({
     },
   };
 
-  const taskId = await createTask(payload);
+  const taskId = await withRetry(() => createTask(payload), { maxAttempts: 3, baseDelayMs: 3000 });
   return await pollTask(taskId);
 }
 
@@ -158,6 +177,6 @@ export async function generateImages({
     };
   }
 
-  const taskId = await createTask(payload);
+  const taskId = await withRetry(() => createTask(payload), { maxAttempts: 3, baseDelayMs: 2000 });
   return await pollTask(taskId);
 }

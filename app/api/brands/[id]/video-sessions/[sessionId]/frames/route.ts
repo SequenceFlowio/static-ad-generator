@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { getServerSupabase, uploadToStorage } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
-import { generateImages } from "@/lib/kie";
+import { generateImages, withRetry } from "@/lib/kie";
 import type { SceneScript, VideoSession } from "@/types";
 
 export const maxDuration = 300;
+
+const FRAME_STAGGER_MS = 600; // stagger between parallel task submissions to avoid burst rate-limit
 
 async function generateAllFrames(
   sessionId: string,
@@ -17,45 +20,59 @@ async function generateAllFrames(
 ) {
   const db = getServerSupabase();
 
-  // Generate frames sequentially to avoid kie.ai rate limits.
-  // After each frame, immediately patch the DB so partial results are never lost.
-  for (const scene of scenes) {
-    try {
-      const refUrls: string[] = [];
-      if (scene.character_in_frame && characterRefUrl) refUrls.push(characterRefUrl);
-      if (environmentRefUrl) refUrls.push(environmentRefUrl);
-      if (scene.product_in_frame && productImageUrl) refUrls.push(productImageUrl);
+  // Clear frame_error on scenes we're about to regenerate
+  const { data: currentRow } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+  const currentScenes = ((currentRow?.scenes ?? []) as SceneScript[]);
+  const clearedScenes = currentScenes.map(s =>
+    scenes.find(ms => ms.index === s.index) ? { ...s, frame_error: false } : s
+  );
+  await db.from("video_sessions").update({ scenes: clearedScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
 
-      const urls = await generateImages({
-        prompt: scene.nano_prompt,
-        aspect_ratio: aspectRatio,
-        resolution: "1K",
-        num_images: 1,
-        model: "nano-banana-2",
-        reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
-      });
+  // Generate all frames in parallel with a stagger delay between submissions.
+  // Each frame gets up to 3 attempts. After each success/failure, immediately patch DB.
+  await Promise.all(scenes.map(async (scene, i) => {
+    // Stagger submissions so we don't hit kie.ai with all requests at once
+    if (i > 0) await new Promise(r => setTimeout(r, i * FRAME_STAGGER_MS));
+
+    const refUrls: string[] = [];
+    if (scene.character_in_frame && characterRefUrl) refUrls.push(characterRefUrl);
+    if (environmentRefUrl) refUrls.push(environmentRefUrl);
+    if (scene.product_in_frame && productImageUrl) refUrls.push(productImageUrl);
+
+    try {
+      const urls = await withRetry(
+        () => generateImages({
+          prompt: scene.nano_prompt,
+          aspect_ratio: aspectRatio,
+          resolution: "1K",
+          num_images: 1,
+          model: "nano-banana-2",
+          reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
+        }),
+        { maxAttempts: 3, baseDelayMs: 3000 }
+      );
 
       const url = urls[0] ?? null;
-      if (url) {
-        // Re-fetch current scenes so we don't overwrite other frames already saved
-        const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
-        const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
-          s.index === scene.index ? { ...s, image_url: url } : s
-        );
-        await db.from("video_sessions").update({
-          scenes: freshScenes,
-          updated_at: new Date().toISOString(),
-        }).eq("id", sessionId);
-      }
+      // Re-fetch to merge without overwriting sibling frames
+      const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+      const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
+        s.index === scene.index ? { ...s, image_url: url, frame_error: !url } : s
+      );
+      await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
     } catch {
-      // Frame failed — continue with next scene, leave image_url as null
+      // Mark this scene as failed so the UI can show a retry button
+      const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+      const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
+        s.index === scene.index ? { ...s, image_url: null, frame_error: true } : s
+      );
+      await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
     }
-  }
+  }));
 
-  // After all frames attempted, check if all have images and advance phase to "prompt"
+  // Advance phase only if ALL frames succeeded
   const { data: finalRow } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
   const finalScenes = ((finalRow?.scenes ?? []) as SceneScript[]);
-  const allDone = finalScenes.length > 0 && finalScenes.every(s => !!s.image_url);
+  const allDone = finalScenes.length > 0 && finalScenes.every(s => !!s.image_url && !s.frame_error);
 
   await db.from("video_sessions").update({
     phase: allDone ? "prompt" : "frames",
@@ -101,7 +118,12 @@ export async function POST(
     updated_at: new Date().toISOString(),
   }).eq("id", sessionId);
 
-  await generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl);
+  // Fire generation in background — return immediately so the client can start polling.
+  // waitUntil keeps the Vercel function alive until all frames complete even after response is sent.
+  waitUntil(
+    generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl)
+      .catch(err => console.error("generateAllFrames error:", err))
+  );
 
   return NextResponse.json({ ok: true });
 }
@@ -176,22 +198,31 @@ export async function PATCH(
   await db.from("video_sessions").update({ scenes: clearScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
 
   try {
-    const urls = await generateImages({
-      prompt,
-      aspect_ratio: videoSession.aspect_ratio,
-      resolution: "2K",
-      num_images: 1,
-      model: "nano-banana-2",
-      reference_image_urls: refUrls,
-    });
+    const urls = await withRetry(
+      () => generateImages({
+        prompt,
+        aspect_ratio: videoSession.aspect_ratio,
+        resolution: "1K",
+        num_images: 1,
+        model: "nano-banana-2",
+        reference_image_urls: refUrls,
+      }),
+      { maxAttempts: 3, baseDelayMs: 2000 }
+    );
     const url = urls[0] ?? null;
     const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
     const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
-      s.index === body.scene_index ? { ...s, image_url: url } : s
+      s.index === body.scene_index ? { ...s, image_url: url, frame_error: !url } : s
     );
     await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
     return NextResponse.json({ ok: true, url });
   } catch (err) {
+    // Mark as failed so UI shows retry button
+    const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
+    const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
+      s.index === body.scene_index ? { ...s, image_url: null, frame_error: true } : s
+    );
+    await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
     console.error("Frame regeneration failed:", err);
     return NextResponse.json({ error: "Frame generation failed" }, { status: 500 });
   }

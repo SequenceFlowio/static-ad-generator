@@ -1042,7 +1042,7 @@ function FrameCard({
   scene: SceneScript;
   brandId: string;
   sessionId: string;
-  onUpdated: (index: number, url: string) => void;
+  onUpdated: (index: number, url: string | null, frameError?: boolean) => void;
 }) {
   const { lang } = useLanguage();
   const [showEdit, setShowEdit] = useState(false);
@@ -1054,7 +1054,8 @@ function FrameCard({
   async function handleAction() {
     setBusy(true);
     setShowEdit(false);
-    await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/frames`, {
+    onUpdated(scene.index, null, false); // optimistic: clear error while generating
+    const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/frames`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1064,6 +1065,12 @@ function FrameCard({
         reference_url: editMode === "adjust" ? scene.image_url : undefined,
       }),
     });
+    if (res.ok) {
+      const { url } = await res.json() as { url: string | null };
+      onUpdated(scene.index, url, !url);
+    } else {
+      onUpdated(scene.index, null, true);
+    }
     setBusy(false);
     setAdjustment("");
   }
@@ -1081,30 +1088,31 @@ function FrameCard({
     });
     if (res.ok) {
       const { url } = await res.json() as { url: string };
-      onUpdated(scene.index, url);
+      onUpdated(scene.index, url, false);
     }
     setBusy(false);
     e.target.value = "";
   }
 
   const hasImage = !!scene.image_url && !busy;
+  const hasFailed = !!scene.frame_error && !busy;
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+    <div className={`rounded-xl border overflow-hidden ${hasFailed ? "border-red-400 dark:border-red-500" : "border-gray-200 dark:border-gray-700"}`}>
       <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800">
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C7F56F]/20 text-[10px] font-bold text-gray-800 dark:text-[#C7F56F]">
-          {scene.index}
+        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${hasFailed ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-[#C7F56F]/20 text-gray-800 dark:text-[#C7F56F]"}`}>
+          {hasFailed ? "!" : scene.index}
         </span>
         <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{scene.title}</span>
         <span className="ml-auto text-[10px] text-gray-400">{scene.duration_s}s</span>
       </div>
 
-      <div className="relative bg-gray-50 dark:bg-gray-800 aspect-[9/16]">
+      <div className={`relative aspect-[9/16] ${hasFailed ? "bg-red-50 dark:bg-red-950/20" : "bg-gray-50 dark:bg-gray-800"}`}>
         {hasImage ? (
           <Image src={scene.image_url!} alt={scene.title} fill className="object-cover" unoptimized />
         ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-            {busy || (!scene.image_url) ? (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-2 text-center">
+            {busy ? (
               <>
                 <svg className="h-5 w-5 animate-spin text-[#C7F56F]" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -1112,8 +1120,22 @@ function FrameCard({
                 </svg>
                 <p className="text-[10px] text-gray-400">{lang === "nl" ? "Genereren..." : "Generating..."}</p>
               </>
+            ) : hasFailed ? (
+              <>
+                <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <circle cx="12" cy="12" r="10" />
+                  <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+                </svg>
+                <p className="text-[10px] text-red-500 font-medium">{lang === "nl" ? "Mislukt" : "Failed"}</p>
+                <button
+                  onClick={() => { setEditMode("regenerate"); handleAction(); }}
+                  className="mt-1 rounded-md bg-red-500 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-red-600"
+                >
+                  {lang === "nl" ? "Opnieuw" : "Retry"}
+                </button>
+              </>
             ) : (
-              <p className="text-[10px] text-gray-400">{lang === "nl" ? "Geen afbeelding" : "No image"}</p>
+              <p className="text-[10px] text-gray-400">{lang === "nl" ? "Wacht..." : "Waiting..."}</p>
             )}
           </div>
         )}
@@ -1184,7 +1206,7 @@ function FramesStep({
   useEffect(() => { setLocalScenes(scenes); }, [scenes]);
 
   useEffect(() => {
-    const ready = localScenes.length > 0 && localScenes.every(s => !!s.image_url);
+    const ready = localScenes.length > 0 && localScenes.every(s => !!s.image_url && !s.frame_error);
     setAllReady(ready);
   }, [localScenes]);
 
@@ -1197,7 +1219,9 @@ function FramesStep({
       const updated = session.scenes;
       setLocalScenes(updated);
       onScenesUpdate(updated);
-      if (updated.every(s => !!s.image_url)) {
+      // Stop polling when every scene has settled (image_url or frame_error — no more pending)
+      const allSettled = updated.every(s => !!s.image_url || !!s.frame_error);
+      if (allSettled) {
         clearInterval(pollRef.current!);
         setGenerating(false);
       }
@@ -1212,15 +1236,18 @@ function FramesStep({
     pollFrames();
   }
 
-  function handleFrameUpdated(index: number, url: string) {
+  function handleFrameUpdated(index: number, url: string | null, frameError?: boolean) {
     setLocalScenes(prev => {
-      const updated = prev.map(s => s.index === index ? { ...s, image_url: url } : s);
+      const updated = prev.map(s =>
+        s.index === index ? { ...s, image_url: url, frame_error: frameError ?? false } : s
+      );
       onScenesUpdate(updated);
       return updated;
     });
   }
 
-  const doneCount = localScenes.filter(s => !!s.image_url).length;
+  const doneCount = localScenes.filter(s => !!s.image_url && !s.frame_error).length;
+  const failedCount = localScenes.filter(s => !!s.frame_error).length;
 
   return (
     <div className="space-y-5">
@@ -1244,6 +1271,19 @@ function FramesStep({
         </button>
       </div>
 
+      {failedCount > 0 && !generating && (
+        <div className="flex items-center gap-2.5 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 px-3 py-2.5">
+          <svg className="h-4 w-4 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <circle cx="12" cy="12" r="10" /><path strokeLinecap="round" d="M12 8v4m0 4h.01" />
+          </svg>
+          <p className="text-xs text-red-600 dark:text-red-400">
+            {lang === "nl"
+              ? `${failedCount} frame${failedCount > 1 ? "s" : ""} mislukt — klik Opnieuw per frame of genereer alles opnieuw.`
+              : `${failedCount} frame${failedCount > 1 ? "s" : ""} failed — click Retry per frame or regenerate all.`}
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {localScenes.map(scene => (
           <FrameCard
@@ -1262,7 +1302,9 @@ function FramesStep({
       </button>
       {!allReady && (
         <p className="text-xs text-gray-400">
-          {lang === "nl" ? "Alle frames moeten een foto hebben voordat je verder kunt." : "All frames need an image before you can continue."}
+          {failedCount > 0
+            ? (lang === "nl" ? "Herstel de mislukte frames om door te gaan." : "Fix the failed frames to continue.")
+            : (lang === "nl" ? "Alle frames moeten een foto hebben voordat je verder kunt." : "All frames need an image before you can continue.")}
         </p>
       )}
     </div>

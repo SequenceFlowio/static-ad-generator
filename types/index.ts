@@ -216,6 +216,7 @@ export interface SceneScript {
   voiceover: string;      // spoken dialogue or on-screen caption text
   duration_s: number;     // seconds (15 / num_scenes)
   image_url: string | null; // set after frame generation or upload
+  frame_error?: boolean;    // true if last generation attempt failed
   product_in_frame: boolean; // whether product should appear in this frame
   character_in_frame: boolean; // whether a person appears in this frame
 }
