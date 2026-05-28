@@ -83,6 +83,7 @@ function NewPostModal({
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [aspectRatio, setAspectRatio] = useState<"1:1" | "4:5" | "9:16" | "16:9">("1:1");
 
   function togglePlatform(p: string) {
     setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
@@ -127,6 +128,7 @@ function NewPostModal({
         caption,
         scheduled_at: scheduledAt || null,
         source: "manual",
+        aspect_ratio: aspectRatio,
       }),
     });
     const post = await res.json();
@@ -138,10 +140,19 @@ function NewPostModal({
     onCreated();
   }
 
+  const RATIOS: { key: "1:1" | "4:5" | "9:16" | "16:9"; label: string; tw: string }[] = [
+    { key: "1:1",  label: "1:1",  tw: "aspect-square" },
+    { key: "4:5",  label: "4:5",  tw: "aspect-[4/5]" },
+    { key: "9:16", label: "9:16", tw: "aspect-[9/16]" },
+    { key: "16:9", label: "16:9", tw: "aspect-video" },
+  ];
+  const currentRatio = RATIOS.find(r => r.key === aspectRatio)!;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
-      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl overflow-hidden">
-        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-4">
+      <div className="w-full max-w-lg rounded-2xl bg-white dark:bg-gray-900 shadow-2xl flex flex-col max-h-[90vh]">
+        {/* Header — fixed */}
+        <div className="flex items-center justify-between border-b border-gray-100 dark:border-gray-800 px-6 py-4 flex-shrink-0">
           <h3 className="font-semibold text-gray-900 dark:text-white">
             {lang === "nl" ? "Nieuwe post" : "New post"}
           </h3>
@@ -150,15 +161,32 @@ function NewPostModal({
           </button>
         </div>
 
-        <div className="p-6 space-y-4">
-          {/* Image */}
+        {/* Scrollable body */}
+        <div className="p-6 space-y-4 overflow-y-auto flex-1">
+          {/* Image + aspect ratio */}
           <div>
-            <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-              {lang === "nl" ? "Afbeelding" : "Image"}
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+                {lang === "nl" ? "Afbeelding" : "Image"}
+              </p>
+              {imageUrl && (
+                <div className="flex gap-1">
+                  {RATIOS.map(r => (
+                    <button key={r.key} onClick={() => setAspectRatio(r.key)}
+                      className={`rounded px-2 py-0.5 text-[10px] font-medium transition-colors ${
+                        aspectRatio === r.key
+                          ? "bg-[#C7F56F] text-[#1a1a1a]"
+                          : "bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700"
+                      }`}>
+                      {r.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {imageUrl ? (
-              <div className="relative rounded-xl overflow-hidden">
-                <Image src={imageUrl} alt="" width={400} height={400} className="w-full aspect-square object-cover" unoptimized />
+              <div className={`relative rounded-xl overflow-hidden w-full max-w-[280px] mx-auto ${currentRatio.tw}`}>
+                <Image src={imageUrl} alt="" fill className="object-cover" unoptimized />
                 <button onClick={() => setImageUrl("")}
                   className="absolute top-2 right-2 rounded-full bg-black/60 p-1.5 text-white hover:bg-black/80">
                   <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
@@ -212,7 +240,8 @@ function NewPostModal({
           </div>
         </div>
 
-        <div className="flex gap-2 border-t border-gray-100 dark:border-gray-800 px-6 py-4">
+        {/* Footer — fixed */}
+        <div className="flex gap-2 border-t border-gray-100 dark:border-gray-800 px-6 py-4 flex-shrink-0">
           <button onClick={() => handleSave(false)} disabled={!imageUrl || saving || publishing}
             className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40">
             {saving ? "…" : scheduledAt ? (lang === "nl" ? "Inplannen →" : "Schedule →") : (lang === "nl" ? "Concept" : "Draft")}
