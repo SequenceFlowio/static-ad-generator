@@ -7,13 +7,14 @@ function appSecret() {
   return process.env.FACEBOOK_APP_SECRET!;
 }
 
-// Scopes: ads analytics + Facebook Page publishing
-// Instagram publishing requires separate Instagram Graph API setup — added later
+// Scopes: ads analytics + Facebook Page + Instagram publishing
 const FB_SCOPES = [
   "ads_read",
   "ads_management",
   "pages_manage_posts",
   "pages_read_engagement",
+  "pages_show_list",
+  "instagram_content_publish",
 ].join(",");
 
 export function getFbOAuthUrl(brandId: string, redirectUri: string): string {
