@@ -82,6 +82,7 @@ function NewPostModal({
   const [scheduledAt, setScheduledAt] = useState("");
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
 
   function togglePlatform(p: string) {
     setPlatforms(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p]);
@@ -99,7 +100,7 @@ function NewPostModal({
 
   async function handleSave(publishNow: boolean) {
     if (!imageUrl) return;
-    setSaving(true);
+    publishNow ? setPublishing(true) : setSaving(true);
     const res = await fetch(`/api/brands/${brandId}/social/posts`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -116,6 +117,7 @@ function NewPostModal({
     if (publishNow && post.id) {
       await fetch(`/api/brands/${brandId}/social/posts/${post.id}/publish`, { method: "POST" });
     }
+    setPublishing(false);
     setSaving(false);
     onCreated();
   }
@@ -195,15 +197,13 @@ function NewPostModal({
         </div>
 
         <div className="flex gap-2 border-t border-gray-100 dark:border-gray-800 px-6 py-4">
-          {!scheduledAt && (
-            <button onClick={() => handleSave(true)} disabled={!imageUrl || saving}
-              className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-2 text-sm font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40">
-              {lang === "nl" ? "Nu publiceren" : "Publish now"}
-            </button>
-          )}
-          <button onClick={() => handleSave(false)} disabled={!imageUrl || saving}
+          <button onClick={() => handleSave(false)} disabled={!imageUrl || saving || publishing}
+            className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40">
+            {saving ? "…" : scheduledAt ? (lang === "nl" ? "Inplannen →" : "Schedule →") : (lang === "nl" ? "Concept" : "Draft")}
+          </button>
+          <button onClick={() => handleSave(true)} disabled={!imageUrl || saving || publishing}
             className="flex-1 rounded-lg bg-[#C7F56F] py-2 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40">
-            {saving ? "…" : scheduledAt ? (lang === "nl" ? "Inplannen →" : "Schedule →") : (lang === "nl" ? "Opslaan als concept" : "Save as draft")}
+            {publishing ? (lang === "nl" ? "Publiceren…" : "Publishing…") : (lang === "nl" ? "Nu publiceren →" : "Publish now →")}
           </button>
         </div>
       </div>
