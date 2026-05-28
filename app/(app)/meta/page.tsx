@@ -110,6 +110,120 @@ function PageSetupSection({ brandId, onSaved }: { brandId: string; onSaved: () =
   );
 }
 
+function InstagramSetupSection({ brandId, pageId, onSaved }: { brandId: string; pageId: string; onSaved: () => void }) {
+  const [fetching, setFetching] = useState(false);
+  const [manualIgId, setManualIgId] = useState("");
+  const [showManual, setShowManual] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  async function handleAutoFetch() {
+    setFetching(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/brands/${brandId}/facebook/pages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Fout");
+      if (data.ig_user_id) {
+        onSaved();
+      } else {
+        setShowManual(true);
+        setError("Instagram Business-account niet automatisch gevonden. Voer het ID handmatig in.");
+      }
+    } catch (e) {
+      setShowManual(true);
+      setError((e as Error).message);
+    } finally {
+      setFetching(false);
+    }
+  }
+
+  async function handleManualSave() {
+    const id = manualIgId.trim();
+    if (!id) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/brands/${brandId}/facebook/pages`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ page_id: pageId, ig_user_id: id }),
+      });
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error ?? "Fout"); }
+      onSaved();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-0.5">Instagram koppelen</h3>
+        <p className="text-xs text-gray-500 dark:text-gray-400">
+          Nodig om posts te publiceren naar Instagram. Je Instagram account moet gekoppeld zijn aan je Facebook Pagina.
+        </p>
+      </div>
+
+      {!showManual ? (
+        <button
+          onClick={handleAutoFetch}
+          disabled={fetching}
+          className="flex items-center gap-2 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 transition-opacity"
+        >
+          {fetching ? (
+            <>
+              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+              Ophalen…
+            </>
+          ) : "Instagram automatisch koppelen"}
+        </button>
+      ) : (
+        <div className="space-y-2">
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-3 text-xs text-gray-600 dark:text-gray-400 space-y-1">
+            <p className="font-medium text-gray-700 dark:text-gray-300">Hoe vind je je Instagram Business Account ID?</p>
+            <ol className="list-decimal list-inside space-y-0.5">
+              <li>Ga naar <a href="https://business.facebook.com/settings/instagram-accounts" target="_blank" rel="noopener noreferrer" className="underline text-[#1877F2]">Meta Business Manager → Instagram-accounts</a></li>
+              <li>Klik op je account → kopieer het ID uit de URL of de instellingen</li>
+              <li>Of: ga naar instagram.com → Profiel → Instellingen → Account → Verbonden accounts</li>
+            </ol>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              type="text"
+              value={manualIgId}
+              onChange={e => setManualIgId(e.target.value)}
+              placeholder="17841480755305284"
+              className="flex-1 min-w-0 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm font-mono text-gray-900 dark:text-white placeholder-gray-400"
+            />
+            <button
+              onClick={handleManualSave}
+              disabled={saving || !manualIgId.trim()}
+              className="rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] disabled:opacity-60 px-4 py-2 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+            >
+              {saving ? "Opslaan…" : "Opslaan"}
+            </button>
+          </div>
+          <button onClick={() => { setShowManual(false); setError(null); }} className="text-xs text-gray-400 hover:text-gray-600 underline">
+            ← Opnieuw automatisch proberen
+          </button>
+        </div>
+      )}
+
+      {error && <p className="text-xs text-amber-600 dark:text-amber-400">{error}</p>}
+    </div>
+  );
+}
+
 export default function MetaPage() {
   const { brand, brands, loading: brandLoading } = useBrand();
   const [connection, setConnection] = useState<FacebookConnection | null>(null);
@@ -247,6 +361,17 @@ export default function MetaPage() {
         {!loadingConn && connection && !connection.page_id && (
           <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
             <PageSetupSection brandId={brand!.id} onSaved={() => loadConnection(brand!.id)} />
+          </div>
+        )}
+
+        {/* Instagram setup if page is linked but ig_user_id is missing */}
+        {!loadingConn && connection && connection.page_id && !connection.ig_user_id && (
+          <div className="border-t border-gray-100 dark:border-gray-800 pt-5">
+            <InstagramSetupSection
+              brandId={brand!.id}
+              pageId={connection.page_id}
+              onSaved={() => loadConnection(brand!.id)}
+            />
           </div>
         )}
 
