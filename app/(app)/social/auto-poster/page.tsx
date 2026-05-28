@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useBrand } from "@/lib/brand-context";
 
