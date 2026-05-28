@@ -39,11 +39,11 @@ export default function SocialCreatePage() {
     setShowGenerator(false);
     setCreatedSession(null);
     Promise.all([
-      fetch(`/api/brands/${brand.id}/dna`),
+      fetch(`/api/brands/${brand.id}`),
       fetch(`/api/brands/${brand.id}/products`),
-    ]).then(async ([dnaRes, prodsRes]) => {
-      const [dnaData, prodsData] = await Promise.all([dnaRes.json(), prodsRes.json()]);
-      setDna(dnaData?.data ?? null);
+    ]).then(async ([brandRes, prodsRes]) => {
+      const [brandData, prodsData] = await Promise.all([brandRes.json(), prodsRes.json()]);
+      setDna(brandData?.brand_dna?.data ?? null);
       setProducts(Array.isArray(prodsData) ? prodsData : []);
       setShowGenerator(true);
     }).finally(() => setLoading(false));
