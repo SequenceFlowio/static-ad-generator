@@ -90,11 +90,26 @@ function NewPostModal({
 
   async function handleImageUpload(file: File) {
     setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch(`/api/brands/${brandId}/upload`, { method: "POST", body: formData });
-    const data = await res.json();
-    if (data.url) setImageUrl(data.url);
+    try {
+      // Step 1: get a signed upload URL from our API (no file data sent)
+      const res = await fetch(`/api/brands/${brandId}/upload`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name, content_type: file.type }),
+      });
+      const { signed_url, public_url } = await res.json() as { signed_url: string; public_url: string };
+
+      // Step 2: upload file directly to Supabase Storage (browser → Supabase, no Vercel hop)
+      await fetch(signed_url, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+
+      setImageUrl(public_url);
+    } catch {
+      // silently fail — user can retry
+    }
     setUploading(false);
   }
 

@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server";
-import { uploadToStorage } from "@/lib/supabase";
+import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 
-// POST /api/brands/[id]/upload — generic file upload for social posts
+// POST /api/brands/[id]/upload
+// Returns a signed upload URL so the browser can upload directly to Supabase Storage.
+// Body: { filename: string; content_type: string }
 export async function POST(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -11,17 +13,27 @@ export async function POST(
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { id } = await params;
+  const { filename, content_type } = await req.json() as { filename: string; content_type: string };
 
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  if (!file) return NextResponse.json({ error: "No file provided" }, { status: 400 });
-
-  const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
-  const contentType = file.type || "image/jpeg";
-  const buffer = Buffer.from(await file.arrayBuffer());
+  const ext = filename.split(".").pop()?.toLowerCase() ?? "jpg";
   const path = `social-posts/${id}/${Date.now()}.${ext}`;
 
-  const url = await uploadToStorage("product-images", path, buffer, contentType);
+  const db = getServerSupabase();
+  const { data, error } = await db.storage
+    .from("product-images")
+    .createSignedUploadUrl(path);
 
-  return NextResponse.json({ url });
+  if (error || !data) {
+    return NextResponse.json({ error: "Could not create upload URL" }, { status: 500 });
+  }
+
+  const publicUrl = db.storage.from("product-images").getPublicUrl(path).data.publicUrl;
+
+  return NextResponse.json({
+    signed_url: data.signedUrl,
+    token: data.token,
+    path,
+    public_url: publicUrl,
+    content_type,
+  });
 }
