@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useBrand } from "@/lib/brand-context";
 import type { Brand } from "@/types";
 
 interface SocialPost {
@@ -38,29 +39,6 @@ const PLATFORM_ICONS: Record<string, string> = {
   facebook: "👍",
 };
 
-function BrandPicker({ onSelect }: { onSelect: (b: Brand) => void }) {
-  const { lang } = useLanguage();
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    fetch("/api/brands").then(r => r.json()).then(d => { setBrands(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
-  if (loading) return <p className="text-sm text-gray-400 py-8 text-center">Loading…</p>;
-  if (brands.length === 0) return <div className="text-center py-10"><Link href="/stores" className="rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a]">{lang === "nl" ? "Store aanmaken" : "Create a store"}</Link></div>;
-  return (
-    <div>
-      <p className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{lang === "nl" ? "Kies een store" : "Choose a store"}</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {brands.map(b => (
-          <button key={b.id} onClick={() => onSelect(b)} className="rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 text-left hover:border-[#C7F56F]">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{b.name}</p>
-            {b.url && <p className="text-[11px] text-gray-400 truncate mt-0.5">{b.url}</p>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ─── New Post Modal ───────────────────────────────────────────────────────────
 
@@ -269,25 +247,14 @@ function NewPostModal({
 function PlannerInner() {
   const { lang } = useLanguage();
   const searchParams = useSearchParams();
-  const initialBrandId = searchParams.get("brand_id");
   const initialImageUrl = searchParams.get("image_url") ?? undefined;
+  const { brand, loading: brandCtxLoading } = useBrand();
 
-  const [brand, setBrand] = useState<Brand | null>(null);
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [showNewPost, setShowNewPost] = useState(!!initialImageUrl);
   const [filter, setFilter] = useState<"all" | "scheduled" | "published" | "draft">("all");
   const [publishingId, setPublishingId] = useState<string | null>(null);
-
-  // Auto-select brand if brand_id in URL
-  useEffect(() => {
-    if (initialBrandId && !brand) {
-      fetch("/api/brands").then(r => r.json()).then((brands: Brand[]) => {
-        const found = brands.find(b => b.id === initialBrandId);
-        if (found) { setBrand(found); }
-      });
-    }
-  }, [initialBrandId, brand]);
 
   const loadPosts = useCallback(async (b: Brand) => {
     setLoading(true);
@@ -297,7 +264,7 @@ function PlannerInner() {
     setLoading(false);
   }, []);
 
-  useEffect(() => { if (brand) loadPosts(brand); }, [brand, loadPosts]);
+  useEffect(() => { if (brand) loadPosts(brand); }, [brand?.id, loadPosts]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function handlePublishNow(post: SocialPost) {
     if (!brand) return;
@@ -321,16 +288,22 @@ function PlannerInner() {
 
   const filtered = posts.filter(p => filter === "all" || p.status === filter);
 
+  if (brandCtxLoading) {
+    return (
+      <div className="mx-auto max-w-4xl px-4 py-10">
+        <div className="h-8 w-32 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse mb-4" />
+        <div className="h-40 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+      </div>
+    );
+  }
+
   if (!brand) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Planner</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Plan en publiceer content op Instagram & Facebook." : "Plan and publish content to Instagram & Facebook."}
-          </p>
-        </div>
-        <BrandPicker onSelect={setBrand} />
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Planner</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {lang === "nl" ? "Selecteer een brand via het menu linksonder." : "Select a brand from the bottom-left menu."}
+        </p>
       </div>
     );
   }
@@ -349,14 +322,17 @@ function PlannerInner() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <button onClick={() => setBrand(null)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">← {lang === "nl" ? "Stores" : "Stores"}</button>
-            <span className="text-xs text-gray-300 dark:text-gray-600">/</span>
-            <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">{brand.name}</span>
-          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{brand.name}</p>
           <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Planner</h1>
         </div>
         <div className="flex gap-2">
+          <Link href="/meta"
+            className="flex items-center gap-1.5 rounded-full border border-gray-200 dark:border-gray-700 px-3 py-1.5 text-xs font-medium text-gray-500 dark:text-gray-400 hover:border-[#1877F2] hover:text-[#1877F2] transition-colors">
+            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            Meta
+          </Link>
           <Link href={`/social/create?brand_id=${brand.id}`}
             className="rounded-full border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:border-[#C7F56F] hover:text-gray-900 dark:hover:text-white">
             {lang === "nl" ? "Content maken" : "Create content"}

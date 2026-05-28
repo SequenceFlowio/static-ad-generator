@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useBrand } from "@/lib/brand-context";
 import type { Brand, BrandDna, Product, SceneScript, VideoSession, CreativeStrategy, CreativeAngle } from "@/types";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
 import { VIDEO_PRESETS } from "@/lib/video-presets";
@@ -46,49 +47,6 @@ const ENVIRONMENT_SUGGESTIONS = [
 ];
 
 // ─── Brand Picker ─────────────────────────────────────────────────────────────
-
-function BrandPicker({ onSelect }: { onSelect: (b: Brand) => void }) {
-  const { lang } = useLanguage();
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/brands").then(r => r.json()).then(d => {
-      setBrands(Array.isArray(d) ? d : []);
-      setLoading(false);
-    }).catch(() => setLoading(false));
-  }, []);
-
-  if (loading) return <p className="text-sm text-gray-400 py-8 text-center">Loading…</p>;
-  if (brands.length === 0) {
-    return (
-      <div className="text-center py-10">
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
-          {lang === "nl" ? "Geen stores gevonden." : "No stores found."}
-        </p>
-        <Link href="/stores" className="rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a]">
-          {lang === "nl" ? "Store aanmaken" : "Create a store"}
-        </Link>
-      </div>
-    );
-  }
-  return (
-    <div>
-      <p className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">
-        {lang === "nl" ? "Kies een store" : "Choose a store"}
-      </p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {brands.map((b) => (
-          <button key={b.id} onClick={() => onSelect(b)}
-            className="rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 text-left hover:border-[#C7F56F]">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{b.name}</p>
-            {b.url && <p className="text-[11px] text-gray-400 truncate mt-0.5">{b.url}</p>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ─── Session helpers ─────────────────────────────────────────────────────────
 
@@ -1682,34 +1640,36 @@ function VideoWizard({
 
 export default function GenerationVideoPage() {
   const { lang } = useLanguage();
-  const [selectedBrand, setSelectedBrand] = useState<Brand | null>(null);
+  const { brand: selectedBrand, loading: brandCtxLoading } = useBrand();
   const [dna, setDna] = useState<BrandDna | null>(null);
   const [strategy, setStrategy] = useState<CreativeStrategy | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
   const [loadingBrand, setLoadingBrand] = useState(false);
   const [viewMode, setViewMode] = useState<"picker" | "wizard">("picker");
   const [initialSession, setInitialSession] = useState<VideoSession | null>(null);
+  const loadedBrandIdRef = useRef<string | null>(null);
 
-  async function handleSelectBrand(brand: Brand) {
-    setSelectedBrand(brand);
+  useEffect(() => {
+    if (!selectedBrand || selectedBrand.id === loadedBrandIdRef.current) return;
+    loadedBrandIdRef.current = selectedBrand.id;
     setLoadingBrand(true);
     setViewMode("picker");
     setInitialSession(null);
-    const [brandRes, prodsRes, stratRes] = await Promise.all([
-      fetch(`/api/brands/${brand.id}`),
-      fetch(`/api/brands/${brand.id}/products`),
-      fetch(`/api/brands/${brand.id}/creative-strategy`),
-    ]);
-    const brandJson = await brandRes.json();
-    const prods = await prodsRes.json();
-    setDna(brandJson.brand_dna ?? null);
-    setProducts(Array.isArray(prods) ? prods : []);
-    if (stratRes.ok) {
-      const s = await stratRes.json();
-      setStrategy(s.strategy ?? null);
-    }
-    setLoadingBrand(false);
-  }
+    Promise.all([
+      fetch(`/api/brands/${selectedBrand.id}`),
+      fetch(`/api/brands/${selectedBrand.id}/products`),
+      fetch(`/api/brands/${selectedBrand.id}/creative-strategy`),
+    ]).then(async ([brandRes, prodsRes, stratRes]) => {
+      const brandJson = await brandRes.json();
+      const prods = await prodsRes.json();
+      setDna(brandJson.brand_dna ?? null);
+      setProducts(Array.isArray(prods) ? prods : []);
+      if (stratRes.ok) {
+        const s = await stratRes.json();
+        setStrategy(s.strategy ?? null);
+      }
+    }).finally(() => setLoadingBrand(false));
+  }, [selectedBrand?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function handleResume(session: VideoSession) {
     setInitialSession(session);
@@ -1722,10 +1682,6 @@ export default function GenerationVideoPage() {
   }
 
   function handleChangeBrand() {
-    setSelectedBrand(null);
-    setDna(null);
-    setStrategy(null);
-    setProducts([]);
     setViewMode("picker");
     setInitialSession(null);
   }
@@ -1750,10 +1706,12 @@ export default function GenerationVideoPage() {
       </div>
 
       <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-6">
-        {!selectedBrand ? (
-          <BrandPicker onSelect={handleSelectBrand} />
-        ) : loadingBrand ? (
+        {brandCtxLoading || loadingBrand ? (
           <p className="text-sm text-gray-400 py-6 text-center">Loading…</p>
+        ) : !selectedBrand ? (
+          <p className="text-sm text-gray-400 py-6 text-center">
+            {lang === "nl" ? "Selecteer een brand via het menu linksonder." : "Select a brand from the bottom-left menu."}
+          </p>
         ) : !dna ? (
           <div className="text-center py-8">
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">

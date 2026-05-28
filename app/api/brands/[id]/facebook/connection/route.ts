@@ -13,7 +13,7 @@ export async function GET(
   const db = getServerSupabase();
 
   const { data } = await db.from("facebook_connections")
-    .select("id, fb_account_id, fb_account_name, token_expires_at, created_at")
+    .select("id, fb_account_id, fb_account_name, token_expires_at, created_at, page_id, page_name, ig_user_id")
     .eq("brand_id", brandId)
     .eq("user_id", user.id)
     .single();

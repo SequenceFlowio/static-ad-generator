@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useLanguage } from "@/components/LanguageProvider";
-import type { Brand } from "@/types";
+import { useBrand } from "@/lib/brand-context";
 
 interface SocialSettings {
   enabled: boolean;
@@ -26,33 +26,9 @@ const CONTENT_TYPE_OPTIONS = [
   { value: "ugc", label: "UGC-style", labelNl: "UGC-stijl", desc: "Creator reviews + reactions", descNl: "Creator reviews + reacties" },
 ];
 
-function BrandPicker({ onSelect }: { onSelect: (b: Brand) => void }) {
-  const { lang } = useLanguage();
-  const [brands, setBrands] = useState<Brand[]>([]);
-  const [loading, setLoading] = useState(true);
-  useEffect(() => {
-    fetch("/api/brands").then(r => r.json()).then(d => { setBrands(Array.isArray(d) ? d : []); setLoading(false); }).catch(() => setLoading(false));
-  }, []);
-  if (loading) return <p className="text-sm text-gray-400 py-8 text-center">Loading…</p>;
-  if (brands.length === 0) return <div className="text-center py-10"><Link href="/stores" className="rounded-full bg-[#C7F56F] px-4 py-2 text-sm font-semibold text-[#1a1a1a]">{lang === "nl" ? "Store aanmaken" : "Create a store"}</Link></div>;
-  return (
-    <div>
-      <p className="mb-4 text-sm font-semibold text-gray-700 dark:text-gray-200">{lang === "nl" ? "Kies een store" : "Choose a store"}</p>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        {brands.map(b => (
-          <button key={b.id} onClick={() => onSelect(b)} className="rounded-xl border-2 border-gray-200 dark:border-gray-700 p-4 text-left hover:border-[#C7F56F]">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">{b.name}</p>
-            {b.url && <p className="text-[11px] text-gray-400 truncate mt-0.5">{b.url}</p>}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 export default function AutoPosterPage() {
   const { lang } = useLanguage();
-  const [brand, setBrand] = useState<Brand | null>(null);
+  const { brand, loading: brandCtxLoading } = useBrand();
   const [settings, setSettings] = useState<SocialSettings>({
     enabled: false,
     platforms: ["instagram"],
@@ -102,18 +78,22 @@ export default function AutoPosterPage() {
     }));
   }
 
+  if (brandCtxLoading) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-10">
+        <div className="h-8 w-40 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse mb-4" />
+        <div className="h-40 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+      </div>
+    );
+  }
+
   if (!brand) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Auto-poster</h1>
-          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-            {lang === "nl"
-              ? "Automatisch content genereren en posten op een vast schema."
-              : "Automatically generate and post content on a fixed schedule."}
-          </p>
-        </div>
-        <BrandPicker onSelect={setBrand} />
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Auto-poster</h1>
+        <p className="text-sm text-gray-500 dark:text-gray-400">
+          {lang === "nl" ? "Selecteer een brand via het menu linksonder." : "Select a brand from the bottom-left menu."}
+        </p>
       </div>
     );
   }
@@ -122,11 +102,7 @@ export default function AutoPosterPage() {
     <div className="mx-auto max-w-2xl px-4 py-10">
       {/* Header */}
       <div className="mb-8">
-        <div className="flex items-center gap-2 mb-1">
-          <button onClick={() => setBrand(null)} className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-200">← {lang === "nl" ? "Stores" : "Stores"}</button>
-          <span className="text-xs text-gray-300 dark:text-gray-600">/</span>
-          <span className="text-xs text-gray-600 dark:text-gray-300 font-medium">{brand.name}</span>
-        </div>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{brand.name}</p>
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Auto-poster</h1>
         <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
           {lang === "nl"

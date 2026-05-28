@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   if (error || !code || !brandId) {
     return NextResponse.redirect(
-      `${appUrl}/generation/analytics?error=fb_oauth_denied`
+      `${appUrl}/meta?error=fb_oauth_denied`
     );
   }
 
@@ -35,7 +35,7 @@ export async function GET(req: NextRequest) {
     const firstAccount = accounts[0];
     if (!firstAccount) {
       return NextResponse.redirect(
-        `${appUrl}/generation/analytics?brand_id=${brandId}&error=no_ad_accounts`
+        `${appUrl}/meta?brand_id=${brandId}&error=no_ad_accounts`
       );
     }
 
@@ -63,12 +63,12 @@ export async function GET(req: NextRequest) {
     );
 
     return NextResponse.redirect(
-      `${appUrl}/generation/analytics?brand_id=${brandId}&connected=1`
+      `${appUrl}/meta?brand_id=${brandId}&connected=1`
     );
   } catch (err) {
     console.error("Facebook OAuth error:", err);
     return NextResponse.redirect(
-      `${appUrl}/generation/analytics?brand_id=${brandId}&error=fb_oauth_failed`
+      `${appUrl}/meta?brand_id=${brandId}&error=fb_oauth_failed`
     );
   }
 }

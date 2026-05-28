@@ -9,6 +9,7 @@ import SupportModal from "@/components/SupportModal";
 import FeedbackModal from "@/components/FeedbackModal";
 import TutorialModal from "@/components/TutorialModal";
 import { useLanguage } from "@/components/LanguageProvider";
+import { useBrand } from "@/lib/brand-context";
 import type { Lang } from "@/lib/translations";
 
 const ADS_NAV = [
@@ -285,6 +286,7 @@ export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const { lang, setLang, t } = useLanguage();
+  const { brand, brands, setBrand } = useBrand();
   const TRIAL_DAYS = 7;
   const WHITELISTED_EMAILS = ["sequenceflownl@gmail.com"];
 
@@ -535,6 +537,19 @@ export default function Sidebar() {
           >
             {t("nav.support")}
           </button>
+          <Link
+            href="/meta"
+            className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors ${
+              pathname === "/meta"
+                ? "bg-[#C7F56F] text-[#1a1a1a] font-semibold"
+                : "text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-700 dark:hover:text-gray-200"
+            }`}
+          >
+            <svg className="h-4 w-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+            </svg>
+            Meta account
+          </Link>
 
           {/* User row */}
           <div className="relative" ref={popoverRef}>
@@ -557,6 +572,33 @@ export default function Sidebar() {
             {/* Popover */}
             {userPopover && (
               <div className="absolute bottom-full left-0 mb-1 w-56 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg py-1.5 z-50">
+                {/* Brand switcher */}
+                {brands.length > 0 && (
+                  <div className="px-3 pb-1.5 mb-1 border-b border-gray-100 dark:border-gray-800">
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500 mb-1 pt-1">Brand</p>
+                    {brands.map(b => (
+                      <button
+                        key={b.id}
+                        onClick={() => { setBrand(b); setUserPopover(false); }}
+                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-xs transition-colors ${
+                          brand?.id === b.id
+                            ? "bg-[#C7F56F]/20 text-[#1a1a1a] dark:text-[#C7F56F] font-semibold"
+                            : "text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800"
+                        }`}
+                      >
+                        <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#C7F56F]/30 text-[10px] font-bold text-[#1a1a1a] dark:text-[#C7F56F] flex-shrink-0">
+                          {b.name.charAt(0).toUpperCase()}
+                        </div>
+                        <span className="truncate">{b.name}</span>
+                        {brand?.id === b.id && (
+                          <svg className="ml-auto h-3 w-3 flex-shrink-0 text-[#C7F56F]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                          </svg>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
                 {/* Theme toggle */}
                 <div className="flex items-center gap-1 px-2 pb-1.5 mb-1 border-b border-gray-100 dark:border-gray-800">
                   <button

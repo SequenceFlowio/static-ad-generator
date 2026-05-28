@@ -253,6 +253,9 @@ export interface FacebookConnection {
   fb_account_id: string;
   fb_account_name: string | null;
   token_expires_at: string | null;
+  page_id: string | null;
+  page_name: string | null;
+  ig_user_id: string | null;
   created_at: string;
 }
 
