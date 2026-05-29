@@ -251,10 +251,19 @@ function InstagramSetupSection({ brandId, pageId, currentIgUserId, onSaved }: { 
   );
 }
 
+interface DiagnoseResult {
+  granted_scopes: string[];
+  has_instagram_publish: boolean;
+  ig_account?: { id?: string; name?: string; username?: string; account_type?: string; error?: string };
+  ig_from_page?: { id: string } | null;
+}
+
 export default function MetaPage() {
   const { brand, brands, loading: brandLoading } = useBrand();
   const [connection, setConnection] = useState<FacebookConnection | null>(null);
   const [loadingConn, setLoadingConn] = useState(false);
+  const [diagnosing, setDiagnosing] = useState(false);
+  const [diagnoseResult, setDiagnoseResult] = useState<DiagnoseResult | null>(null);
 
   const loadConnection = useCallback(async (brandId: string) => {
     setLoadingConn(true);
@@ -285,6 +294,20 @@ export default function MetaPage() {
     if (!brand) return;
     await fetch(`/api/brands/${brand.id}/facebook/connection`, { method: "DELETE" });
     setConnection(null);
+    setDiagnoseResult(null);
+  }
+
+  async function handleDiagnose() {
+    if (!brand) return;
+    setDiagnosing(true);
+    setDiagnoseResult(null);
+    try {
+      const res = await fetch(`/api/brands/${brand.id}/facebook/verify`);
+      const data = await res.json();
+      setDiagnoseResult(data);
+    } finally {
+      setDiagnosing(false);
+    }
   }
 
   if (brandLoading) {
@@ -434,6 +457,98 @@ export default function MetaPage() {
           ) : null}
         </div>
       </div>
+
+      {/* Diagnose */}
+      {!loadingConn && connection && (
+        <div className="space-y-3">
+          <button
+            onClick={handleDiagnose}
+            disabled={diagnosing}
+            className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-50 transition-colors"
+          >
+            {diagnosing ? (
+              <svg className="h-3.5 w-3.5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+              </svg>
+            ) : (
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+            )}
+            {diagnosing ? "Controleren…" : "Verbinding controleren"}
+          </button>
+
+          {diagnoseResult && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 p-4 space-y-3 text-xs">
+              {/* Token scopes */}
+              <div>
+                <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Token permissies</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {["instagram_content_publish", "pages_manage_posts", "pages_read_engagement", "ads_read", "ads_management"].map(scope => {
+                    const has = diagnoseResult.granted_scopes.includes(scope);
+                    return (
+                      <span key={scope} className={`flex items-center gap-1 rounded-full px-2 py-0.5 font-mono text-[10px] ${has ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" : "bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400"}`}>
+                        {has ? "✓" : "✗"} {scope}
+                      </span>
+                    );
+                  })}
+                </div>
+                {!diagnoseResult.has_instagram_publish && (
+                  <p className="mt-2 text-amber-600 dark:text-amber-400 font-medium">
+                    ⚠ instagram_content_publish ontbreekt — klik &quot;Opnieuw verbinden&quot; om opnieuw te autoriseren.
+                  </p>
+                )}
+              </div>
+
+              {/* IG account info */}
+              {diagnoseResult.ig_account && (
+                <div>
+                  <p className="font-semibold text-gray-700 dark:text-gray-300 mb-1.5">Instagram account</p>
+                  {diagnoseResult.ig_account.error ? (
+                    <p className="text-red-500">Fout: {diagnoseResult.ig_account.error}</p>
+                  ) : (
+                    <div className="space-y-1">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Gebruikersnaam</span>
+                        <span className="font-medium text-gray-900 dark:text-white">@{diagnoseResult.ig_account.username ?? "—"}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-500 dark:text-gray-400">Account type</span>
+                        <span className={`font-medium ${diagnoseResult.ig_account.account_type === "BUSINESS" ? "text-green-600 dark:text-green-400" : "text-red-500"}`}>
+                          {diagnoseResult.ig_account.account_type ?? "onbekend"}
+                        </span>
+                      </div>
+                      {diagnoseResult.ig_account.account_type !== "BUSINESS" && (
+                        <p className="text-red-500 font-medium pt-1">
+                          ⚠ Dit is geen Business account — Instagram publiceren vereist een Instagram Business account gekoppeld aan je Facebook Pagina.
+                        </p>
+                      )}
+                      {diagnoseResult.ig_from_page && diagnoseResult.ig_from_page.id !== diagnoseResult.ig_account.id && (
+                        <p className="text-amber-600 dark:text-amber-400 font-medium pt-1">
+                          ⚠ ID komt niet overeen met de pagina ({diagnoseResult.ig_from_page.id}). Gebruik dat ID via &quot;Wijzigen&quot; hieronder.
+                        </p>
+                      )}
+                      {diagnoseResult.ig_from_page && diagnoseResult.ig_from_page.id === diagnoseResult.ig_account.id && (
+                        <p className="text-green-600 dark:text-green-400 font-medium pt-1">✓ ID klopt overeen met je Facebook Pagina.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Suggest correct ID if different */}
+              {diagnoseResult.ig_from_page && (!diagnoseResult.ig_account || diagnoseResult.ig_from_page.id !== diagnoseResult.ig_account?.id) && (
+                <div className="rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-3">
+                  <p className="text-blue-700 dark:text-blue-400 font-medium mb-1">Correct Instagram Business Account ID gevonden:</p>
+                  <p className="font-mono text-blue-800 dark:text-blue-300 text-sm">{diagnoseResult.ig_from_page.id}</p>
+                  <p className="text-blue-600 dark:text-blue-400 mt-1">Sla dit op via &quot;Wijzigen&quot; in het Instagram gedeelte hierboven.</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Info block */}
       <div className="rounded-xl border border-gray-100 dark:border-gray-800 p-4 space-y-2 text-xs text-gray-500 dark:text-gray-400">
