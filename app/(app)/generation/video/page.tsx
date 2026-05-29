@@ -995,12 +995,14 @@ function ScriptStep({
 // ─── Step 3: Frames ───────────────────────────────────────────────────────────
 
 function FrameCard({
-  scene, brandId, sessionId, onUpdated,
+  scene, brandId, sessionId, product, onUpdated, onToggleProduct,
 }: {
   scene: SceneScript;
   brandId: string;
   sessionId: string;
+  product: Product | null;
   onUpdated: (index: number, url: string | null, frameError?: boolean) => void;
+  onToggleProduct: (index: number, value: boolean) => void;
 }) {
   const { lang } = useLanguage();
   const [showEdit, setShowEdit] = useState(false);
@@ -1103,6 +1105,25 @@ function FrameCard({
         {scene.voiceover}
       </div>
 
+      {product && (
+        <div className="px-3 pb-2">
+          <button
+            onClick={() => onToggleProduct(scene.index, !scene.product_in_frame)}
+            className={`flex w-full items-center gap-2 rounded-lg border px-2.5 py-1.5 text-[10px] font-medium transition-colors ${
+              scene.product_in_frame
+                ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white"
+                : "border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500"
+            }`}
+          >
+            {product.image_urls?.[0] && (
+              <Image src={product.image_urls[0]} alt="" width={14} height={14} className="rounded object-cover flex-shrink-0" unoptimized />
+            )}
+            <span className="truncate">{product.name}</span>
+            <span className="ml-auto flex-shrink-0">{scene.product_in_frame ? "📦 ✓" : "📦"}</span>
+          </button>
+        </div>
+      )}
+
       <div className="flex gap-1.5 px-3 pb-3">
         <button onClick={() => setShowEdit(v => !v)} disabled={busy}
           className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 disabled:opacity-40">
@@ -1147,11 +1168,12 @@ function FrameCard({
 }
 
 function FramesStep({
-  scenes, brandId, sessionId, onScenesUpdate, onNext,
+  scenes, brandId, sessionId, product, onScenesUpdate, onNext,
 }: {
   scenes: SceneScript[];
   brandId: string;
   sessionId: string;
+  product: Product | null;
   onScenesUpdate: (scenes: SceneScript[]) => void;
   onNext: () => void;
 }) {
@@ -1204,6 +1226,18 @@ function FramesStep({
     });
   }
 
+  async function handleToggleProduct(index: number, value: boolean) {
+    const updated = localScenes.map(s => s.index === index ? { ...s, product_in_frame: value } : s);
+    setLocalScenes(updated);
+    onScenesUpdate(updated);
+    // Persist to DB
+    await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scenes: updated }),
+    });
+  }
+
   const doneCount = localScenes.filter(s => !!s.image_url && !s.frame_error).length;
   const failedCount = localScenes.filter(s => !!s.frame_error).length;
 
@@ -1249,7 +1283,9 @@ function FramesStep({
             scene={scene}
             brandId={brandId}
             sessionId={sessionId}
+            product={product}
             onUpdated={handleFrameUpdated}
+            onToggleProduct={handleToggleProduct}
           />
         ))}
       </div>
@@ -1614,6 +1650,7 @@ function VideoWizard({
           scenes={scenes}
           brandId={brand.id}
           sessionId={sessionId}
+          product={products.find(p => p.id === productId) ?? null}
           onScenesUpdate={setScenes}
           onNext={() => setStep(4)}
         />

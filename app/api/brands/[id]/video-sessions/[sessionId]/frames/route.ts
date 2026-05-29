@@ -185,12 +185,28 @@ export async function PATCH(
   const scene = scenes.find(s => s.index === body.scene_index);
   if (!scene) return NextResponse.json({ error: "Scene not found" }, { status: 404 });
 
+  // Load session refs for this scene
+  let productImageUrl: string | null = null;
+  if (videoSession.product_id) {
+    const { data: productRow } = await db.from("products")
+      .select("image_urls").eq("id", videoSession.product_id).single();
+    const imgs = (productRow?.image_urls ?? []) as string[];
+    productImageUrl = imgs[0] ?? null;
+  }
+  const characterRefUrl = videoSession.character_ref_url ?? null;
+  const environmentRefUrl = videoSession.environment_ref_url ?? null;
+
+  const sceneRefs: string[] = [];
+  if (scene.character_in_frame && characterRefUrl) sceneRefs.push(characterRefUrl);
+  if (environmentRefUrl) sceneRefs.push(environmentRefUrl);
+  if (scene.product_in_frame && productImageUrl) sceneRefs.push(productImageUrl);
+
   let prompt = scene.nano_prompt;
-  let refUrls: string[] | undefined;
+  let refUrls: string[] = sceneRefs;
 
   if (body.action === "adjust" && body.adjustment) {
     prompt = `${scene.nano_prompt}\n\nAdjustment: ${body.adjustment}`;
-    if (body.reference_url) refUrls = [body.reference_url];
+    if (body.reference_url) refUrls = [body.reference_url, ...sceneRefs];
   }
 
   // Clear the frame immediately
@@ -205,7 +221,7 @@ export async function PATCH(
         resolution: "1K",
         num_images: 1,
         model: "nano-banana-2",
-        reference_image_urls: refUrls,
+        reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
       }),
       { maxAttempts: 3, baseDelayMs: 2000 }
     );
