@@ -1278,7 +1278,16 @@ function FramesStep({
         ))}
       </div>
 
-      <button onClick={onNext} disabled={!allReady}
+      <button
+        onClick={async () => {
+          await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ phase: "prompt" }),
+          });
+          onNext();
+        }}
+        disabled={!allReady}
         className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 disabled:cursor-not-allowed">
         {lang === "nl" ? "Prompt bekijken →" : "Review Prompt →"}
       </button>
