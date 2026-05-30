@@ -107,11 +107,13 @@ export async function generateVideo({
   prompt,
   aspect_ratio,
   duration,
+  resolution = "720p",
   reference_image_urls,
 }: {
   prompt: string;
   aspect_ratio: string;
   duration: number; // 4-15 seconds
+  resolution?: "480p" | "720p" | "1080p";
   reference_image_urls: string[]; // up to 9 total
 }): Promise<string[]> {
   const payload = {
@@ -120,6 +122,7 @@ export async function generateVideo({
       prompt,
       aspect_ratio,
       duration: Math.min(15, Math.max(4, duration)),
+      resolution,
       reference_image_urls: reference_image_urls.slice(0, 9),
     },
   };

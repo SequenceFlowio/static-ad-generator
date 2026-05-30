@@ -1296,11 +1296,12 @@ function FramesStep({
 // ─── Step 4: Prompt ───────────────────────────────────────────────────────────
 
 function PromptStep({
-  scenes, seedancePrompt, numScenes, onSave, onGenerate,
+  scenes, seedancePrompt, numScenes, productImageUrl, onSave, onGenerate,
 }: {
   scenes: SceneScript[];
   seedancePrompt: string;
   numScenes: number;
+  productImageUrl: string | null;
   onSave: (prompt: string) => void;
   onGenerate: (prompt: string) => void;
 }) {
@@ -1330,8 +1331,11 @@ function PromptStep({
           </div>
         ))}
         <div className="flex-shrink-0 text-center">
-          <div className="flex h-16 w-12 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600 items-center justify-center">
-            <span className="text-[10px] text-gray-400">📦</span>
+          <div className="relative h-16 w-12 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
+            {productImageUrl
+              ? <Image src={productImageUrl} alt="Product" fill className="object-cover" unoptimized />
+              : <span className="text-[10px] text-gray-400">📦</span>
+            }
           </div>
           <p className="text-[9px] text-gray-400 mt-0.5">@Image{numScenes + 1}</p>
         </div>
@@ -1649,6 +1653,7 @@ function VideoWizard({
           scenes={scenes}
           seedancePrompt={seedancePrompt}
           numScenes={numScenes}
+          productImageUrl={products.find(p => p.id === productId)?.image_urls?.[productImageIndex] ?? null}
           onSave={handleSavePrompt}
           onGenerate={handleGenerate}
         />

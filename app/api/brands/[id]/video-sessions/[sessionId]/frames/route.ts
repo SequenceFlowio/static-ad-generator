@@ -39,10 +39,14 @@ async function generateAllFrames(
     if (environmentRefUrl) refUrls.push(environmentRefUrl);
     if (scene.product_in_frame && productImageUrl) refUrls.push(productImageUrl);
 
+    const scenePrompt = scene.product_in_frame && productImageUrl
+      ? `${scene.nano_prompt}\n\nThe last reference image is the product. Render it faithfully but integrated naturally into the scene — maintain the same artistic style, lighting and perspective. Do not paste it as a flat overlay.`
+      : scene.nano_prompt;
+
     try {
       const urls = await withRetry(
         () => generateImages({
-          prompt: scene.nano_prompt,
+          prompt: scenePrompt,
           aspect_ratio: aspectRatio,
           resolution: "1K",
           num_images: 1,
@@ -201,11 +205,15 @@ export async function PATCH(
   if (environmentRefUrl) sceneRefs.push(environmentRefUrl);
   if (scene.product_in_frame && productImageUrl) sceneRefs.push(productImageUrl);
 
-  let prompt = scene.nano_prompt;
+  const basePrompt = scene.product_in_frame && productImageUrl
+    ? `${scene.nano_prompt}\n\nThe last reference image is the product. Render it faithfully but integrated naturally into the scene — maintain the same artistic style, lighting and perspective. Do not paste it as a flat overlay.`
+    : scene.nano_prompt;
+
+  let prompt = basePrompt;
   let refUrls: string[] = sceneRefs;
 
   if (body.action === "adjust" && body.adjustment) {
-    prompt = `${scene.nano_prompt}\n\nAdjustment: ${body.adjustment}`;
+    prompt = `${basePrompt}\n\nAdjustment: ${body.adjustment}`;
     if (body.reference_url) refUrls = [body.reference_url, ...sceneRefs];
   }
 
