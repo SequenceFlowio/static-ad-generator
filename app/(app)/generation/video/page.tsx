@@ -11,6 +11,10 @@ import { VIDEO_PRESETS } from "@/lib/video-presets";
 import { IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from "@/lib/model-configs";
 import { ENVIRONMENT_PRESETS } from "@/lib/environment-presets";
 import { AVATAR_PRESETS } from "@/lib/avatar-presets";
+import {
+  Film, MapPin, User, SlidersHorizontal, Package, X, ChevronDown, Check,
+  Smartphone, Clapperboard, Cpu, Video,
+} from "lucide-react";
 
 const AWARENESS_LEVELS = [
   { value: "unaware",        label: "Unaware",        labelNl: "Onbewust",         desc: "Geen probleem in beeld — pure curiosity hook", descNl: "Geen probleem in beeld — pure curiosity hook" },
@@ -343,80 +347,73 @@ function SetupStep({
 
   const selectedPlatform = PLATFORMS.find(p => p.value === platform) ?? PLATFORMS[0];
   const selectedEnvLabel = ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? environmentPresetKey;
-  const selectedEnvEmoji = ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.emoji ?? "🏠";
   const selectedAvatarLabel = AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? avatarPresetKey;
-  const selectedAvatarEmoji = AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.emoji ?? "👤";
+
+  const PRESET_GRADIENTS: Record<string, string> = {
+    "ugc-review":   "from-rose-500 via-orange-400 to-amber-300",
+    "lifestyle":    "from-amber-500 via-yellow-400 to-lime-300",
+    "product-hero": "from-slate-700 via-slate-800 to-slate-900",
+    "animation":    "from-purple-500 via-pink-500 to-rose-400",
+    "cinematic":    "from-gray-800 via-gray-900 to-black",
+  };
+  const AVATAR_GRADIENTS: Record<string, string> = {
+    "young-woman":   "from-rose-300 to-pink-500",
+    "young-man":     "from-blue-300 to-indigo-500",
+    "influencer":    "from-purple-300 to-fuchsia-500",
+    "fitness":       "from-orange-300 to-red-500",
+    "professional":  "from-slate-300 to-slate-600",
+    "mom":           "from-amber-300 to-orange-400",
+    "custom":        "from-gray-300 to-gray-500",
+  };
+
+  const placeholderImg = products[0]?.image_urls?.[0] ?? null;
 
   return (
-    <div className="space-y-4">
-      {/* Product strip */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-gray-400">Product</p>
-        <div className="flex flex-wrap gap-2">
-          {products.map(p => (
-            <button key={p.id} onClick={() => { setProductId(p.id); setProductImageIndex(0); }}
-              className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-xs font-medium transition-colors ${
-                productId === p.id ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}>
-              {p.image_urls?.[0] && <Image src={p.image_urls[0]} alt="" width={18} height={18} className="rounded object-cover" unoptimized />}
-              {p.name}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="space-y-5">
 
-      {/* Format modal overlay */}
+      {/* ── Format modal ─────────────────────────────────────────── */}
       {openPanel === "format" && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-          <div className="relative w-full max-w-2xl rounded-2xl bg-gray-950 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            {/* Header */}
-            <div className="flex items-start justify-between p-6 pb-4">
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-start justify-between p-6 pb-3">
               <div>
                 <h2 className="text-xl font-black uppercase tracking-tight text-white">
                   {lang === "nl" ? "Kies het juiste format" : "Pick the format that hits"}
                 </h2>
-                <p className="mt-1 text-sm text-gray-400">
+                <p className="mt-1 text-sm text-white/50">
                   {lang === "nl" ? "Van UGC tot cinematic — kies wat past bij jouw product." : "From UGC to cinematic — choose what fits your product."}
                 </p>
               </div>
               <button onClick={closePanel} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                <X size={16} />
               </button>
             </div>
-            {/* Grid */}
             <div className="grid grid-cols-2 gap-3 p-6 pt-2 sm:grid-cols-3">
               {VIDEO_PRESETS.map(preset => {
-                const gradients: Record<string, string> = {
-                  "ugc-review":   "from-rose-500 via-orange-400 to-amber-300",
-                  "lifestyle":    "from-amber-500 via-yellow-400 to-lime-300",
-                  "product-hero": "from-slate-700 via-slate-800 to-slate-900",
-                  "animation":    "from-purple-500 via-pink-500 to-rose-400",
-                  "cinematic":    "from-gray-800 via-gray-900 to-black",
-                };
-                const gradient = gradients[preset.key] ?? "from-gray-700 to-gray-900";
                 const isSelected = selectedPresetKey === preset.key;
                 return (
                   <button key={preset.key} onClick={() => { handlePresetSelect(preset.key); closePanel(); }}
                     className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
-                      isSelected ? "ring-2 ring-[#C7F56F]" : "hover:ring-1 hover:ring-white/30"
+                      isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
                     }`}>
-                    {/* Thumbnail area */}
-                    <div className={`relative h-36 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-                      <span className="text-5xl drop-shadow-lg">{preset.icon}</span>
+                    <div className={`relative h-36 bg-gradient-to-br ${PRESET_GRADIENTS[preset.key] ?? "from-gray-700 to-gray-900"} flex items-center justify-center`}>
+                      {placeholderImg && (
+                        <Image src={placeholderImg} alt="" fill className="object-cover opacity-30 mix-blend-overlay" unoptimized />
+                      )}
+                      <Film size={40} className="text-white/80 drop-shadow-lg relative z-10" />
                       {preset.badge && (
-                        <span className="absolute top-2 right-2 rounded-full bg-[#C7F56F] px-2 py-0.5 text-[9px] font-bold text-[#1a1a1a]">{preset.badge}</span>
+                        <span className="absolute top-2 right-2 z-10 rounded-full bg-[#C7F56F] px-2 py-0.5 text-[9px] font-bold text-[#1a1a1a]">{preset.badge}</span>
                       )}
                       {isSelected && (
-                        <div className="absolute inset-0 bg-[#C7F56F]/20 flex items-end justify-end p-2">
-                          <span className="rounded-full bg-[#C7F56F] p-1 text-[10px] font-bold text-[#1a1a1a]">✓</span>
+                        <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                          <Check size={12} className="text-[#1a1a1a]" />
                         </div>
                       )}
                     </div>
-                    {/* Label */}
-                    <div className="bg-gray-900 px-3 py-2">
+                    <div className="bg-[#1a1a1a] px-3 py-2.5">
                       <p className="text-xs font-bold text-white">{lang === "nl" ? preset.labelNl : preset.label}</p>
-                      <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{lang === "nl" ? preset.descNl : preset.desc}</p>
+                      <p className="mt-0.5 text-[10px] text-white/50 leading-tight">{lang === "nl" ? preset.descNl : preset.desc}</p>
                     </div>
                   </button>
                 );
@@ -426,12 +423,114 @@ function SetupStep({
         </div>
       )}
 
-      {/* Higgsfield-style main panel */}
-      <div className="relative">
-        {openPanel && openPanel !== "format" && <div className="fixed inset-0 z-40" onClick={closePanel} />}
+      {/* ── Product modal ─────────────────────────────────────────── */}
+      {openPanel === "product" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-lg rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 pb-3">
+              <h2 className="text-lg font-black uppercase tracking-tight text-white">
+                {lang === "nl" ? "Selecteer product" : "Select product"}
+              </h2>
+              <button onClick={closePanel} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 p-5 pt-2 sm:grid-cols-3">
+              {products.map(p => {
+                const isSelected = productId === p.id;
+                return (
+                  <button key={p.id} onClick={() => { setProductId(p.id); setProductImageIndex(0); closePanel(); }}
+                    className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                      isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                    }`}>
+                    <div className="relative h-32 bg-[#222] flex items-center justify-center overflow-hidden">
+                      {p.image_urls?.[0] ? (
+                        <Image src={p.image_urls[0]} alt={p.name} fill className="object-cover" unoptimized />
+                      ) : (
+                        <Package size={32} className="text-white/30" />
+                      )}
+                      {isSelected && (
+                        <div className="absolute bottom-2 right-2 rounded-full bg-[#C7F56F] p-1">
+                          <Check size={12} className="text-[#1a1a1a]" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1a1a1a] px-3 py-2">
+                      <p className="text-xs font-semibold text-white leading-snug line-clamp-2">{p.name}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+            {/* Image index picker if product has multiple images */}
+            {selectedProduct && (selectedProduct.image_urls?.length ?? 0) > 1 && (
+              <div className="px-5 pb-5">
+                <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-white/40">
+                  {lang === "nl" ? "Foto" : "Photo"}
+                </p>
+                <div className="flex gap-2 flex-wrap">
+                  {selectedProduct.image_urls!.slice(0, 6).map((url, i) => (
+                    <button key={i} onClick={() => setProductImageIndex(i)}
+                      className={`relative size-12 overflow-hidden rounded-lg transition-all ${productImageIndex === i ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"}`}>
+                      <Image src={url} alt="" fill className="object-cover" unoptimized />
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
-        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-visible">
-          <div className="flex gap-0">
+      {/* ── Avatar modal ─────────────────────────────────────────── */}
+      {openPanel === "avatar" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 pb-3">
+              <h2 className="text-lg font-black uppercase tracking-tight text-white">
+                {lang === "nl" ? "Selecteer personage" : "Select avatar"}
+              </h2>
+              <button onClick={closePanel} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3 p-5 pt-2 sm:grid-cols-4">
+              {AVATAR_PRESETS.map(a => {
+                const isSelected = avatarPresetKey === a.key;
+                return (
+                  <button key={a.key} onClick={() => { setAvatarPresetKey(a.key); closePanel(); }}
+                    className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                      isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                    }`}>
+                    <div className={`relative h-28 bg-gradient-to-br ${AVATAR_GRADIENTS[a.key] ?? "from-gray-500 to-gray-700"} flex items-center justify-center`}>
+                      <User size={36} className="text-white/70 relative z-10" />
+                      {isSelected && (
+                        <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                          <Check size={12} className="text-[#1a1a1a]" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1a1a1a] px-2.5 py-2">
+                      <p className="text-xs font-bold text-white">{lang === "nl" ? a.labelNl : a.label}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Main chat panel ─────────────────────────────────────── */}
+      <div className="relative">
+        {openPanel && !["format", "product", "avatar"].includes(openPanel) && (
+          <div className="fixed inset-0 z-40" onClick={closePanel} />
+        )}
+
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg">
+          <div className="flex">
             {/* Left: textarea + pills */}
             <div className="flex flex-1 flex-col min-w-0 p-4">
               <textarea
@@ -443,73 +542,25 @@ function SetupStep({
                   : "Describe the video vibe, target audience and tone-of-voice…"}
                 className="w-full bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none"
               />
-
               <div className="mt-3 h-px bg-gray-100 dark:bg-gray-800" />
-
               {/* Pills row */}
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
 
-                {/* Format pill — opens full modal */}
+                {/* Format */}
                 <button onClick={() => togglePanel("format")}
                   className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                  <span>{selectedPreset.icon}</span>
+                  <Film size={13} className="opacity-60" />
                   <span>{lang === "nl" ? selectedPreset.labelNl : selectedPreset.label}</span>
-                  <span className="text-gray-400">▾</span>
+                  <ChevronDown size={11} className="opacity-40" />
                 </button>
 
-                {/* Platform pill */}
-                <div className="relative z-50">
-                  <button onClick={() => togglePanel("platform")}
-                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <span>{selectedPlatform.icon}</span>
-                    <span>{selectedPlatform.label}</span>
-                    <span className="text-gray-400">▾</span>
-                  </button>
-                  {openPanel === "platform" && (
-                    <div className="absolute bottom-full mb-2 left-0 z-50 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-1.5 min-w-[140px]">
-                      {PLATFORMS.map(p => (
-                        <button key={p.value} onClick={() => { setPlatform(p.value); closePanel(); }}
-                          className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
-                            platform === p.value ? "bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          }`}>
-                          {p.icon} {p.label}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Scenes pill */}
-                <div className="relative z-50">
-                  <button onClick={() => togglePanel("scenes")}
-                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <span>🎬</span>
-                    <span>{numScenes} {lang === "nl" ? "scènes" : "scenes"}</span>
-                    <span className="text-gray-400">▾</span>
-                  </button>
-                  {openPanel === "scenes" && (
-                    <div className="absolute bottom-full mb-2 left-0 z-50 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-1.5">
-                      <div className="flex gap-1 px-1 py-1">
-                        {[4, 5, 6, 7, 8].map(n => (
-                          <button key={n} onClick={() => { setNumScenes(n); closePanel(); }}
-                            className={`rounded-lg w-9 h-9 text-xs font-bold transition-colors ${
-                              numScenes === n ? "bg-[#C7F56F] text-[#1a1a1a]" : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
-                            }`}>
-                            {n}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Environment pill */}
+                {/* Environment */}
                 <div className="relative z-50">
                   <button onClick={() => togglePanel("env")}
                     className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <span>{selectedEnvEmoji}</span>
+                    <MapPin size={13} className="opacity-60" />
                     <span>{selectedEnvLabel}</span>
-                    <span className="text-gray-400">▾</span>
+                    <ChevronDown size={11} className="opacity-40" />
                   </button>
                   {openPanel === "env" && (
                     <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3">
@@ -520,7 +571,7 @@ function SetupStep({
                             className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-colors ${
                               environmentPresetKey === e.key ? "bg-[#C7F56F]/20 ring-1 ring-[#C7F56F]" : "hover:bg-gray-50 dark:hover:bg-gray-800"
                             }`}>
-                            <span className="text-xl">{e.emoji}</span>
+                            <MapPin size={18} className="text-gray-400" />
                             <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 leading-tight">{lang === "nl" ? e.labelNl : e.label}</span>
                           </button>
                         ))}
@@ -529,46 +580,64 @@ function SetupStep({
                   )}
                 </div>
 
-                {/* Avatar pill (only if preset includes person) */}
+                {/* Avatar (only for presets that include a person) */}
                 {includesPerson && (
-                  <div className="relative z-50">
-                    <button onClick={() => togglePanel("avatar")}
-                      className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                      <span>{selectedAvatarEmoji}</span>
-                      <span>{selectedAvatarLabel}</span>
-                      <span className="text-gray-400">▾</span>
-                    </button>
-                    {openPanel === "avatar" && (
-                      <div className="absolute bottom-full mb-2 left-0 z-50 w-72 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3">
-                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Personage" : "Character"}</p>
-                        <div className="grid grid-cols-4 gap-1.5">
-                          {AVATAR_PRESETS.map(a => (
-                            <button key={a.key} onClick={() => { setAvatarPresetKey(a.key); closePanel(); }}
-                              className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-colors ${
-                                avatarPresetKey === a.key ? "bg-[#C7F56F]/20 ring-1 ring-[#C7F56F]" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                  <button onClick={() => togglePanel("avatar")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <User size={13} className="opacity-60" />
+                    <span>{selectedAvatarLabel}</span>
+                    <ChevronDown size={11} className="opacity-40" />
+                  </button>
+                )}
+
+                {/* Settings (platform + scenes + models) */}
+                <div className="relative z-50">
+                  <button onClick={() => togglePanel("settings")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <SlidersHorizontal size={13} className="opacity-60" />
+                    <span>{lang === "nl" ? "Instellingen" : "Settings"}</span>
+                    <ChevronDown size={11} className="opacity-40" />
+                  </button>
+                  {openPanel === "settings" && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-4">
+                      {/* Platform */}
+                      <div>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                          <Smartphone size={11} /> Platform
+                        </p>
+                        <div className="flex gap-1.5">
+                          {PLATFORMS.map(p => (
+                            <button key={p.value} onClick={() => setPlatform(p.value)}
+                              className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
+                                platform === p.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
                               }`}>
-                              <span className="text-xl">{a.emoji}</span>
-                              <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 leading-tight">{lang === "nl" ? a.labelNl : a.label}</span>
+                              {p.label}
                             </button>
                           ))}
                         </div>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Models pill */}
-                <div className="relative z-50">
-                  <button onClick={() => togglePanel("models")}
-                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <span>⚙️</span>
-                    <span>{lang === "nl" ? "Modellen" : "Models"}</span>
-                    <span className="text-gray-400">▾</span>
-                  </button>
-                  {openPanel === "models" && (
-                    <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-3">
+                      {/* Scenes */}
                       <div>
-                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Framemodel" : "Frame model"}</p>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                          <Clapperboard size={11} /> {lang === "nl" ? "Scènes" : "Scenes"}
+                        </p>
+                        <div className="flex gap-1.5">
+                          {[4, 5, 6, 7, 8].map(n => (
+                            <button key={n} onClick={() => setNumScenes(n)}
+                              className={`flex-1 rounded-lg border py-1.5 text-xs font-bold transition-colors ${
+                                numScenes === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
+                              }`}>
+                              {n}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="h-px bg-gray-100 dark:bg-gray-800" />
+                      {/* Image model */}
+                      <div>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                          <Cpu size={11} /> {lang === "nl" ? "Framemodel" : "Frame model"}
+                        </p>
                         <div className="space-y-1">
                           {(Object.entries(IMAGE_MODEL_CONFIGS) as [ImageModel, typeof IMAGE_MODEL_CONFIGS[ImageModel]][]).map(([key, cfg]) => (
                             <button key={key} onClick={() => setImageModel(key)}
@@ -586,9 +655,11 @@ function SetupStep({
                           ))}
                         </div>
                       </div>
-                      <div className="h-px bg-gray-100 dark:bg-gray-800" />
+                      {/* Video model */}
                       <div>
-                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Videomodel" : "Video model"}</p>
+                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                          <Video size={11} /> {lang === "nl" ? "Videomodel" : "Video model"}
+                        </p>
                         <div className="space-y-1">
                           {(Object.entries(VIDEO_MODEL_CONFIGS) as [VideoModel, typeof VIDEO_MODEL_CONFIGS[VideoModel]][]).map(([key, cfg]) => (
                             <button key={key} onClick={() => setVideoModel(key)}
@@ -613,28 +684,21 @@ function SetupStep({
               </div>
             </div>
 
-            {/* Right: product image + next button */}
+            {/* Right: product thumbnail + next */}
             <div className="flex shrink-0 flex-col items-end justify-between gap-3 p-4 pl-0">
-              {/* Product image thumbnail — click to cycle */}
-              {selectedProduct?.image_urls?.[productImageIndex] ? (
-                <button
-                  onClick={() => setProductImageIndex(i => (i + 1) % Math.min(selectedProduct.image_urls!.length, 6))}
-                  title={lang === "nl" ? "Klik om foto te wisselen" : "Click to cycle image"}
-                  className="relative size-20 shrink-0 overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-[#C7F56F] transition-colors">
+              <button onClick={() => togglePanel("product")}
+                className="relative size-20 shrink-0 overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-[#C7F56F] transition-colors bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
+                {selectedProduct?.image_urls?.[productImageIndex] ? (
                   <Image src={selectedProduct.image_urls[productImageIndex]} alt="" fill className="object-cover" unoptimized />
-                  {(selectedProduct.image_urls?.length ?? 0) > 1 && (
-                    <div className="absolute bottom-0 inset-x-0 flex justify-center pb-1">
-                      <span className="rounded-full bg-black/50 px-1.5 py-0.5 text-[8px] text-white">
-                        {productImageIndex + 1}/{Math.min(selectedProduct.image_urls!.length, 6)}
-                      </span>
-                    </div>
-                  )}
-                </button>
-              ) : (
-                <div className="size-20 shrink-0 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
-                  <span className="text-2xl">📦</span>
+                ) : (
+                  <Package size={24} className="text-gray-400" />
+                )}
+                <div className="absolute bottom-0 inset-x-0 flex justify-center pb-1">
+                  <span className="rounded-full bg-black/50 px-1.5 py-0.5 text-[8px] text-white leading-tight">
+                    {selectedProduct?.name?.split(" ").slice(0, 2).join(" ") ?? "Product"}
+                  </span>
                 </div>
-              )}
+              </button>
 
               <button
                 onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel })}
@@ -647,49 +711,86 @@ function SetupStep({
         </div>
       </div>
 
-      {/* Desire + Awareness + Angles — compact below panel */}
-      <div className="space-y-3">
+      {/* ── Desire + Awareness + Angles ─────────────────────────── */}
+      <div className="space-y-2.5">
         {desires.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 shrink-0">Desire</span>
+            <span className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Desire</span>
             {desires.map(d => (
               <button key={d} onClick={() => setActiveDesire(activeDesire === d ? null : d)}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   activeDesire === d ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}>
-                {d}
-              </button>
+                }`}>{d}</button>
             ))}
           </div>
         )}
-
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 shrink-0">Awareness</span>
+          <span className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">Awareness</span>
           {AWARENESS_LEVELS.map(a => (
             <button key={a.value} onClick={() => setAwarenessLevel(a.value)}
               className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                 awarenessLevel === a.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
-              }`}>
-              {lang === "nl" ? a.labelNl : a.label}
-            </button>
+              }`}>{lang === "nl" ? a.labelNl : a.label}</button>
           ))}
         </div>
-
         {angles.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 shrink-0">{lang === "nl" ? "Hoek" : "Angle"}</span>
+            <span className="w-20 shrink-0 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Hoek" : "Angle"}</span>
             {angles.map(a => (
               <button key={a.key} onClick={() => setActiveAngleKey(activeAngleKey === a.key ? null : a.key)}
                 title={a.description}
                 className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   activeAngleKey === a.key ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
-                }`}>
-                {a.label}
-              </button>
+                }`}>{a.label}</button>
             ))}
           </div>
         )}
       </div>
+
+      {/* ── Genereer across formats ──────────────────────────────── */}
+      <div className="pt-6">
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-base font-black uppercase tracking-tight text-gray-900 dark:text-white">
+            {lang === "nl" ? "Genereer across formats" : "Generate across formats"}
+          </span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+          {VIDEO_PRESETS.map(preset => (
+            <button key={preset.key}
+              onClick={() => { handlePresetSelect(preset.key); window.scrollTo({ top: 0, behavior: "smooth" }); }}
+              className={`group relative flex flex-col overflow-hidden rounded-2xl text-left transition-all hover:scale-[1.02] active:scale-[0.98] ${
+                selectedPresetKey === preset.key ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-gray-200 dark:ring-gray-700"
+              }`}>
+              {/* Portrait-ratio thumbnail */}
+              <div className={`relative w-full bg-gradient-to-br ${PRESET_GRADIENTS[preset.key] ?? "from-gray-700 to-gray-900"}`} style={{ paddingTop: "133%" }}>
+                {placeholderImg && (
+                  <Image src={placeholderImg} alt="" fill className="object-cover opacity-40 mix-blend-overlay" unoptimized />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent" />
+                <div className="absolute inset-0 flex flex-col justify-end p-3">
+                  <p className="text-xs font-black uppercase tracking-tight text-white leading-tight">
+                    {lang === "nl" ? preset.labelNl : preset.label}
+                  </p>
+                  <p className="mt-0.5 text-[9px] text-white/60 leading-tight line-clamp-2">
+                    {lang === "nl" ? preset.descNl : preset.desc}
+                  </p>
+                </div>
+                {preset.badge && (
+                  <span className="absolute top-2 left-2 rounded-full bg-[#C7F56F] px-1.5 py-0.5 text-[8px] font-bold text-[#1a1a1a]">
+                    {preset.badge}
+                  </span>
+                )}
+                {selectedPresetKey === preset.key && (
+                  <div className="absolute top-2 right-2 rounded-full bg-[#C7F56F] p-1">
+                    <Check size={10} className="text-[#1a1a1a]" />
+                  </div>
+                )}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
