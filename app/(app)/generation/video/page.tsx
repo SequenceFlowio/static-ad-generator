@@ -345,7 +345,6 @@ function SetupStep({
   const togglePanel = (name: string) => setOpenPanel(p => p === name ? null : name);
   const closePanel = () => setOpenPanel(null);
 
-  const selectedPlatform = PLATFORMS.find(p => p.value === platform) ?? PLATFORMS[0];
   const selectedEnvLabel = ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? environmentPresetKey;
   const selectedAvatarLabel = AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? avatarPresetKey;
 
