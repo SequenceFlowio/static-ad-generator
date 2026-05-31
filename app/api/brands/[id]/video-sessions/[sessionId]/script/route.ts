@@ -4,6 +4,8 @@ import { getAuthUser } from "@/lib/auth";
 import { generateVideoScript } from "@/lib/video-script-generator";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
 import type { BrandDnaData, Product, SceneScript, VideoSession } from "@/types";
+import { getEnvironmentPreset } from "@/lib/environment-presets";
+import { getAvatarPreset } from "@/lib/avatar-presets";
 
 export const maxDuration = 120;
 
@@ -32,6 +34,8 @@ export async function POST(
     notes?: string;
     character_ref_prompt?: string;
     environment_ref_prompt?: string;
+    environment_preset_key?: string;
+    avatar_preset_key?: string;
   };
 
   const [dnaRes, productRes] = await Promise.all([
@@ -59,6 +63,16 @@ export async function POST(
     }
   }
 
+  // Merge preset hints with explicit ref descriptions
+  const envPreset = body.environment_preset_key ? getEnvironmentPreset(body.environment_preset_key) : undefined;
+  const avatarPreset = body.avatar_preset_key ? getAvatarPreset(body.avatar_preset_key) : undefined;
+
+  const environmentRefDescription = body.environment_ref_prompt
+    ?? (envPreset?.promptHint ? envPreset.promptHint : undefined);
+
+  const characterRefDescription = body.character_ref_prompt
+    ?? (avatarPreset?.promptHint ? avatarPreset.promptHint : undefined);
+
   let scriptOutput;
   try {
     scriptOutput = await generateVideoScript({
@@ -74,8 +88,8 @@ export async function POST(
       awarenessLevel: body.awareness_level,
       activeAngleDescription,
       notes: body.notes,
-      characterRefDescription: body.character_ref_prompt,
-      environmentRefDescription: body.environment_ref_prompt,
+      characterRefDescription,
+      environmentRefDescription,
     });
   } catch (err) {
     const msg = err instanceof Error ? err.message : "Script generation failed";

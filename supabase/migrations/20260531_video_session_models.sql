@@ -1,0 +1,4 @@
+ALTER TABLE video_sessions
+  ADD COLUMN IF NOT EXISTS image_model TEXT NOT NULL DEFAULT 'nano-banana-2',
+  ADD COLUMN IF NOT EXISTS video_model TEXT NOT NULL DEFAULT 'seedance-2',
+  ADD COLUMN IF NOT EXISTS video_clips TEXT[] NOT NULL DEFAULT '{}';

@@ -5,9 +5,12 @@ import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useBrand } from "@/lib/brand-context";
-import type { Brand, BrandDna, Product, SceneScript, VideoSession, CreativeStrategy, CreativeAngle } from "@/types";
+import type { Brand, BrandDna, Product, SceneScript, VideoSession, CreativeStrategy, CreativeAngle, ImageModel, VideoModel } from "@/types";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
 import { VIDEO_PRESETS } from "@/lib/video-presets";
+import { EnvironmentPicker } from "@/components/video/EnvironmentPicker";
+import { AvatarPicker } from "@/components/video/AvatarPicker";
+import { IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from "@/lib/model-configs";
 
 const AWARENESS_LEVELS = [
   { value: "unaware",        label: "Unaware",        labelNl: "Onbewust",         desc: "Geen probleem in beeld — pure curiosity hook", descNl: "Geen probleem in beeld — pure curiosity hook" },
@@ -291,6 +294,10 @@ interface SetupConfig {
   awarenessLevel: AwarenessLevel;
   activeAngleKey: string | null;
   notes: string;
+  environmentPresetKey: string;
+  avatarPresetKey: string;
+  imageModel: ImageModel;
+  videoModel: VideoModel;
 }
 
 function SetupStep({
@@ -311,6 +318,10 @@ function SetupStep({
   const [awarenessLevel, setAwarenessLevel] = useState<AwarenessLevel>("problem-aware");
   const [activeAngleKey, setActiveAngleKey] = useState<string | null>(null);
   const [notes, setNotes] = useState("");
+  const [environmentPresetKey, setEnvironmentPresetKey] = useState("studio");
+  const [avatarPresetKey, setAvatarPresetKey] = useState("young-woman");
+  const [imageModel, setImageModel] = useState<ImageModel>("nano-banana-2");
+  const [videoModel, setVideoModel] = useState<VideoModel>("seedance-2");
 
   const selectedPreset = VIDEO_PRESETS.find(p => p.key === selectedPresetKey) ?? VIDEO_PRESETS[0];
   const videoStyle = selectedPreset.video_style;
@@ -366,35 +377,55 @@ function SetupStep({
         </div>
       )}
 
-      {/* Video preset */}
+      {/* Video format / preset */}
       <div>
         <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Videostijl" : "Video style"}
+          {lang === "nl" ? "Videoformat" : "Video format"}
         </p>
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {VIDEO_PRESETS.map(preset => (
             <button key={preset.key} onClick={() => handlePresetSelect(preset.key)}
-              className={`relative flex flex-col rounded-xl border-2 p-3 text-left transition-colors ${
+              className={`relative flex shrink-0 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-colors ${
                 selectedPresetKey === preset.key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
               }`}>
               {preset.badge && (
-                <span className="absolute top-2 right-2 rounded-full bg-[#C7F56F]/20 px-1.5 py-0.5 text-[9px] font-bold text-[#1a1a1a] dark:text-[#C7F56F]">
+                <span className="absolute -top-1.5 -right-1.5 rounded-full bg-[#C7F56F] px-1.5 py-0.5 text-[8px] font-bold text-[#1a1a1a]">
                   {preset.badge}
                 </span>
               )}
-              <span className="text-lg mb-1">{preset.icon}</span>
-              <span className={`text-xs font-semibold ${selectedPresetKey === preset.key ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>
-                {lang === "nl" ? preset.labelNl : preset.label}
-              </span>
-              <span className="text-[10px] text-gray-400 mt-0.5 leading-tight">
-                {lang === "nl" ? preset.descNl : preset.desc}
-              </span>
+              <span className="text-base">{preset.icon}</span>
+              <div className="flex flex-col">
+                <span className={`text-xs font-semibold whitespace-nowrap ${selectedPresetKey === preset.key ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>
+                  {lang === "nl" ? preset.labelNl : preset.label}
+                </span>
+                <span className="text-[9px] text-gray-400 whitespace-nowrap">
+                  {lang === "nl" ? preset.descNl : preset.desc}
+                </span>
+              </div>
             </button>
           ))}
         </div>
       </div>
 
-      {/* Tweak platform + scenes (compact, below preset) */}
+      {/* Environment */}
+      <div>
+        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {lang === "nl" ? "Omgeving" : "Setting / Environment"}
+        </p>
+        <EnvironmentPicker value={environmentPresetKey} onChange={setEnvironmentPresetKey} />
+      </div>
+
+      {/* Avatar (only for presets that include a person) */}
+      {includesPerson && (
+        <div>
+          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
+            {lang === "nl" ? "Personage" : "Character / Avatar"}
+          </p>
+          <AvatarPicker value={avatarPresetKey} onChange={setAvatarPresetKey} />
+        </div>
+      )}
+
+      {/* Platform + scenes + models */}
       <div className="flex flex-wrap gap-4">
         <div>
           <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Platform</p>
@@ -424,6 +455,48 @@ function SetupStep({
               </button>
             ))}
           </div>
+        </div>
+      </div>
+
+      {/* Image model */}
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {lang === "nl" ? "Framemodel" : "Frame model"}
+        </p>
+        <div className="flex gap-2">
+          {(Object.entries(IMAGE_MODEL_CONFIGS) as [ImageModel, typeof IMAGE_MODEL_CONFIGS[ImageModel]][]).map(([key, cfg]) => (
+            <button key={key} onClick={() => setImageModel(key)}
+              className={`flex flex-col rounded-xl border-2 px-3 py-2 text-left transition-colors ${
+                imageModel === key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
+              }`}>
+              <span className="text-xs font-semibold text-gray-900 dark:text-white">{cfg.label}</span>
+              <span className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                {cfg.api}
+              </span>
+              <span className="mt-0.5 text-[10px] text-gray-400">{cfg.description}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Video model */}
+      <div>
+        <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+          {lang === "nl" ? "Videomodel" : "Video model"}
+        </p>
+        <div className="flex gap-2">
+          {(Object.entries(VIDEO_MODEL_CONFIGS) as [VideoModel, typeof VIDEO_MODEL_CONFIGS[VideoModel]][]).map(([key, cfg]) => (
+            <button key={key} onClick={() => setVideoModel(key)}
+              className={`flex flex-col rounded-xl border-2 px-3 py-2 text-left transition-colors ${
+                videoModel === key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
+              }`}>
+              <span className="text-xs font-semibold text-gray-900 dark:text-white">{cfg.label}</span>
+              <span className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                {cfg.api}
+              </span>
+              <span className="mt-0.5 text-[10px] text-gray-400">{cfg.note}</span>
+            </button>
+          ))}
         </div>
       </div>
 
@@ -488,22 +561,24 @@ function SetupStep({
         </div>
       )}
 
-      {/* Notes */}
+      {/* Notes — chat-style */}
       <div>
         <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Extra notities (optioneel)" : "Extra notes (optional)"}
+          {lang === "nl" ? "Beschrijf de videosfeer (optioneel)" : "Describe the video vibe (optional)"}
         </p>
         <textarea
           value={notes}
           onChange={e => setNotes(e.target.value)}
-          rows={2}
-          placeholder={lang === "nl" ? "Bijv: maak scène 1 heel direct, gebruik een kookthema..." : "E.g: make scene 1 very direct, use a cooking theme..."}
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2.5 text-xs text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50"
+          rows={3}
+          placeholder={lang === "nl"
+            ? "Bijv: energetisch en snel gesneden, gebruik warme kleuren, toon het product in gebruik…"
+            : "E.g: energetic fast-paced cuts, warm color grading, show product in action…"}
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50 resize-none"
         />
       </div>
 
       <button
-        onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes })}
+        onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel })}
         disabled={!productId}
         className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40"
       >
@@ -1378,16 +1453,12 @@ function PromptStep({
 
 // ─── Step 5: Video ────────────────────────────────────────────────────────────
 
-const STATUS_LABELS: Record<string, { en: string; nl: string }> = {
-  generating_video: { en: "Rendering with Seedance 2… this takes 3–8 minutes", nl: "Renderen met Seedance 2… dit duurt 3–8 minuten" },
-  done: { en: "Done!", nl: "Klaar!" },
-  failed: { en: "Generation failed", nl: "Generatie mislukt" },
-};
-
 function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string }) {
   const { lang } = useLanguage();
   const [phase, setPhase] = useState("generating_video");
   const [videoUrl, setVideoUrl] = useState<string | null>(null);
+  const [videoClips, setVideoClips] = useState<string[]>([]);
+  const [videoModel, setVideoModel] = useState<VideoModel>("seedance-2");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   useEffect(() => {
@@ -1396,8 +1467,10 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
       if (!res.ok) return;
       const { session } = await res.json() as { session: VideoSession };
       setPhase(session.phase);
+      setVideoModel(session.video_model ?? "seedance-2");
       if (session.phase === "done") {
         setVideoUrl(session.video_url);
+        setVideoClips(session.video_clips ?? []);
         clearInterval(interval);
       } else if (session.phase === "failed") {
         setErrorMsg(session.error_msg);
@@ -1407,7 +1480,11 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
     return () => clearInterval(interval);
   }, [brandId, sessionId]);
 
-  const label = STATUS_LABELS[phase]?.[lang] ?? phase;
+  const generatingLabel = videoModel === "veo-3.1"
+    ? (lang === "nl" ? "Renderen met Veo 3.1… dit duurt 2–5 minuten" : "Rendering with Veo 3.1… this takes 2–5 minutes")
+    : (lang === "nl" ? "Renderen met Seedance 2… dit duurt 3–8 minuten" : "Rendering with Seedance 2… this takes 3–8 minutes");
+
+  const isMultiClip = videoClips.length > 1;
 
   return (
     <div className="space-y-6">
@@ -1417,22 +1494,51 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
-          <p className="text-sm text-gray-700 dark:text-gray-200">{label}</p>
+          <p className="text-sm text-gray-700 dark:text-gray-200">{generatingLabel}</p>
         </div>
       )}
       {phase === "failed" && (
         <div className="rounded-xl bg-red-50 dark:bg-red-900/20 px-4 py-3 text-sm text-red-600 dark:text-red-400">
-          {errorMsg ?? label}
+          {errorMsg ?? (lang === "nl" ? "Generatie mislukt" : "Generation failed")}
         </div>
       )}
-      {videoUrl && (
+      {phase === "done" && (
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-gray-900 dark:text-white">{label}</p>
-          <video src={videoUrl} controls playsInline className="w-full max-w-xs rounded-xl mx-auto block" />
-          <a href={videoUrl} download target="_blank" rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-full bg-[#C7F56F] px-5 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
-            {lang === "nl" ? "Download video" : "Download video"}
-          </a>
+          <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            {lang === "nl" ? "Klaar! 🎉" : "Done! 🎉"}
+          </p>
+
+          {isMultiClip ? (
+            <>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {lang === "nl"
+                  ? "Veo 3.1 heeft 2 clips gegenereerd. Download beide en voeg ze samen in je video-editor."
+                  : "Veo 3.1 generated 2 clips. Download both and stitch them in your video editor."}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                {videoClips.map((url, i) => (
+                  <div key={i} className="space-y-2">
+                    <p className="text-xs font-medium text-gray-600 dark:text-gray-300">
+                      {lang === "nl" ? `Clip ${i + 1}` : `Clip ${i + 1}`}
+                    </p>
+                    <video src={url} controls playsInline className="w-full rounded-xl" />
+                    <a href={url} download target="_blank" rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1.5 rounded-full bg-[#C7F56F] px-4 py-2 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+                      ↓ {lang === "nl" ? `Clip ${i + 1}` : `Clip ${i + 1}`}
+                    </a>
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : videoUrl ? (
+            <>
+              <video src={videoUrl} controls playsInline className="w-full max-w-xs rounded-xl mx-auto block" />
+              <a href={videoUrl} download target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-full bg-[#C7F56F] px-5 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+                {lang === "nl" ? "Download video" : "Download video"}
+              </a>
+            </>
+          ) : null}
         </div>
       )}
     </div>
@@ -1486,6 +1592,8 @@ function VideoWizard({
         num_scenes: cfg.numScenes,
         duration: 15,
         includes_person: cfg.includesPerson,
+        image_model: cfg.imageModel,
+        video_model: cfg.videoModel,
       }),
     });
 
@@ -1519,6 +1627,8 @@ function VideoWizard({
         notes: setupConfig?.notes || undefined,
         character_ref_prompt: characterRefPrompt,
         environment_ref_prompt: environmentRefPrompt,
+        environment_preset_key: setupConfig?.environmentPresetKey || undefined,
+        avatar_preset_key: setupConfig?.avatarPresetKey || undefined,
       }),
     });
 

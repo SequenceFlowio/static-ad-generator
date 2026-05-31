@@ -84,7 +84,7 @@ export default function AdsPage() {
   const [adMode, setAdMode] = useState<"regular" | "batch">("regular");
   const [selectedTemplates, setSelectedTemplates] = useState<number[]>([1]);
   const [numImages, setNumImages] = useState(2);
-  const [model, setModel] = useState<KieModel>("nano-banana-2");
+  const [model, setModel] = useState<KieModel | "nano-banana-pro-genai">("nano-banana-2");
   const [selectedInspo, setSelectedInspo] = useState<string[]>([]);
   const [batchSize, setBatchSize] = useState<10 | 20 | 50>(10);
   const [batchTemplates, setBatchTemplates] = useState<string[]>(["headline", "offer-promotion", "testimonial", "vs-them", "ugc-lifestyle"]);
@@ -153,7 +153,7 @@ export default function AdsPage() {
     setBatchTemplates((prev) => prev.includes(name) ? prev.filter((t) => t !== name) : [...prev, name]);
   }
 
-  function selectModel(m: KieModel) {
+  function selectModel(m: KieModel | "nano-banana-pro-genai") {
     setModel(m);
   }
 
@@ -436,7 +436,7 @@ export default function AdsPage() {
                 <div>
                   <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">{t("ads.generationModel")}</p>
                   <div className="flex gap-2">
-                    {(Object.entries(MODEL_CONFIGS) as [KieModel, typeof MODEL_CONFIGS[KieModel]][]).map(([key, cfg]) => (
+                    {(Object.entries(MODEL_CONFIGS) as [KieModel | "nano-banana-pro-genai", typeof MODEL_CONFIGS[KieModel]][]).map(([key, cfg]) => (
                       <button key={key} onClick={() => selectModel(key)}
                         className={`flex flex-col items-start rounded-xl border px-4 py-3 text-left transition-colors ${model === key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"}`}>
                         <div className="flex items-center justify-between gap-3 w-full">

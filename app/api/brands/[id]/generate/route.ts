@@ -3,6 +3,7 @@ import { waitUntil } from "@vercel/functions";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateImages, withRetry } from "@/lib/kie";
+import { createImageGenAIPro } from "@/lib/genaipro";
 import { checkAndDeduct, isQualityModel } from "@/lib/credits";
 import { buildNanoBananaPrompt, AD_TEMPLATE_CAMERA_PRESETS } from "@/lib/prompt-utils";
 import type { GenerateRequest, PromptItem, KieModel } from "@/types";
@@ -10,13 +11,46 @@ import type { GenerateRequest, PromptItem, KieModel } from "@/types";
 export const maxDuration = 300;
 
 // Background processor — runs after response is sent, updates job rows in DB
+async function generateAdImage(
+  prompt: string,
+  aspectRatio: string,
+  resolution: string,
+  refImages: string[],
+  model: KieModel | "nano-banana-pro-genai",
+): Promise<string[]> {
+  if (model === "nano-banana-pro-genai") {
+    return await withRetry(
+      () => createImageGenAIPro({
+        prompt,
+        aspect_ratio: aspectRatio,
+        model: "nano_banana_pro",
+        number_of_images: 1,
+        reference_image_urls: refImages.length > 0 ? refImages : undefined,
+        upscale_resolution: resolution === "4K" ? "4k" : resolution === "2K" || resolution === "2k" ? "2k" : "none",
+      }),
+      { maxAttempts: 3, baseDelayMs: 2000 }
+    );
+  }
+  return await withRetry(
+    () => generateImages({
+      prompt,
+      aspect_ratio: aspectRatio,
+      resolution,
+      num_images: 1,
+      reference_image_urls: refImages.length > 0 ? refImages : undefined,
+      model,
+    }),
+    { maxAttempts: 3, baseDelayMs: 2000 }
+  );
+}
+
 async function runGeneration(
   jobs: Array<{ id: string; template_number: number }>,
   prompts: PromptItem[],
   logoUrl: string | null,
   productImageUrls: string[],
   resolution: string,
-  model: KieModel,
+  model: KieModel | "nano-banana-pro-genai",
   aspectRatioOverride?: string,
   inspoImageUrls?: string[]
 ) {
@@ -37,7 +71,7 @@ async function runGeneration(
 
       const aspectRatio = aspectRatioOverride ?? promptItem.aspect_ratio;
 
-      // Enrich background_prompt with cinematic specs for nano-banana-2 (quality model only)
+      // Enrich background_prompt with cinematic specs for nano-banana-2
       let enrichedBackground = promptItem.background_prompt;
       if (model === "nano-banana-2") {
         const preset = AD_TEMPLATE_CAMERA_PRESETS[promptItem.template_name];
@@ -52,22 +86,12 @@ async function runGeneration(
         }
       }
 
-      // Generate all hook variants in parallel — each fires a separate kie.ai task simultaneously
+      // Generate all hook variants in parallel
       const variantResults = await Promise.all(
         promptItem.hook_variants.map(async (hookVariant) => {
           try {
             const combinedPrompt = `${enrichedBackground}\n\nText in the ad: ${hookVariant}`;
-            return await withRetry(
-              () => generateImages({
-                prompt: combinedPrompt,
-                aspect_ratio: aspectRatio,
-                resolution,
-                num_images: 1,
-                reference_image_urls: refImages.length > 0 ? refImages : undefined,
-                model,
-              }),
-              { maxAttempts: 3, baseDelayMs: 2000 }
-            );
+            return await generateAdImage(combinedPrompt, aspectRatio, resolution, refImages, model);
           } catch {
             return []; // one variant failing doesn't kill the whole job
           }
@@ -103,7 +127,7 @@ export async function POST(
   }
 
   const body: GenerateRequest = await req.json();
-  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio, inspo_image_urls, product_ids: multiProductIds } = body as GenerateRequest & { inspo_image_urls?: string[]; product_ids?: string[] };
+  const { template_numbers, resolution, prompt_set_id, model = "nano-banana-2", aspect_ratio, inspo_image_urls, product_ids: multiProductIds } = body as GenerateRequest & { inspo_image_urls?: string[]; product_ids?: string[]; model?: KieModel | "nano-banana-pro-genai" };
 
   const db = getServerSupabase();
 

@@ -8,7 +8,8 @@ import GeneratingOverlay from "@/components/GeneratingOverlay";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useBrand } from "@/lib/brand-context";
 import { resolveAdConfig, AD_GOALS, type AdGoal } from "@/lib/resolve-creative-config";
-import type { Brand, BrandDna, Product, CreativeStrategy, KieModel } from "@/types";
+import type { Brand, BrandDna, Product, CreativeStrategy, ImageModel } from "@/types";
+import { IMAGE_MODEL_CONFIGS } from "@/lib/model-configs";
 
 type Mode = "quick" | "advanced";
 
@@ -38,12 +39,11 @@ function QuickAdsPanel({
   const [submitted, setSubmitted] = useState(false);
   const [done, setDone] = useState(false);
   const [numVariants, setNumVariants] = useState(2);
-  const [quality, setQuality] = useState<"fast" | "quality">("fast");
+  const [imageModel, setImageModel] = useState<ImageModel>("nano-banana-2");
   const [inspoImageUrls] = useState<string[]>(() => initialRefImage ? [initialRefImage] : []);
 
   const isPaid = userPlan !== "trial" && userPlan !== "free";
-  const resolution = quality === "quality" ? (isPaid ? "4K" : "2K") : "1K";
-  const model: KieModel = "nano-banana-2";
+  const resolution = imageModel === "nano-banana-pro-genai" ? (isPaid ? "4K" : "2K") : "1K";
 
   function toggleProduct(id: string) {
     setSelectedProductIds(prev =>
@@ -95,7 +95,7 @@ function QuickAdsPanel({
         resolution,
         num_images: numVariants,
         prompt_set_id: prompt_set.id,
-        model,
+        model: imageModel,
         inspo_image_urls: inspoImageUrls,
         product_ids: selectedProductIds,
       }),
@@ -214,26 +214,27 @@ function QuickAdsPanel({
         </div>
       )}
 
-      {/* Quality + Variants */}
-      <div className="grid grid-cols-2 gap-4">
+      {/* Model + Variants */}
+      <div className="space-y-4">
         <div>
           <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Kwaliteit" : "Quality"}
+            {lang === "nl" ? "Model" : "Model"}
           </p>
           <div className="flex gap-2">
-            {([
-              { value: "fast", label: lang === "nl" ? "Snel" : "Fast", sub: "1K" },
-              { value: "quality", label: lang === "nl" ? "Kwaliteit" : "Quality", sub: isPaid ? "4K" : "2K" },
-            ] as const).map(opt => (
+            {(Object.entries(IMAGE_MODEL_CONFIGS) as [ImageModel, typeof IMAGE_MODEL_CONFIGS[ImageModel]][]).map(([key, cfg]) => (
               <button
-                key={opt.value}
-                onClick={() => setQuality(opt.value)}
-                className={`flex-1 rounded-xl border-2 py-2 px-3 text-left transition-colors ${
-                  quality === opt.value ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                key={key}
+                onClick={() => setImageModel(key)}
+                className={`flex flex-col rounded-xl border-2 px-3 py-2 text-left transition-colors ${
+                  imageModel === key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}
               >
-                <p className={`text-xs font-semibold ${quality === opt.value ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>{opt.label}</p>
-                <p className="text-[10px] text-gray-400 dark:text-gray-500">{opt.sub}</p>
+                <p className={`text-xs font-semibold ${imageModel === key ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>
+                  {cfg.label}
+                </p>
+                <span className={`mt-0.5 w-fit rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
+                  {cfg.api}
+                </span>
               </button>
             ))}
           </div>

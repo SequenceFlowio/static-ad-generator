@@ -27,9 +27,11 @@ export async function POST(
     num_scenes: number;
     duration: number;
     includes_person: boolean;
+    image_model?: string;
+    video_model?: string;
   };
 
-  const { product_id, video_style, platform, num_scenes, duration, includes_person } = body;
+  const { product_id, video_style, platform, num_scenes, duration, includes_person, image_model, video_model } = body;
   const aspectRatio = getVideoAspectRatio();
 
   const { data: session, error } = await db.from("video_sessions").insert({
@@ -41,9 +43,12 @@ export async function POST(
     num_scenes,
     duration,
     includes_person,
+    image_model: image_model ?? "nano-banana-2",
+    video_model: video_model ?? "seedance-2",
     phase: "references",
     scenes: [],
     seedance_prompt: null,
+    video_clips: [],
   }).select("*").single();
 
   if (error || !session) {

@@ -146,7 +146,12 @@ export interface CreativeStrategy {
 export type Resolution = "1K" | "2K" | "4K";
 export type KieModel = "nano-banana-2" | "seedream/4.5-edit";
 
-export const MODEL_CONFIGS: Record<KieModel, {
+// Broader image model type — includes both kie.ai and GenAIPro models
+export type ImageModel = "nano-banana-2" | "nano-banana-pro-genai";
+// Video model type — kie.ai Seedance vs GenAIPro Veo 3.1
+export type VideoModel = "seedance-2" | "veo-3.1";
+
+export const MODEL_CONFIGS: Record<KieModel | "nano-banana-pro-genai", {
   label: string;
   description: string;
   resolutions: Resolution[];
@@ -154,18 +159,25 @@ export const MODEL_CONFIGS: Record<KieModel, {
   creditsPerImage: number;
 }> = {
   "nano-banana-2": {
-    label: "Quality",
+    label: "Nano Banana 2 (kie.ai)",
     description: "Best results · Structured commercial design",
     resolutions: ["1K", "2K", "4K"],
     costPerImage: { "1K": 0.04, "2K": 0.06, "4K": 0.09 },
     creditsPerImage: 2,
   },
   "seedream/4.5-edit": {
-    label: "Fast & Efficient",
+    label: "Seedream 4.5 (kie.ai)",
     description: "Quick results · Great for volume generation",
     resolutions: ["2K", "4K"],
     costPerImage: { "2K": 0.0325, "4K": 0.0325 },
     creditsPerImage: 1,
+  },
+  "nano-banana-pro-genai": {
+    label: "Nano Banana Pro (genai)",
+    description: "Higher quality · richer details · GenAIPro",
+    resolutions: ["2K", "4K"],
+    costPerImage: { "2K": 0.05, "4K": 0.08 },
+    creditsPerImage: 3,
   },
 };
 
@@ -240,6 +252,9 @@ export interface VideoSession {
   seedance_prompt: string | null;
   visual_bible: VideoVisualBible | null;
   video_url: string | null;
+  image_model: ImageModel;
+  video_model: VideoModel;
+  video_clips: string[];
   error_msg: string | null;
   created_at: string;
   updated_at: string;

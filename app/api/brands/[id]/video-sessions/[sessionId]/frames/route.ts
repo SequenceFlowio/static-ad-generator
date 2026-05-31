@@ -3,11 +3,45 @@ import { waitUntil } from "@vercel/functions";
 import { getServerSupabase, uploadToStorage } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateImages, withRetry } from "@/lib/kie";
+import { createImageGenAIPro } from "@/lib/genaipro";
 import type { SceneScript, VideoSession } from "@/types";
 
 export const maxDuration = 300;
 
 const FRAME_STAGGER_MS = 600; // stagger between parallel task submissions to avoid burst rate-limit
+
+async function generateFrame(
+  scenePrompt: string,
+  aspectRatio: string,
+  refUrls: string[],
+  imageModel: string,
+): Promise<string[]> {
+  if (imageModel === "nano-banana-pro-genai") {
+    return await withRetry(
+      () => createImageGenAIPro({
+        prompt: scenePrompt,
+        aspect_ratio: aspectRatio,
+        model: "nano_banana_pro",
+        number_of_images: 1,
+        reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
+        upscale_resolution: "none",
+      }),
+      { maxAttempts: 3, baseDelayMs: 3000 }
+    );
+  }
+  // Default: nano-banana-2 via kie.ai
+  return await withRetry(
+    () => generateImages({
+      prompt: scenePrompt,
+      aspect_ratio: aspectRatio,
+      resolution: "1K",
+      num_images: 1,
+      model: "nano-banana-2",
+      reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
+    }),
+    { maxAttempts: 3, baseDelayMs: 3000 }
+  );
+}
 
 async function generateAllFrames(
   sessionId: string,
@@ -17,6 +51,7 @@ async function generateAllFrames(
   productImageUrl: string | null,
   characterRefUrl: string | null,
   environmentRefUrl: string | null,
+  imageModel: string = "nano-banana-2",
 ) {
   const db = getServerSupabase();
 
@@ -31,7 +66,7 @@ async function generateAllFrames(
   // Generate all frames in parallel with a stagger delay between submissions.
   // Each frame gets up to 3 attempts. After each success/failure, immediately patch DB.
   await Promise.all(scenes.map(async (scene, i) => {
-    // Stagger submissions so we don't hit kie.ai with all requests at once
+    // Stagger submissions so we don't hit the API with all requests at once
     if (i > 0) await new Promise(r => setTimeout(r, i * FRAME_STAGGER_MS));
 
     const refUrls: string[] = [];
@@ -44,17 +79,7 @@ async function generateAllFrames(
       : scene.nano_prompt;
 
     try {
-      const urls = await withRetry(
-        () => generateImages({
-          prompt: scenePrompt,
-          aspect_ratio: aspectRatio,
-          resolution: "1K",
-          num_images: 1,
-          model: "nano-banana-2",
-          reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
-        }),
-        { maxAttempts: 3, baseDelayMs: 3000 }
-      );
+      const urls = await generateFrame(scenePrompt, aspectRatio, refUrls, imageModel);
 
       const url = urls[0] ?? null;
       // Re-fetch to merge without overwriting sibling frames
@@ -125,7 +150,7 @@ export async function POST(
   // Fire generation in background — return immediately so the client can start polling.
   // waitUntil keeps the Vercel function alive until all frames complete even after response is sent.
   waitUntil(
-    generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl)
+    generateAllFrames(sessionId, brandId, missingScenes, videoSession.aspect_ratio, productImageUrl, characterRefUrl, environmentRefUrl, videoSession.image_model ?? "nano-banana-2")
       .catch(err => console.error("generateAllFrames error:", err))
   );
 
@@ -222,17 +247,7 @@ export async function PATCH(
   await db.from("video_sessions").update({ scenes: clearScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
 
   try {
-    const urls = await withRetry(
-      () => generateImages({
-        prompt,
-        aspect_ratio: videoSession.aspect_ratio,
-        resolution: "1K",
-        num_images: 1,
-        model: "nano-banana-2",
-        reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
-      }),
-      { maxAttempts: 3, baseDelayMs: 2000 }
-    );
+    const urls = await generateFrame(prompt, videoSession.aspect_ratio, refUrls, videoSession.image_model ?? "nano-banana-2");
     const url = urls[0] ?? null;
     const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
     const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>

@@ -31,7 +31,7 @@ export const QUALITY_MODEL = "nano-banana-2";
 export const EFFICIENCY_MODEL = "seedream/4.5-edit";
 
 export function isQualityModel(model: string): boolean {
-  return model === QUALITY_MODEL;
+  return model === QUALITY_MODEL || model === "nano-banana-pro-genai";
 }
 
 function currentMonth(): string {
