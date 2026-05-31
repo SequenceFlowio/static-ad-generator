@@ -11,6 +11,8 @@ import { VIDEO_PRESETS } from "@/lib/video-presets";
 import { EnvironmentPicker } from "@/components/video/EnvironmentPicker";
 import { AvatarPicker } from "@/components/video/AvatarPicker";
 import { IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from "@/lib/model-configs";
+import { ENVIRONMENT_PRESETS } from "@/lib/environment-presets";
+import { AVATAR_PRESETS } from "@/lib/avatar-presets";
 
 const AWARENESS_LEVELS = [
   { value: "unaware",        label: "Unaware",        labelNl: "Onbewust",         desc: "Geen probleem in beeld — pure curiosity hook", descNl: "Geen probleem in beeld — pure curiosity hook" },
@@ -338,16 +340,26 @@ function SetupStep({
   const selectedProduct = products.find(p => p.id === productId);
   const productImages = selectedProduct?.image_urls ?? [];
 
+  const [openPanel, setOpenPanel] = useState<string | null>(null);
+  const togglePanel = (name: string) => setOpenPanel(p => p === name ? null : name);
+  const closePanel = () => setOpenPanel(null);
+
+  const selectedPlatform = PLATFORMS.find(p => p.value === platform) ?? PLATFORMS[0];
+  const selectedEnvLabel = ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? environmentPresetKey;
+  const selectedEnvEmoji = ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.emoji ?? "🏠";
+  const selectedAvatarLabel = AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? avatarPresetKey;
+  const selectedAvatarEmoji = AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.emoji ?? "👤";
+
   return (
-    <div className="space-y-6">
-      {/* Product */}
+    <div className="space-y-4">
+      {/* Product strip */}
       <div>
-        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Product</p>
+        <p className="mb-2 text-xs font-medium text-gray-400">Product</p>
         <div className="flex flex-wrap gap-2">
           {products.map(p => (
             <button key={p.id} onClick={() => { setProductId(p.id); setProductImageIndex(0); }}
               className={`flex items-center gap-2 rounded-xl border-2 px-3 py-2 text-xs font-medium transition-colors ${
-                productId === p.id ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
+                productId === p.id ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
               }`}>
               {p.image_urls?.[0] && <Image src={p.image_urls[0]} alt="" width={18} height={18} className="rounded object-cover" unoptimized />}
               {p.name}
@@ -356,234 +368,331 @@ function SetupStep({
         </div>
       </div>
 
-      {productImages.length > 1 && (
-        <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Productreferentie foto" : "Product reference photo"}
-          </p>
-          <div className="flex gap-2">
-            {productImages.slice(0, 6).map((url, i) => (
-              <button key={i} onClick={() => setProductImageIndex(i)}
-                className={`relative rounded-lg overflow-hidden border-2 transition-colors ${productImageIndex === i ? "border-[#C7F56F]" : "border-transparent"}`}>
-                <Image src={url} alt={`Product ${i + 1}`} width={56} height={72} className="object-cover" unoptimized />
-                {productImageIndex === i && (
-                  <div className="absolute inset-0 bg-[#C7F56F]/20 flex items-center justify-center">
-                    <span className="text-xs font-bold text-[#1a1a1a]">✓</span>
+      {/* Format modal overlay */}
+      {openPanel === "format" && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-gray-950 shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="flex items-start justify-between p-6 pb-4">
+              <div>
+                <h2 className="text-xl font-black uppercase tracking-tight text-white">
+                  {lang === "nl" ? "Kies het juiste format" : "Pick the format that hits"}
+                </h2>
+                <p className="mt-1 text-sm text-gray-400">
+                  {lang === "nl" ? "Van UGC tot cinematic — kies wat past bij jouw product." : "From UGC to cinematic — choose what fits your product."}
+                </p>
+              </div>
+              <button onClick={closePanel} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+              </button>
+            </div>
+            {/* Grid */}
+            <div className="grid grid-cols-2 gap-3 p-6 pt-2 sm:grid-cols-3">
+              {VIDEO_PRESETS.map(preset => {
+                const gradients: Record<string, string> = {
+                  "ugc-review":   "from-rose-500 via-orange-400 to-amber-300",
+                  "lifestyle":    "from-amber-500 via-yellow-400 to-lime-300",
+                  "product-hero": "from-slate-700 via-slate-800 to-slate-900",
+                  "animation":    "from-purple-500 via-pink-500 to-rose-400",
+                  "cinematic":    "from-gray-800 via-gray-900 to-black",
+                };
+                const gradient = gradients[preset.key] ?? "from-gray-700 to-gray-900";
+                const isSelected = selectedPresetKey === preset.key;
+                return (
+                  <button key={preset.key} onClick={() => { handlePresetSelect(preset.key); closePanel(); }}
+                    className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                      isSelected ? "ring-2 ring-[#C7F56F]" : "hover:ring-1 hover:ring-white/30"
+                    }`}>
+                    {/* Thumbnail area */}
+                    <div className={`relative h-36 bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+                      <span className="text-5xl drop-shadow-lg">{preset.icon}</span>
+                      {preset.badge && (
+                        <span className="absolute top-2 right-2 rounded-full bg-[#C7F56F] px-2 py-0.5 text-[9px] font-bold text-[#1a1a1a]">{preset.badge}</span>
+                      )}
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-[#C7F56F]/20 flex items-end justify-end p-2">
+                          <span className="rounded-full bg-[#C7F56F] p-1 text-[10px] font-bold text-[#1a1a1a]">✓</span>
+                        </div>
+                      )}
+                    </div>
+                    {/* Label */}
+                    <div className="bg-gray-900 px-3 py-2">
+                      <p className="text-xs font-bold text-white">{lang === "nl" ? preset.labelNl : preset.label}</p>
+                      <p className="mt-0.5 text-[10px] text-gray-400 leading-tight">{lang === "nl" ? preset.descNl : preset.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Higgsfield-style main panel */}
+      <div className="relative">
+        {openPanel && openPanel !== "format" && <div className="fixed inset-0 z-40" onClick={closePanel} />}
+
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-lg overflow-visible">
+          <div className="flex gap-0">
+            {/* Left: textarea + pills */}
+            <div className="flex flex-1 flex-col min-w-0 p-4">
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                rows={3}
+                placeholder={lang === "nl"
+                  ? "Beschrijf de video sfeer, doelgroep en tone-of-voice…"
+                  : "Describe the video vibe, target audience and tone-of-voice…"}
+                className="w-full bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none"
+              />
+
+              <div className="mt-3 h-px bg-gray-100 dark:bg-gray-800" />
+
+              {/* Pills row */}
+              <div className="mt-3 flex flex-wrap items-center gap-1.5">
+
+                {/* Format pill — opens full modal */}
+                <button onClick={() => togglePanel("format")}
+                  className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <span>{selectedPreset.icon}</span>
+                  <span>{lang === "nl" ? selectedPreset.labelNl : selectedPreset.label}</span>
+                  <span className="text-gray-400">▾</span>
+                </button>
+
+                {/* Platform pill */}
+                <div className="relative z-50">
+                  <button onClick={() => togglePanel("platform")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <span>{selectedPlatform.icon}</span>
+                    <span>{selectedPlatform.label}</span>
+                    <span className="text-gray-400">▾</span>
+                  </button>
+                  {openPanel === "platform" && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-1.5 min-w-[140px]">
+                      {PLATFORMS.map(p => (
+                        <button key={p.value} onClick={() => { setPlatform(p.value); closePanel(); }}
+                          className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-medium transition-colors ${
+                            platform === p.value ? "bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "hover:bg-gray-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                          }`}>
+                          {p.icon} {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* Scenes pill */}
+                <div className="relative z-50">
+                  <button onClick={() => togglePanel("scenes")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <span>🎬</span>
+                    <span>{numScenes} {lang === "nl" ? "scènes" : "scenes"}</span>
+                    <span className="text-gray-400">▾</span>
+                  </button>
+                  {openPanel === "scenes" && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-1.5">
+                      <div className="flex gap-1 px-1 py-1">
+                        {[4, 5, 6, 7, 8].map(n => (
+                          <button key={n} onClick={() => { setNumScenes(n); closePanel(); }}
+                            className={`rounded-lg w-9 h-9 text-xs font-bold transition-colors ${
+                              numScenes === n ? "bg-[#C7F56F] text-[#1a1a1a]" : "hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300"
+                            }`}>
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Environment pill */}
+                <div className="relative z-50">
+                  <button onClick={() => togglePanel("env")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <span>{selectedEnvEmoji}</span>
+                    <span>{selectedEnvLabel}</span>
+                    <span className="text-gray-400">▾</span>
+                  </button>
+                  {openPanel === "env" && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3">
+                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Omgeving" : "Environment"}</p>
+                      <div className="grid grid-cols-4 gap-1.5">
+                        {ENVIRONMENT_PRESETS.map(e => (
+                          <button key={e.key} onClick={() => { setEnvironmentPresetKey(e.key); closePanel(); }}
+                            className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-colors ${
+                              environmentPresetKey === e.key ? "bg-[#C7F56F]/20 ring-1 ring-[#C7F56F]" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                            }`}>
+                            <span className="text-xl">{e.emoji}</span>
+                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 leading-tight">{lang === "nl" ? e.labelNl : e.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Avatar pill (only if preset includes person) */}
+                {includesPerson && (
+                  <div className="relative z-50">
+                    <button onClick={() => togglePanel("avatar")}
+                      className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                      <span>{selectedAvatarEmoji}</span>
+                      <span>{selectedAvatarLabel}</span>
+                      <span className="text-gray-400">▾</span>
+                    </button>
+                    {openPanel === "avatar" && (
+                      <div className="absolute bottom-full mb-2 left-0 z-50 w-72 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3">
+                        <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Personage" : "Character"}</p>
+                        <div className="grid grid-cols-4 gap-1.5">
+                          {AVATAR_PRESETS.map(a => (
+                            <button key={a.key} onClick={() => { setAvatarPresetKey(a.key); closePanel(); }}
+                              className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-colors ${
+                                avatarPresetKey === a.key ? "bg-[#C7F56F]/20 ring-1 ring-[#C7F56F]" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                              }`}>
+                              <span className="text-xl">{a.emoji}</span>
+                              <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 leading-tight">{lang === "nl" ? a.labelNl : a.label}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
 
-      {/* Video format / preset */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Videoformat" : "Video format"}
-        </p>
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {VIDEO_PRESETS.map(preset => (
-            <button key={preset.key} onClick={() => handlePresetSelect(preset.key)}
-              className={`relative flex shrink-0 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-colors ${
-                selectedPresetKey === preset.key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
-              }`}>
-              {preset.badge && (
-                <span className="absolute -top-1.5 -right-1.5 rounded-full bg-[#C7F56F] px-1.5 py-0.5 text-[8px] font-bold text-[#1a1a1a]">
-                  {preset.badge}
-                </span>
-              )}
-              <span className="text-base">{preset.icon}</span>
-              <div className="flex flex-col">
-                <span className={`text-xs font-semibold whitespace-nowrap ${selectedPresetKey === preset.key ? "text-gray-900 dark:text-white" : "text-gray-700 dark:text-gray-200"}`}>
-                  {lang === "nl" ? preset.labelNl : preset.label}
-                </span>
-                <span className="text-[9px] text-gray-400 whitespace-nowrap">
-                  {lang === "nl" ? preset.descNl : preset.desc}
-                </span>
+                {/* Models pill */}
+                <div className="relative z-50">
+                  <button onClick={() => togglePanel("models")}
+                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                    <span>⚙️</span>
+                    <span>{lang === "nl" ? "Modellen" : "Models"}</span>
+                    <span className="text-gray-400">▾</span>
+                  </button>
+                  {openPanel === "models" && (
+                    <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-3">
+                      <div>
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Framemodel" : "Frame model"}</p>
+                        <div className="space-y-1">
+                          {(Object.entries(IMAGE_MODEL_CONFIGS) as [ImageModel, typeof IMAGE_MODEL_CONFIGS[ImageModel]][]).map(([key, cfg]) => (
+                            <button key={key} onClick={() => setImageModel(key)}
+                              className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors ${
+                                imageModel === key ? "bg-[#C7F56F]/10 ring-1 ring-[#C7F56F]/40" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                              }`}>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{cfg.label}</div>
+                                <div className="text-[10px] text-gray-400">{cfg.description}</div>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400"}`}>
+                                {cfg.api}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="h-px bg-gray-100 dark:bg-gray-800" />
+                      <div>
+                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Videomodel" : "Video model"}</p>
+                        <div className="space-y-1">
+                          {(Object.entries(VIDEO_MODEL_CONFIGS) as [VideoModel, typeof VIDEO_MODEL_CONFIGS[VideoModel]][]).map(([key, cfg]) => (
+                            <button key={key} onClick={() => setVideoModel(key)}
+                              className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors ${
+                                videoModel === key ? "bg-[#C7F56F]/10 ring-1 ring-[#C7F56F]/40" : "hover:bg-gray-50 dark:hover:bg-gray-800"
+                              }`}>
+                              <div className="flex-1 min-w-0">
+                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{cfg.label}</div>
+                                <div className="text-[10px] text-gray-400">{cfg.note}</div>
+                              </div>
+                              <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400"}`}>
+                                {cfg.api}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
               </div>
-            </button>
-          ))}
-        </div>
-      </div>
+            </div>
 
-      {/* Environment */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Omgeving" : "Setting / Environment"}
-        </p>
-        <EnvironmentPicker value={environmentPresetKey} onChange={setEnvironmentPresetKey} />
-      </div>
+            {/* Right: product image + next button */}
+            <div className="flex shrink-0 flex-col items-end justify-between gap-3 p-4 pl-0">
+              {/* Product image thumbnail — click to cycle */}
+              {selectedProduct?.image_urls?.[productImageIndex] ? (
+                <button
+                  onClick={() => setProductImageIndex(i => (i + 1) % Math.min(selectedProduct.image_urls!.length, 6))}
+                  title={lang === "nl" ? "Klik om foto te wisselen" : "Click to cycle image"}
+                  className="relative size-20 shrink-0 overflow-hidden rounded-xl border-2 border-gray-200 dark:border-gray-700 hover:border-[#C7F56F] transition-colors">
+                  <Image src={selectedProduct.image_urls[productImageIndex]} alt="" fill className="object-cover" unoptimized />
+                  {(selectedProduct.image_urls?.length ?? 0) > 1 && (
+                    <div className="absolute bottom-0 inset-x-0 flex justify-center pb-1">
+                      <span className="rounded-full bg-black/50 px-1.5 py-0.5 text-[8px] text-white">
+                        {productImageIndex + 1}/{Math.min(selectedProduct.image_urls!.length, 6)}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              ) : (
+                <div className="size-20 shrink-0 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center">
+                  <span className="text-2xl">📦</span>
+                </div>
+              )}
 
-      {/* Avatar (only for presets that include a person) */}
-      {includesPerson && (
-        <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Personage" : "Character / Avatar"}
-          </p>
-          <AvatarPicker value={avatarPresetKey} onChange={setAvatarPresetKey} />
-        </div>
-      )}
-
-      {/* Platform + scenes + models */}
-      <div className="flex flex-wrap gap-4">
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">Platform</p>
-          <div className="flex gap-1.5">
-            {PLATFORMS.map(p => (
-              <button key={p.value} onClick={() => setPlatform(p.value)}
-                className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-xs font-medium transition-colors ${
-                  platform === p.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
-                }`}>
-                {p.icon} {p.label}
+              <button
+                onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel })}
+                disabled={!productId}
+                className="rounded-xl bg-[#C7F56F] px-4 py-3 text-sm font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 whitespace-nowrap transition-colors">
+                {lang === "nl" ? "Volgende →" : "Next →"}
               </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Scènes" : "Scenes"}
-          </p>
-          <div className="flex gap-1.5">
-            {[4, 5, 6, 7, 8].map(n => (
-              <button key={n} onClick={() => setNumScenes(n)}
-                className={`rounded-lg border px-2.5 py-1.5 text-xs font-semibold transition-colors ${
-                  numScenes === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-300"
-                }`}>
-                {n}
-              </button>
-            ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Image model */}
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Framemodel" : "Frame model"}
-        </p>
-        <div className="flex gap-2">
-          {(Object.entries(IMAGE_MODEL_CONFIGS) as [ImageModel, typeof IMAGE_MODEL_CONFIGS[ImageModel]][]).map(([key, cfg]) => (
-            <button key={key} onClick={() => setImageModel(key)}
-              className={`flex flex-col rounded-xl border-2 px-3 py-2 text-left transition-colors ${
-                imageModel === key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
-              }`}>
-              <span className="text-xs font-semibold text-gray-900 dark:text-white">{cfg.label}</span>
-              <span className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
-                {cfg.api}
-              </span>
-              <span className="mt-0.5 text-[10px] text-gray-400">{cfg.description}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Video model */}
-      <div>
-        <p className="mb-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Videomodel" : "Video model"}
-        </p>
-        <div className="flex gap-2">
-          {(Object.entries(VIDEO_MODEL_CONFIGS) as [VideoModel, typeof VIDEO_MODEL_CONFIGS[VideoModel]][]).map(([key, cfg]) => (
-            <button key={key} onClick={() => setVideoModel(key)}
-              className={`flex flex-col rounded-xl border-2 px-3 py-2 text-left transition-colors ${
-                videoModel === key ? "border-[#C7F56F] bg-[#C7F56F]/10" : "border-gray-200 dark:border-gray-700"
-              }`}>
-              <span className="text-xs font-semibold text-gray-900 dark:text-white">{cfg.label}</span>
-              <span className={`mt-0.5 rounded-full px-1.5 py-0.5 text-[9px] font-semibold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700" : "bg-purple-100 text-purple-700"}`}>
-                {cfg.api}
-              </span>
-              <span className="mt-0.5 text-[10px] text-gray-400">{cfg.note}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Customer desire */}
-      {desires.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            Customer desire
-            <span className="ml-1 font-normal text-gray-400">{lang === "nl" ? "(script wordt hierop gefocust)" : "(script will focus on this)"}</span>
-          </p>
-          <div className="flex flex-wrap gap-2">
+      {/* Desire + Awareness + Angles — compact below panel */}
+      <div className="space-y-3">
+        {desires.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 shrink-0">Desire</span>
             {desires.map(d => (
               <button key={d} onClick={() => setActiveDesire(activeDesire === d ? null : d)}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activeDesire === d ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  activeDesire === d ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}>
                 {d}
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Awareness level */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">Awareness level</p>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 shrink-0">Awareness</span>
           {AWARENESS_LEVELS.map(a => (
             <button key={a.value} onClick={() => setAwarenessLevel(a.value)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                awarenessLevel === a.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+              className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                awarenessLevel === a.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
               }`}>
               {lang === "nl" ? a.labelNl : a.label}
             </button>
           ))}
         </div>
-        <p className="mt-1.5 text-[10px] text-gray-400 dark:text-gray-500">
-          {lang === "nl"
-            ? AWARENESS_LEVELS.find(a => a.value === awarenessLevel)?.descNl
-            : AWARENESS_LEVELS.find(a => a.value === awarenessLevel)?.desc}
-        </p>
-      </div>
 
-      {/* Creative angle */}
-      {angles.length > 0 && (
-        <div>
-          <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-            {lang === "nl" ? "Creatieve invalshoek" : "Creative angle"}
-            <span className="ml-1 font-normal text-gray-400">{lang === "nl" ? "(optioneel)" : "(optional)"}</span>
-          </p>
-          <div className="flex flex-wrap gap-2">
+        {angles.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 w-16 shrink-0">{lang === "nl" ? "Hoek" : "Angle"}</span>
             {angles.map(a => (
               <button key={a.key} onClick={() => setActiveAngleKey(activeAngleKey === a.key ? null : a.key)}
                 title={a.description}
-                className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${
-                  activeAngleKey === a.key ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300"
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  activeAngleKey === a.key ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600"
                 }`}>
                 {a.label}
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {/* Notes — chat-style */}
-      <div>
-        <p className="mb-2 text-xs font-medium text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Beschrijf de videosfeer (optioneel)" : "Describe the video vibe (optional)"}
-        </p>
-        <textarea
-          value={notes}
-          onChange={e => setNotes(e.target.value)}
-          rows={3}
-          placeholder={lang === "nl"
-            ? "Bijv: energetisch en snel gesneden, gebruik warme kleuren, toon het product in gebruik…"
-            : "E.g: energetic fast-paced cuts, warm color grading, show product in action…"}
-          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50 resize-none"
-        />
+        )}
       </div>
-
-      <button
-        onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel })}
-        disabled={!productId}
-        className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40"
-      >
-        {lang === "nl" ? "Volgende →" : "Next →"}
-      </button>
     </div>
   );
 }
