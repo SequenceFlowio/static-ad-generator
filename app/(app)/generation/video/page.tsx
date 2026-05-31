@@ -8,8 +8,6 @@ import { useBrand } from "@/lib/brand-context";
 import type { Brand, BrandDna, Product, SceneScript, VideoSession, CreativeStrategy, CreativeAngle, ImageModel, VideoModel } from "@/types";
 import type { VideoStyle, VideoPlatform } from "@/lib/video-script-generator";
 import { VIDEO_PRESETS } from "@/lib/video-presets";
-import { EnvironmentPicker } from "@/components/video/EnvironmentPicker";
-import { AvatarPicker } from "@/components/video/AvatarPicker";
 import { IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from "@/lib/model-configs";
 import { ENVIRONMENT_PRESETS } from "@/lib/environment-presets";
 import { AVATAR_PRESETS } from "@/lib/avatar-presets";
@@ -338,7 +336,6 @@ function SetupStep({
   }
 
   const selectedProduct = products.find(p => p.id === productId);
-  const productImages = selectedProduct?.image_urls ?? [];
 
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const togglePanel = (name: string) => setOpenPanel(p => p === name ? null : name);
