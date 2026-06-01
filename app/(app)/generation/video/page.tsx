@@ -372,7 +372,7 @@ function SetupStep({
 
       {/* ── Format modal ─────────────────────────────────────────── */}
       {openPanel === "format" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closePanel}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <div className="relative w-full max-w-2xl rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-start justify-between p-6 pb-3">
@@ -424,7 +424,7 @@ function SetupStep({
 
       {/* ── Product modal ─────────────────────────────────────────── */}
       {openPanel === "product" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closePanel}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <div className="relative w-full max-w-lg rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 pb-3">
@@ -484,7 +484,7 @@ function SetupStep({
 
       {/* ── Avatar modal ─────────────────────────────────────────── */}
       {openPanel === "avatar" && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={closePanel}>
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closePanel}>
           <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
           <div className="relative w-full max-w-2xl rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
             <div className="flex items-center justify-between p-5 pb-3">
@@ -522,9 +522,67 @@ function SetupStep({
         </div>
       )}
 
+      {/* ── Environment modal ───────────────────────────────────── */}
+      {openPanel === "env" && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4" onClick={closePanel}>
+          <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" />
+          <div className="relative w-full max-w-2xl rounded-2xl bg-[#111] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between p-5 pb-3">
+              <h2 className="text-lg font-black uppercase tracking-tight text-white">
+                {lang === "nl" ? "Selecteer omgeving" : "Select environment"}
+              </h2>
+              <button onClick={closePanel} className="rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors">
+                <X size={16} />
+              </button>
+            </div>
+            <div className="grid grid-cols-3 gap-3 p-5 pt-2 sm:grid-cols-4">
+              {ENVIRONMENT_PRESETS.map(e => {
+                const envGradients: Record<string, string> = {
+                  studio:       "from-gray-200 to-gray-400",
+                  bedroom:      "from-rose-200 to-orange-300",
+                  kitchen:      "from-amber-200 to-yellow-300",
+                  "living-room":"from-emerald-200 to-teal-300",
+                  outdoor:      "from-green-300 to-emerald-500",
+                  beach:        "from-sky-300 to-blue-400",
+                  gym:          "from-slate-400 to-gray-600",
+                  cafe:         "from-amber-400 to-orange-500",
+                  forest:       "from-green-500 to-emerald-700",
+                  abstract:     "from-purple-400 to-pink-500",
+                  neon:         "from-cyan-400 to-purple-600",
+                  space:        "from-indigo-600 to-slate-900",
+                  custom:       "from-gray-400 to-gray-600",
+                };
+                const isSelected = environmentPresetKey === e.key;
+                return (
+                  <button key={e.key} onClick={() => { setEnvironmentPresetKey(e.key); closePanel(); }}
+                    className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                      isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                    }`}>
+                    <div className={`relative h-24 bg-gradient-to-br ${envGradients[e.key] ?? "from-gray-500 to-gray-700"} flex items-center justify-center`}>
+                      {placeholderImg && (
+                        <Image src={placeholderImg} alt="" fill className="object-cover opacity-20 mix-blend-overlay" unoptimized />
+                      )}
+                      <MapPin size={28} className="text-white/70 relative z-10 drop-shadow" />
+                      {isSelected && (
+                        <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                          <Check size={12} className="text-[#1a1a1a]" />
+                        </div>
+                      )}
+                    </div>
+                    <div className="bg-[#1a1a1a] px-2.5 py-2">
+                      <p className="text-xs font-bold text-white">{lang === "nl" ? e.labelNl : e.label}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ── Main chat panel ─────────────────────────────────────── */}
       <div className="relative">
-        {openPanel && !["format", "product", "avatar"].includes(openPanel) && (
+        {openPanel && !["format", "product", "avatar", "env"].includes(openPanel) && (
           <div className="fixed inset-0 z-40" onClick={closePanel} />
         )}
 
@@ -554,30 +612,12 @@ function SetupStep({
                 </button>
 
                 {/* Environment */}
-                <div className="relative z-50">
-                  <button onClick={() => togglePanel("env")}
-                    className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
-                    <MapPin size={13} className="opacity-60" />
-                    <span>{selectedEnvLabel}</span>
-                    <ChevronDown size={11} className="opacity-40" />
-                  </button>
-                  {openPanel === "env" && (
-                    <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3">
-                      <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Omgeving" : "Environment"}</p>
-                      <div className="grid grid-cols-4 gap-1.5">
-                        {ENVIRONMENT_PRESETS.map(e => (
-                          <button key={e.key} onClick={() => { setEnvironmentPresetKey(e.key); closePanel(); }}
-                            className={`flex flex-col items-center gap-1 rounded-lg p-2 text-center transition-colors ${
-                              environmentPresetKey === e.key ? "bg-[#C7F56F]/20 ring-1 ring-[#C7F56F]" : "hover:bg-gray-50 dark:hover:bg-gray-800"
-                            }`}>
-                            <MapPin size={18} className="text-gray-400" />
-                            <span className="text-[9px] font-medium text-gray-600 dark:text-gray-400 leading-tight">{lang === "nl" ? e.labelNl : e.label}</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                <button onClick={() => togglePanel("env")}
+                  className="flex items-center gap-1.5 rounded-lg bg-gray-100 dark:bg-gray-800 px-2.5 py-1.5 text-xs font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">
+                  <MapPin size={13} className="opacity-60" />
+                  <span>{selectedEnvLabel}</span>
+                  <ChevronDown size={11} className="opacity-40" />
+                </button>
 
                 {/* Avatar (only for presets that include a person) */}
                 {includesPerson && (
