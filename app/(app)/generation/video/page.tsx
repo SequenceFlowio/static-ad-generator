@@ -302,14 +302,32 @@ interface SetupConfig {
   avatarPresetKey: string;
   imageModel: ImageModel;
   videoModel: VideoModel;
+  customAvatarId: string | null;
+  customEnvId: string | null;
+}
+
+interface GalleryAvatar {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  prompt_hint: string;
+}
+
+interface GalleryEnvironment {
+  id: string;
+  name: string;
+  photo_url: string | null;
+  prompt_hint: string;
 }
 
 function SetupStep({
-  products, desires, angles, onNext,
+  products, desires, angles, customAvatars, customEnvs, onNext,
 }: {
   products: Product[];
   desires: string[];
   angles: CreativeAngle[];
+  customAvatars: GalleryAvatar[];
+  customEnvs: GalleryEnvironment[];
   onNext: (cfg: SetupConfig) => void;
 }) {
   const { lang } = useLanguage();
@@ -326,6 +344,8 @@ function SetupStep({
   const [avatarPresetKey, setAvatarPresetKey] = useState("young-woman");
   const [imageModel, setImageModel] = useState<ImageModel>("nano-banana-2");
   const [videoModel, setVideoModel] = useState<VideoModel>("seedance-2");
+  const [customAvatarId, setCustomAvatarId] = useState<string | null>(null);
+  const [customEnvId, setCustomEnvId] = useState<string | null>(null);
 
   const selectedPreset = VIDEO_PRESETS.find(p => p.key === selectedPresetKey) ?? VIDEO_PRESETS[0];
   const videoStyle = selectedPreset.video_style;
@@ -345,8 +365,12 @@ function SetupStep({
   const togglePanel = (name: string) => setOpenPanel(p => p === name ? null : name);
   const closePanel = () => setOpenPanel(null);
 
-  const selectedEnvLabel = ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? environmentPresetKey;
-  const selectedAvatarLabel = AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? avatarPresetKey;
+  const selectedEnvLabel = customEnvId
+    ? (customEnvs.find(e => e.id === customEnvId)?.name ?? "Aangepast")
+    : (ENVIRONMENT_PRESETS.find(e => e.key === environmentPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? environmentPresetKey);
+  const selectedAvatarLabel = customAvatarId
+    ? (customAvatars.find(a => a.id === customAvatarId)?.name ?? "Aangepast")
+    : (AVATAR_PRESETS.find(a => a.key === avatarPresetKey)?.[lang === "nl" ? "labelNl" : "label"] ?? avatarPresetKey);
 
   const PRESET_GRADIENTS: Record<string, string> = {
     "ugc-review":   "from-rose-500 via-orange-400 to-amber-300",
@@ -495,28 +519,67 @@ function SetupStep({
                 <X size={16} />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-3 p-5 pt-2 sm:grid-cols-4">
-              {AVATAR_PRESETS.map(a => {
-                const isSelected = avatarPresetKey === a.key;
-                return (
-                  <button key={a.key} onClick={() => { setAvatarPresetKey(a.key); closePanel(); }}
-                    className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
-                      isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
-                    }`}>
-                    <div className={`relative h-28 bg-gradient-to-br ${AVATAR_GRADIENTS[a.key] ?? "from-gray-500 to-gray-700"} flex items-center justify-center`}>
-                      <User size={36} className="text-white/70 relative z-10" />
-                      {isSelected && (
-                        <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
-                          <Check size={12} className="text-[#1a1a1a]" />
+            <div className="overflow-y-auto max-h-[70vh] px-5 pb-5 space-y-4">
+              {customAvatars.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">Mijn personages</p>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                    {customAvatars.map(a => {
+                      const isSelected = customAvatarId === a.id;
+                      return (
+                        <button key={a.id} onClick={() => { setCustomAvatarId(a.id); setAvatarPresetKey("custom"); closePanel(); }}
+                          className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                            isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                          }`}>
+                          <div className="relative h-28 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
+                            {a.photo_url ? (
+                              <Image src={a.photo_url} alt={a.name} fill className="object-cover" unoptimized />
+                            ) : (
+                              <User size={36} className="text-white/70 relative z-10" />
+                            )}
+                            {isSelected && (
+                              <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                                <Check size={12} className="text-[#1a1a1a]" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-[#1a1a1a] px-2.5 py-2">
+                            <p className="text-xs font-bold text-white truncate">{a.name}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div>
+                {customAvatars.length > 0 && (
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">Presets</p>
+                )}
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {AVATAR_PRESETS.map(a => {
+                    const isSelected = !customAvatarId && avatarPresetKey === a.key;
+                    return (
+                      <button key={a.key} onClick={() => { setAvatarPresetKey(a.key); setCustomAvatarId(null); closePanel(); }}
+                        className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                          isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                        }`}>
+                        <div className={`relative h-28 bg-gradient-to-br ${AVATAR_GRADIENTS[a.key] ?? "from-gray-500 to-gray-700"} flex items-center justify-center`}>
+                          <User size={36} className="text-white/70 relative z-10" />
+                          {isSelected && (
+                            <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                              <Check size={12} className="text-[#1a1a1a]" />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="bg-[#1a1a1a] px-2.5 py-2">
-                      <p className="text-xs font-bold text-white">{lang === "nl" ? a.labelNl : a.label}</p>
-                    </div>
-                  </button>
-                );
-              })}
+                        <div className="bg-[#1a1a1a] px-2.5 py-2">
+                          <p className="text-xs font-bold text-white">{lang === "nl" ? a.labelNl : a.label}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -535,46 +598,85 @@ function SetupStep({
                 <X size={16} />
               </button>
             </div>
-            <div className="grid grid-cols-3 gap-3 p-5 pt-2 sm:grid-cols-4">
-              {ENVIRONMENT_PRESETS.map(e => {
-                const envGradients: Record<string, string> = {
-                  studio:       "from-gray-200 to-gray-400",
-                  bedroom:      "from-rose-200 to-orange-300",
-                  kitchen:      "from-amber-200 to-yellow-300",
-                  "living-room":"from-emerald-200 to-teal-300",
-                  outdoor:      "from-green-300 to-emerald-500",
-                  beach:        "from-sky-300 to-blue-400",
-                  gym:          "from-slate-400 to-gray-600",
-                  cafe:         "from-amber-400 to-orange-500",
-                  forest:       "from-green-500 to-emerald-700",
-                  abstract:     "from-purple-400 to-pink-500",
-                  neon:         "from-cyan-400 to-purple-600",
-                  space:        "from-indigo-600 to-slate-900",
-                  custom:       "from-gray-400 to-gray-600",
-                };
-                const isSelected = environmentPresetKey === e.key;
-                return (
-                  <button key={e.key} onClick={() => { setEnvironmentPresetKey(e.key); closePanel(); }}
-                    className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
-                      isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
-                    }`}>
-                    <div className={`relative h-24 bg-gradient-to-br ${envGradients[e.key] ?? "from-gray-500 to-gray-700"} flex items-center justify-center`}>
-                      {placeholderImg && (
-                        <Image src={placeholderImg} alt="" fill className="object-cover opacity-20 mix-blend-overlay" unoptimized />
-                      )}
-                      <MapPin size={28} className="text-white/70 relative z-10 drop-shadow" />
-                      {isSelected && (
-                        <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
-                          <Check size={12} className="text-[#1a1a1a]" />
+            <div className="overflow-y-auto max-h-[70vh] px-5 pb-5 space-y-4">
+              {customEnvs.length > 0 && (
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">Mijn omgevingen</p>
+                  <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                    {customEnvs.map(env => {
+                      const isSelected = customEnvId === env.id;
+                      return (
+                        <button key={env.id} onClick={() => { setCustomEnvId(env.id); setEnvironmentPresetKey("custom"); closePanel(); }}
+                          className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                            isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                          }`}>
+                          <div className="relative h-24 bg-gradient-to-br from-gray-700 to-gray-900 flex items-center justify-center overflow-hidden">
+                            {env.photo_url ? (
+                              <Image src={env.photo_url} alt={env.name} fill className="object-cover" unoptimized />
+                            ) : (
+                              <MapPin size={28} className="text-white/70 relative z-10 drop-shadow" />
+                            )}
+                            {isSelected && (
+                              <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                                <Check size={12} className="text-[#1a1a1a]" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="bg-[#1a1a1a] px-2.5 py-2">
+                            <p className="text-xs font-bold text-white truncate">{env.name}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+              <div>
+                {customEnvs.length > 0 && (
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-white/40 mb-2">Presets</p>
+                )}
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
+                  {ENVIRONMENT_PRESETS.map(e => {
+                    const envGradients: Record<string, string> = {
+                      studio:       "from-gray-200 to-gray-400",
+                      bedroom:      "from-rose-200 to-orange-300",
+                      kitchen:      "from-amber-200 to-yellow-300",
+                      "living-room":"from-emerald-200 to-teal-300",
+                      outdoor:      "from-green-300 to-emerald-500",
+                      beach:        "from-sky-300 to-blue-400",
+                      gym:          "from-slate-400 to-gray-600",
+                      cafe:         "from-amber-400 to-orange-500",
+                      forest:       "from-green-500 to-emerald-700",
+                      abstract:     "from-purple-400 to-pink-500",
+                      neon:         "from-cyan-400 to-purple-600",
+                      space:        "from-indigo-600 to-slate-900",
+                      custom:       "from-gray-400 to-gray-600",
+                    };
+                    const isSelected = !customEnvId && environmentPresetKey === e.key;
+                    return (
+                      <button key={e.key} onClick={() => { setEnvironmentPresetKey(e.key); setCustomEnvId(null); closePanel(); }}
+                        className={`group relative flex flex-col overflow-hidden rounded-xl text-left transition-all ${
+                          isSelected ? "ring-2 ring-[#C7F56F]" : "ring-1 ring-white/10 hover:ring-white/30"
+                        }`}>
+                        <div className={`relative h-24 bg-gradient-to-br ${envGradients[e.key] ?? "from-gray-500 to-gray-700"} flex items-center justify-center`}>
+                          {placeholderImg && (
+                            <Image src={placeholderImg} alt="" fill className="object-cover opacity-20 mix-blend-overlay" unoptimized />
+                          )}
+                          <MapPin size={28} className="text-white/70 relative z-10 drop-shadow" />
+                          {isSelected && (
+                            <div className="absolute bottom-2 right-2 z-10 rounded-full bg-[#C7F56F] p-1">
+                              <Check size={12} className="text-[#1a1a1a]" />
+                            </div>
+                          )}
                         </div>
-                      )}
-                    </div>
-                    <div className="bg-[#1a1a1a] px-2.5 py-2">
-                      <p className="text-xs font-bold text-white">{lang === "nl" ? e.labelNl : e.label}</p>
-                    </div>
-                  </button>
-                );
-              })}
+                        <div className="bg-[#1a1a1a] px-2.5 py-2">
+                          <p className="text-xs font-bold text-white">{lang === "nl" ? e.labelNl : e.label}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -740,7 +842,7 @@ function SetupStep({
               </button>
 
               <button
-                onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel })}
+                onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel, customAvatarId, customEnvId })}
                 disabled={!productId}
                 className="rounded-xl bg-[#C7F56F] px-4 py-3 text-sm font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 whitespace-nowrap transition-colors">
                 {lang === "nl" ? "Volgende →" : "Next →"}
@@ -1815,7 +1917,20 @@ function VideoWizard({
   const [setupConfig, setSetupConfig] = useState<SetupConfig | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customAvatars, setCustomAvatars] = useState<GalleryAvatar[]>([]);
+  const [customEnvs, setCustomEnvs] = useState<GalleryEnvironment[]>([]);
   const { lang } = useLanguage();
+
+  useEffect(() => {
+    fetch(`/api/brands/${brand.id}/gallery/avatars`)
+      .then(r => r.json())
+      .then(d => setCustomAvatars(d.avatars ?? []))
+      .catch(() => {});
+    fetch(`/api/brands/${brand.id}/gallery/environments`)
+      .then(r => r.json())
+      .then(d => setCustomEnvs(d.environments ?? []))
+      .catch(() => {});
+  }, [brand.id]);
 
   // Step 0 → 1: create session, store config, advance to references
   async function handleSetupNext(cfg: SetupConfig) {
@@ -1977,6 +2092,8 @@ function VideoWizard({
           products={products}
           desires={dna?.data?.customer_desires ?? []}
           angles={strategy?.creative_angles ?? []}
+          customAvatars={customAvatars}
+          customEnvs={customEnvs}
           onNext={handleSetupNext}
         />
       )}

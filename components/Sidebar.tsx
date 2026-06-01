@@ -91,6 +91,16 @@ const GLOBAL_NAV = [
       </svg>
     ),
   },
+  {
+    labelKey: "nav.gallery",
+    label: "Gallerij",
+    href: "/gallery",
+    icon: (
+      <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zm10 0a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+      </svg>
+    ),
+  },
 ];
 
 
@@ -363,6 +373,7 @@ export default function Sidebar() {
         || !!pathname.match(/\/brands\/[^/]+\/strategy/);
     }
     if (href === "/products") return pathname.startsWith("/products") || !!pathname.match(/\/brands\/[^/]+\/products/);
+    if (href === "/gallery") return pathname.startsWith("/gallery");
     if (href === "/generation/analytics") return pathname === "/generation/analytics";
     if (href === "/social/create") return pathname === "/social/create";
     if (href === "/social/planner") return pathname === "/social/planner";
@@ -454,7 +465,7 @@ export default function Sidebar() {
               }`}
             >
               <span className={isActive(item.href) ? "text-[#1a1a1a]" : ""}>{item.icon}</span>
-              {t(item.labelKey)}
+              {"label" in item && item.label ? item.label : t(item.labelKey)}
             </Link>
           ))}
         </nav>
