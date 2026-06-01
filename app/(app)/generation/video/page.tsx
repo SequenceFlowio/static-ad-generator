@@ -281,10 +281,10 @@ function StepBar({ current }: { current: number }) {
 
 // ─── Step 0: Setup ────────────────────────────────────────────────────────────
 
-const PLATFORMS: Array<{ value: VideoPlatform; label: string; icon: string }> = [
-  { value: "tiktok", label: "TikTok", icon: "🎵" },
-  { value: "instagram-reels", label: "Reels", icon: "📸" },
-  { value: "youtube-shorts", label: "Shorts", icon: "▶️" },
+const PLATFORMS: Array<{ value: VideoPlatform; label: string; ratio: string }> = [
+  { value: "tiktok", label: "TikTok", ratio: "9:16" },
+  { value: "instagram-reels", label: "Reels", ratio: "9:16" },
+  { value: "youtube-shorts", label: "Shorts", ratio: "9:16" },
 ];
 
 interface SetupConfig {
@@ -752,7 +752,8 @@ function SetupStep({
                               className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
                                 platform === p.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
                               }`}>
-                              {p.label}
+                              <span className="block leading-tight">{p.label}</span>
+                              <span className="block text-[9px] font-normal opacity-60">{p.ratio}</span>
                             </button>
                           ))}
                         </div>
