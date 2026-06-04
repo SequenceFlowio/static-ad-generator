@@ -795,56 +795,55 @@ function SetupStep({
                     <ChevronDown size={11} className="opacity-40" />
                   </button>
                   {openPanel === "settings" && (
-                    <div className="absolute bottom-full mb-2 left-0 z-50 w-80 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-4">
-                      {/* Platform */}
-                      <div>
-                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                          <Smartphone size={11} /> Platform
-                        </p>
-                        <div className="flex gap-1.5">
-                          {PLATFORMS.map(p => (
-                            <button key={p.value} onClick={() => setPlatform(p.value)}
-                              className={`flex-1 rounded-lg border px-2 py-1.5 text-xs font-medium transition-colors ${
-                                platform === p.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
-                              }`}>
-                              <span className="block leading-tight">{p.label}</span>
-                              <span className="block text-[9px] font-normal opacity-60">{p.ratio}</span>
-                            </button>
-                          ))}
+                    <div className="absolute bottom-full mb-2 left-0 z-50 w-72 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 shadow-2xl p-3 space-y-3">
+                      {/* Platform + Scenes side-by-side */}
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                            <Smartphone size={10} /> Platform
+                          </p>
+                          <div className="flex flex-col gap-1">
+                            {PLATFORMS.map(p => (
+                              <button key={p.value} onClick={() => setPlatform(p.value)}
+                                className={`rounded-lg border px-2 py-1 text-left text-[11px] font-medium transition-colors ${
+                                  platform === p.value ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
+                                }`}>
+                                {p.label} <span className="opacity-50 font-normal">{p.ratio}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="mb-1.5 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                            <Clapperboard size={10} /> {lang === "nl" ? "Scènes" : "Scenes"}
+                          </p>
+                          <div className="grid grid-cols-3 gap-1">
+                            {[4, 5, 6, 7, 8].map(n => (
+                              <button key={n} onClick={() => setNumScenes(n)}
+                                className={`rounded-lg border py-1 text-xs font-bold transition-colors ${
+                                  numScenes === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
+                                }`}>
+                                {n}
+                              </button>
+                            ))}
+                          </div>
                         </div>
                       </div>
-                      {/* Scenes */}
-                      <div>
-                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                          <Clapperboard size={11} /> {lang === "nl" ? "Scènes" : "Scenes"}
-                        </p>
-                        <div className="flex gap-1.5">
-                          {[4, 5, 6, 7, 8].map(n => (
-                            <button key={n} onClick={() => setNumScenes(n)}
-                              className={`flex-1 rounded-lg border py-1.5 text-xs font-bold transition-colors ${
-                                numScenes === n ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400"
-                              }`}>
-                              {n}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
+
                       <div className="h-px bg-gray-100 dark:bg-gray-800" />
-                      {/* Image model */}
+
+                      {/* Frame model */}
                       <div>
-                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                          <Cpu size={11} /> {lang === "nl" ? "Framemodel" : "Frame model"}
+                        <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                          <Cpu size={10} /> {lang === "nl" ? "Framemodel" : "Frame model"}
                         </p>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           {(Object.entries(IMAGE_MODEL_CONFIGS) as [ImageModel, typeof IMAGE_MODEL_CONFIGS[ImageModel]][]).map(([key, cfg]) => (
                             <button key={key} onClick={() => setImageModel(key)}
-                              className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors ${
+                              className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
                                 imageModel === key ? "bg-[#C7F56F]/10 ring-1 ring-[#C7F56F]/40" : "hover:bg-gray-50 dark:hover:bg-gray-800"
                               }`}>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{cfg.label}</div>
-                                <div className="text-[10px] text-gray-400">{cfg.description}</div>
-                              </div>
+                              <span className="flex-1 text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{cfg.label}</span>
                               <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400"}`}>
                                 {cfg.api}
                               </span>
@@ -852,21 +851,19 @@ function SetupStep({
                           ))}
                         </div>
                       </div>
+
                       {/* Video model */}
                       <div>
-                        <p className="mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                          <Video size={11} /> {lang === "nl" ? "Videomodel" : "Video model"}
+                        <p className="mb-1 flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                          <Video size={10} /> {lang === "nl" ? "Videomodel" : "Video model"}
                         </p>
-                        <div className="space-y-1">
+                        <div className="space-y-0.5">
                           {(Object.entries(VIDEO_MODEL_CONFIGS) as [VideoModel, typeof VIDEO_MODEL_CONFIGS[VideoModel]][]).map(([key, cfg]) => (
                             <button key={key} onClick={() => setVideoModel(key)}
-                              className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors ${
+                              className={`w-full flex items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors ${
                                 videoModel === key ? "bg-[#C7F56F]/10 ring-1 ring-[#C7F56F]/40" : "hover:bg-gray-50 dark:hover:bg-gray-800"
                               }`}>
-                              <div className="flex-1 min-w-0">
-                                <div className="text-xs font-semibold text-gray-800 dark:text-gray-200">{cfg.label}</div>
-                                <div className="text-[10px] text-gray-400">{cfg.note}</div>
-                              </div>
+                              <span className="flex-1 text-[11px] font-semibold text-gray-800 dark:text-gray-200 truncate">{cfg.label}</span>
                               <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold ${cfg.api === "kie.ai" ? "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400" : "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-400"}`}>
                                 {cfg.api}
                               </span>
@@ -874,14 +871,13 @@ function SetupStep({
                           ))}
                         </div>
                       </div>
+
                       <div className="h-px bg-gray-100 dark:bg-gray-800" />
+
                       {/* Voice-over */}
                       <button onClick={() => setVoiceover(v => !v)}
-                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                        <div>
-                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Voice-over</p>
-                          <p className="text-[10px] text-gray-400">{lang === "nl" ? "Gesproken tekst per scène genereren" : "Generate spoken text per scene"}</p>
-                        </div>
+                        className="flex w-full items-center justify-between rounded-lg px-2 py-1.5 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <span className="text-[11px] font-semibold text-gray-800 dark:text-gray-200">Voice-over</span>
                         <div className={`relative h-5 w-9 rounded-full transition-colors ${voiceover ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`}>
                           <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${voiceover ? "translate-x-4" : "translate-x-0.5"}`} />
                         </div>
