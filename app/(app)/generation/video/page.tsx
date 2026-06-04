@@ -59,8 +59,8 @@ const ENVIRONMENT_SUGGESTIONS = [
 
 function phaseToStep(phase: string): number {
   const map: Record<string, number> = {
-    references: 1, script: 2, frames: 3, prompt: 4,
-    generating_video: 5, done: 5, failed: 5,
+    references: 2, script: 3, frames: 4, prompt: 5,
+    generating_video: 6, done: 6, failed: 6,
   };
   return map[phase] ?? 0;
 }
@@ -255,7 +255,7 @@ function VideoSessionPicker({
 
 // ─── Step indicator ───────────────────────────────────────────────────────────
 
-const STEPS = ["Setup", "Referenties", "Script", "Frames", "Prompt", "Video"];
+const STEPS = ["Setup", "Ideeën", "Referenties", "Script", "Frames", "Prompt", "Video"];
 
 function StepBar({ current }: { current: number }) {
   return (
@@ -349,8 +349,6 @@ function SetupStep({
   const [customAvatarId, setCustomAvatarId] = useState<string | null>(null);
   const [customEnvId, setCustomEnvId] = useState<string | null>(null);
   const [voiceover, setVoiceover] = useState(true);
-  const [adIdeas, setAdIdeas] = useState<string[]>([]);
-  const [ideasLoading, setIdeasLoading] = useState(false);
 
   const selectedPreset = VIDEO_PRESETS.find(p => p.key === selectedPresetKey) ?? VIDEO_PRESETS[0];
   const videoStyle = selectedPreset.video_style;
@@ -365,28 +363,6 @@ function SetupStep({
   }
 
   const selectedProduct = products.find(p => p.id === productId);
-
-  async function generateIdeas() {
-    setIdeasLoading(true);
-    setAdIdeas([]);
-    try {
-      const res = await fetch(`/api/brands/${brandId}/video-sessions/ideas`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          product_id: productId || undefined,
-          video_style: videoStyle,
-          active_desire: activeDesire ?? undefined,
-          awareness_level: awarenessLevel,
-          notes: notes || undefined,
-        }),
-      });
-      const data = await res.json() as { ideas?: string[] };
-      setAdIdeas(data.ideas ?? []);
-    } finally {
-      setIdeasLoading(false);
-    }
-  }
 
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const togglePanel = (name: string) => setOpenPanel(p => p === name ? null : name);
@@ -720,42 +696,17 @@ function SetupStep({
             {/* Left: textarea + pills */}
             <div className="flex flex-1 flex-col min-w-0 p-4">
               <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
-                {lang === "nl" ? "Jouw idee (optioneel)" : "Your idea (optional)"}
+                {lang === "nl" ? "Extra opmerkingen (optioneel)" : "Extra notes (optional)"}
               </p>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
-                rows={3}
+                rows={2}
                 placeholder={lang === "nl"
-                  ? "Beschrijf je concept, of laat leeg voor AI-suggesties…"
-                  : "Describe your concept, or leave empty for AI suggestions…"}
+                  ? "Stijl, toon, speciale wensen…"
+                  : "Style, tone, special requests…"}
                 className="w-full bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none"
               />
-              {/* Ideas */}
-              <div className="mt-2">
-                <button
-                  onClick={generateIdeas}
-                  disabled={ideasLoading}
-                  className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 hover:text-[#C7F56F] transition-colors disabled:opacity-50"
-                >
-                  {ideasLoading ? (
-                    <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                  ) : (
-                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-                  )}
-                  {lang === "nl" ? "Genereer ideeën" : "Generate ideas"}
-                </button>
-                {adIdeas.length > 0 && (
-                  <div className="mt-2 flex flex-col gap-1.5">
-                    {adIdeas.map((idea, i) => (
-                      <button key={i} onClick={() => setNotes(idea)}
-                        className="text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:border-[#C7F56F] hover:bg-[#C7F56F]/5 transition-colors">
-                        {idea}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
               <div className="mt-3 h-px bg-gray-100 dark:bg-gray-800" />
               {/* Pills row */}
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -1000,7 +951,116 @@ function SetupStep({
   );
 }
 
-// ─── Step 1: References ───────────────────────────────────────────────────────
+// ─── Step 1: Ideas ────────────────────────────────────────────────────────────
+
+function IdeasStep({
+  brandId, setupConfig, onSelect, onNext,
+}: {
+  brandId: string;
+  setupConfig: SetupConfig;
+  onSelect: (idea: string) => void;
+  onNext: () => void;
+}) {
+  const { lang } = useLanguage();
+  const [ideas, setIdeas] = useState<string[]>([]);
+  const [loadingIdeas, setLoadingIdeas] = useState(true);
+  const [selected, setSelected] = useState<string>(setupConfig.notes ?? "");
+  const [customText, setCustomText] = useState(setupConfig.notes ?? "");
+
+  useEffect(() => {
+    setLoadingIdeas(true);
+    fetch(`/api/brands/${brandId}/video-sessions/ideas`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        product_id: setupConfig.productId,
+        video_style: setupConfig.videoStyle,
+        active_desire: setupConfig.activeDesire || undefined,
+        awareness_level: setupConfig.awarenessLevel,
+        notes: setupConfig.notes || undefined,
+      }),
+    })
+      .then(r => r.json())
+      .then(d => { setIdeas((d as { ideas?: string[] }).ideas ?? []); setLoadingIdeas(false); })
+      .catch(() => setLoadingIdeas(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function handleChip(idea: string) {
+    setSelected(idea);
+    setCustomText("");
+    onSelect(idea);
+  }
+
+  function handleCustomChange(val: string) {
+    setCustomText(val);
+    setSelected(val);
+    onSelect(val);
+  }
+
+  const hasSelection = selected.trim().length > 0;
+
+  return (
+    <div className="space-y-5">
+      <div>
+        <h3 className="text-base font-bold text-gray-900 dark:text-white">
+          {lang === "nl" ? "Wat is het concept van je video?" : "What is the concept of your video?"}
+        </h3>
+        <p className="text-xs text-gray-400 mt-1">
+          {lang === "nl"
+            ? "Kies een idee hieronder als startpunt, of schrijf je eigen concept."
+            : "Pick an idea below as a starting point, or write your own concept."}
+        </p>
+      </div>
+
+      {loadingIdeas ? (
+        <div className="flex items-center gap-3 py-8 justify-center">
+          <svg className="h-5 w-5 animate-spin text-[#C7F56F]" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+          </svg>
+          <p className="text-sm text-gray-500">{lang === "nl" ? "Ideeën genereren…" : "Generating ideas…"}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {ideas.map((idea, i) => (
+            <button key={i} onClick={() => handleChip(idea)}
+              className={`w-full text-left rounded-xl border px-4 py-3 text-sm leading-snug transition-colors ${
+                selected === idea && !customText
+                  ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white"
+                  : "border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+              }`}>
+              {idea}
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div>
+        <p className="text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1.5">
+          {lang === "nl" ? "Of schrijf je eigen concept" : "Or write your own concept"}
+        </p>
+        <textarea
+          value={customText}
+          onChange={e => handleCustomChange(e.target.value)}
+          onFocus={() => { if (ideas.includes(selected)) setSelected(customText); }}
+          rows={3}
+          placeholder={lang === "nl" ? "Beschrijf het concept van je video…" : "Describe the concept of your video…"}
+          className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-sm text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50 resize-none"
+        />
+      </div>
+
+      <button
+        onClick={onNext}
+        disabled={!hasSelection}
+        className="w-full rounded-xl bg-[#C7F56F] py-3 text-sm font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 transition-colors">
+        {lang === "nl" ? "Volgende →" : "Next →"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Step 2: References ───────────────────────────────────────────────────────
 
 interface RefState {
   tab: "upload" | "generate";
@@ -1343,7 +1403,7 @@ function ReferencesStep({
   );
 }
 
-// ─── Step 2: Script ───────────────────────────────────────────────────────────
+// ─── Step 3: Script ───────────────────────────────────────────────────────────
 
 function ScriptStep({
   scenes, product, onSave, onRegenerate, onNext,
@@ -2190,29 +2250,38 @@ function VideoWizard({
   }, [brand.id]);
 
   // Step 0 → 1: create session, store config, advance to references
-  async function handleSetupNext(cfg: SetupConfig) {
-    setLoading(true);
-    setError(null);
+  function handleSetupNext(cfg: SetupConfig) {
     setProductId(cfg.productId);
     setProductImageIndex(cfg.productImageIndex);
     setNumScenes(cfg.numScenes);
     setIncludesPerson(cfg.includesPerson);
     setVideoStyle(cfg.videoStyle);
     setSetupConfig(cfg);
+    setStep(1);
+  }
+
+  // Step 1 → 2: user picked an idea, now create the session and advance
+  async function handleIdeasNext(selectedIdea: string) {
+    if (!setupConfig) return;
+    setLoading(true);
+    setError(null);
+
+    const cfgWithIdea: SetupConfig = { ...setupConfig, notes: selectedIdea };
+    setSetupConfig(cfgWithIdea);
 
     const res = await fetch(`/api/brands/${brand.id}/video-sessions`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        product_id: cfg.productId,
-        video_style: cfg.videoStyle,
-        platform: cfg.platform,
-        num_scenes: cfg.numScenes,
+        product_id: cfgWithIdea.productId,
+        video_style: cfgWithIdea.videoStyle,
+        platform: cfgWithIdea.platform,
+        num_scenes: cfgWithIdea.numScenes,
         duration: 15,
-        includes_person: cfg.includesPerson,
-        image_model: cfg.imageModel,
-        video_model: cfg.videoModel,
-        voiceover_enabled: cfg.voiceover,
+        includes_person: cfgWithIdea.includesPerson,
+        image_model: cfgWithIdea.imageModel,
+        video_model: cfgWithIdea.videoModel,
+        voiceover_enabled: cfgWithIdea.voiceover,
       }),
     });
 
@@ -2226,10 +2295,10 @@ function VideoWizard({
     const { session } = await res.json() as { session: VideoSession };
     setSessionId(session.id);
     setLoading(false);
-    setStep(1);
+    setStep(2);
   }
 
-  // Step 1 → 2: generate script using stored setup config + reference prompts
+  // Step 2 → 3: generate script using stored setup config + reference prompts
   async function handleGenerateScript(characterRefPrompt?: string, environmentRefPrompt?: string, characterUrl?: string, environmentUrl?: string) {
     if (characterUrl) setCharRefUrl(characterUrl);
     if (environmentUrl) setEnvRefUrl(environmentUrl);
@@ -2264,7 +2333,7 @@ function VideoWizard({
     setScenes(newScenes);
     setSeedancePrompt(seedance_prompt ?? "");
     setLoading(false);
-    setStep(2);
+    setStep(3);
   }
 
   async function handleSaveScript(updatedScenes: SceneScript[]) {
@@ -2316,7 +2385,7 @@ function VideoWizard({
       body: JSON.stringify({ product_image_url: productImageUrl }),
     });
 
-    setStep(5);
+    setStep(6);
   }
 
   if (loading) {
@@ -2327,8 +2396,10 @@ function VideoWizard({
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
         </svg>
         <p className="text-sm text-gray-500 dark:text-gray-400">
-          {step === 1
+          {step === 2
             ? (lang === "nl" ? "Script genereren..." : "Generating script…")
+            : step === 1
+            ? (lang === "nl" ? "Sessie aanmaken..." : "Creating session…")
             : (lang === "nl" ? "Laden..." : "Loading…")}
         </p>
       </div>
@@ -2359,7 +2430,16 @@ function VideoWizard({
         />
       )}
 
-      {step === 1 && sessionId && (
+      {step === 1 && setupConfig && (
+        <IdeasStep
+          brandId={brand.id}
+          setupConfig={setupConfig}
+          onSelect={idea => setSetupConfig(c => c ? { ...c, notes: idea } : c)}
+          onNext={() => handleIdeasNext(setupConfig.notes)}
+        />
+      )}
+
+      {step === 2 && sessionId && (
         <ReferencesStep
           brandId={brand.id}
           sessionId={sessionId}
@@ -2371,17 +2451,17 @@ function VideoWizard({
         />
       )}
 
-      {step === 2 && sessionId && (
+      {step === 3 && sessionId && (
         <ScriptStep
           scenes={scenes}
           product={products.find(p => p.id === productId) ?? null}
           onSave={handleSaveScript}
           onRegenerate={handleRegenScript}
-          onNext={() => setStep(3)}
+          onNext={() => setStep(4)}
         />
       )}
 
-      {step === 3 && sessionId && (
+      {step === 4 && sessionId && (
         <FramesStep
           scenes={scenes}
           brandId={brand.id}
@@ -2390,11 +2470,11 @@ function VideoWizard({
           envRefUrl={envRefUrl}
           productImageUrl={products.find(p => p.id === productId)?.image_urls?.[productImageIndex] ?? null}
           onScenesUpdate={setScenes}
-          onNext={() => setStep(4)}
+          onNext={() => setStep(5)}
         />
       )}
 
-      {step === 4 && sessionId && (
+      {step === 5 && sessionId && (
         <PromptStep
           scenes={scenes}
           seedancePrompt={seedancePrompt}
@@ -2405,7 +2485,7 @@ function VideoWizard({
         />
       )}
 
-      {step === 5 && sessionId && (
+      {step === 6 && sessionId && (
         <VideoStep brandId={brand.id} sessionId={sessionId} />
       )}
     </div>
