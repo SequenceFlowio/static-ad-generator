@@ -61,10 +61,12 @@ Geef ALLEEN de ideeën terug als een JSON array van strings, geen extra tekst:
     const raw = await generateText({
       messages: [{ role: "user", content: prompt }],
       temperature: 0.9,
-      responseFormat: { type: "json_object" },
     });
 
-    const parsed = JSON.parse(raw) as { ideas?: string[] };
+    // Extract JSON object from response (handles surrounding text or fences)
+    const jsonMatch = raw.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error("No JSON in response");
+    const parsed = JSON.parse(jsonMatch[0]) as { ideas?: string[] };
     const ideas = parsed.ideas ?? [];
 
     return NextResponse.json({ ideas });

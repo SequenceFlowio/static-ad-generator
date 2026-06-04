@@ -963,11 +963,13 @@ function IdeasStep({
   const { lang } = useLanguage();
   const [ideas, setIdeas] = useState<string[]>([]);
   const [loadingIdeas, setLoadingIdeas] = useState(true);
+  const [ideasError, setIdeasError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string>(setupConfig.notes ?? "");
   const [customText, setCustomText] = useState(setupConfig.notes ?? "");
 
-  useEffect(() => {
+  const fetchIdeas = useCallback(() => {
     setLoadingIdeas(true);
+    setIdeasError(null);
     fetch(`/api/brands/${brandId}/video-sessions/ideas`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -979,11 +981,23 @@ function IdeasStep({
         notes: setupConfig.notes || undefined,
       }),
     })
-      .then(r => r.json())
-      .then(d => { setIdeas((d as { ideas?: string[] }).ideas ?? []); setLoadingIdeas(false); })
-      .catch(() => setLoadingIdeas(false));
+      .then(async r => {
+        const d = await r.json() as { ideas?: string[]; error?: string };
+        if (!r.ok || d.error) {
+          setIdeasError(d.error ?? "Laden mislukt");
+        } else {
+          setIdeas(d.ideas ?? []);
+        }
+        setLoadingIdeas(false);
+      })
+      .catch(err => {
+        setIdeasError(err instanceof Error ? err.message : "Laden mislukt");
+        setLoadingIdeas(false);
+      });
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => { fetchIdeas(); }, [fetchIdeas]);
 
   function handleChip(idea: string) {
     setSelected(idea);
@@ -1019,6 +1033,13 @@ function IdeasStep({
             <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
           </svg>
           <p className="text-sm text-gray-500">{lang === "nl" ? "Ideeën genereren…" : "Generating ideas…"}</p>
+        </div>
+      ) : ideasError ? (
+        <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-4 py-3 flex items-center justify-between">
+          <p className="text-sm text-red-600 dark:text-red-400">{ideasError}</p>
+          <button onClick={fetchIdeas} className="ml-3 shrink-0 text-xs font-medium text-red-600 dark:text-red-400 underline">
+            {lang === "nl" ? "Opnieuw" : "Retry"}
+          </button>
         </div>
       ) : (
         <div className="space-y-2">
