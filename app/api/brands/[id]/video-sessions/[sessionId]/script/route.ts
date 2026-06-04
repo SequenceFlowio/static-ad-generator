@@ -84,6 +84,7 @@ export async function POST(
       numScenes: videoSession.num_scenes,
       duration: videoSession.duration,
       includesPerson: videoSession.includes_person ?? true,
+      voiceoverEnabled: (videoSession as { voiceover_enabled?: boolean }).voiceover_enabled ?? true,
       activeDesire: body.active_desire,
       awarenessLevel: body.awareness_level,
       activeAngleDescription,
@@ -173,6 +174,7 @@ export async function PATCH(
       numScenes: videoSession.num_scenes,
       duration: videoSession.duration,
       includesPerson: body.includes_person ?? videoSession.includes_person ?? true,
+      voiceoverEnabled: (videoSession as { voiceover_enabled?: boolean }).voiceover_enabled ?? true,
       notes: body.notes,
       existingScenes: body.notes ? currentScenes : undefined,
     });

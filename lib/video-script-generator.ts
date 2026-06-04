@@ -126,6 +126,7 @@ export async function generateVideoScript({
   numScenes,
   duration,
   includesPerson,
+  voiceoverEnabled = true,
   notes,
   existingScenes,
   activeDesire,
@@ -142,6 +143,7 @@ export async function generateVideoScript({
   numScenes: number;
   duration: number;
   includesPerson: boolean;
+  voiceoverEnabled?: boolean;
   notes?: string;
   existingScenes?: SceneScript[];
   activeDesire?: string;
@@ -198,6 +200,8 @@ Then for each scene, use nano_prompt_json (structured JSON, NOT a free-form stri
 - mood: emotional quality of this specific frame
 
 PRODUCT TIMING — obey the awareness level rules exactly. Set product_in_frame: false for scenes where product is forbidden.
+
+VOICE-OVER: ${voiceoverEnabled ? `YES — write natural spoken voiceover text for each scene. This will be recorded or displayed as captions.` : `NO — set voiceover to "" (empty string) for ALL scenes. Pure visual storytelling only. Do not embed voiceover in the Seedance prompt either.`}
 
 SEEDANCE PROMPT RULES:
 - Reference scenes as @Image1 through @Image${numScenes}

@@ -15,6 +15,7 @@ async function generateFrame(
   aspectRatio: string,
   refUrls: string[],
   imageModel: string,
+  numImages = 4,
 ): Promise<string[]> {
   if (imageModel === "nano-banana-pro-genai") {
     return await withRetry(
@@ -22,7 +23,7 @@ async function generateFrame(
         prompt: scenePrompt,
         aspect_ratio: aspectRatio,
         model: "nano_banana_pro",
-        number_of_images: 1,
+        number_of_images: numImages,
         reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
         upscale_resolution: "none",
       }),
@@ -35,7 +36,7 @@ async function generateFrame(
       prompt: scenePrompt,
       aspect_ratio: aspectRatio,
       resolution: "1K",
-      num_images: 1,
+      num_images: numImages,
       model: "nano-banana-2",
       reference_image_urls: refUrls.length > 0 ? refUrls : undefined,
     }),
@@ -79,13 +80,14 @@ async function generateAllFrames(
       : scene.nano_prompt;
 
     try {
-      const urls = await generateFrame(scenePrompt, aspectRatio, refUrls, imageModel);
+      const urls = await generateFrame(scenePrompt, aspectRatio, refUrls, imageModel, 4);
 
-      const url = urls[0] ?? null;
+      const primaryUrl = urls[0] ?? null;
+      const variants = urls.length > 0 ? urls : null;
       // Re-fetch to merge without overwriting sibling frames
       const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
       const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
-        s.index === scene.index ? { ...s, image_url: url, frame_error: !url } : s
+        s.index === scene.index ? { ...s, image_url: primaryUrl, image_url_variants: variants, frame_error: !primaryUrl } : s
       );
       await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
     } catch {
@@ -203,13 +205,25 @@ export async function PATCH(
     return NextResponse.json({ url, scene_index: sceneIndex });
   }
 
-  // JSON body — regenerate or adjust single frame
+  // JSON body — regenerate, adjust, or select a variant
   const body = await req.json() as {
     scene_index: number;
-    action: "regenerate" | "adjust";
+    action: "regenerate" | "adjust" | "select_variant";
     adjustment?: string;
     reference_url?: string;
+    variant_url?: string;
   };
+
+  // select_variant: just swap the active image_url without regenerating
+  if (body.action === "select_variant" && body.variant_url) {
+    const scene = scenes.find(s => s.index === body.scene_index);
+    if (!scene) return NextResponse.json({ error: "Scene not found" }, { status: 404 });
+    const updatedScenes = scenes.map(s =>
+      s.index === body.scene_index ? { ...s, image_url: body.variant_url! } : s
+    );
+    await db.from("video_sessions").update({ scenes: updatedScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
+    return NextResponse.json({ ok: true, url: body.variant_url });
+  }
 
   const scene = scenes.find(s => s.index === body.scene_index);
   if (!scene) return NextResponse.json({ error: "Scene not found" }, { status: 404 });
@@ -247,14 +261,15 @@ export async function PATCH(
   await db.from("video_sessions").update({ scenes: clearScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
 
   try {
-    const urls = await generateFrame(prompt, videoSession.aspect_ratio, refUrls, videoSession.image_model ?? "nano-banana-2");
+    const urls = await generateFrame(prompt, videoSession.aspect_ratio, refUrls, videoSession.image_model ?? "nano-banana-2", 4);
     const url = urls[0] ?? null;
+    const variants = urls.length > 0 ? urls : null;
     const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();
     const freshScenes = ((fresh?.scenes ?? []) as SceneScript[]).map(s =>
-      s.index === body.scene_index ? { ...s, image_url: url, frame_error: !url } : s
+      s.index === body.scene_index ? { ...s, image_url: url, image_url_variants: variants, frame_error: !url } : s
     );
     await db.from("video_sessions").update({ scenes: freshScenes, updated_at: new Date().toISOString() }).eq("id", sessionId);
-    return NextResponse.json({ ok: true, url });
+    return NextResponse.json({ ok: true, url, variants });
   } catch (err) {
     // Mark as failed so UI shows retry button
     const { data: fresh } = await db.from("video_sessions").select("scenes").eq("id", sessionId).single();

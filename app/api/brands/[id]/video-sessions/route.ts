@@ -29,9 +29,10 @@ export async function POST(
     includes_person: boolean;
     image_model?: string;
     video_model?: string;
+    voiceover_enabled?: boolean;
   };
 
-  const { product_id, video_style, platform, num_scenes, duration, includes_person, image_model, video_model } = body;
+  const { product_id, video_style, platform, num_scenes, duration, includes_person, image_model, video_model, voiceover_enabled } = body;
   const aspectRatio = getVideoAspectRatio();
 
   const { data: session, error } = await db.from("video_sessions").insert({
@@ -45,6 +46,7 @@ export async function POST(
     includes_person,
     image_model: image_model ?? "nano-banana-2",
     video_model: video_model ?? "seedance-2",
+    voiceover_enabled: voiceover_enabled ?? false,
     phase: "references",
     scenes: [],
     seedance_prompt: null,
@@ -69,15 +71,9 @@ export async function GET(
   const { id: brandId } = await params;
   const db = getServerSupabase();
 
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-
-  // Lazy cleanup: delete sessions older than 7 days, skip pinned (fire-and-forget)
-  db.from("video_sessions").delete().eq("brand_id", brandId).lt("created_at", cutoff).eq("is_pinned", false).then(() => {/* no-op */});
-
   const { data: sessions } = await db.from("video_sessions")
     .select("id, phase, video_style, platform, num_scenes, duration, created_at, video_url, product_id, includes_person, scenes")
     .eq("brand_id", brandId)
-    .gte("created_at", cutoff)
     .order("created_at", { ascending: false });
 
   return NextResponse.json(sessions ?? []);

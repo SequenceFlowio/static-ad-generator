@@ -227,8 +227,9 @@ export interface SceneScript {
   nano_prompt: string;    // full Nano Banana 2 prompt for this frame (serialized from JSON)
   voiceover: string;      // spoken dialogue or on-screen caption text
   duration_s: number;     // seconds (15 / num_scenes)
-  image_url: string | null; // set after frame generation or upload
-  frame_error?: boolean;    // true if last generation attempt failed
+  image_url: string | null;          // selected/active frame image
+  image_url_variants?: string[] | null; // up to 4 generated options to pick from
+  frame_error?: boolean;             // true if last generation attempt failed
   product_in_frame: boolean; // whether product should appear in this frame
   character_in_frame: boolean; // whether a person appears in this frame
 }
@@ -255,6 +256,7 @@ export interface VideoSession {
   image_model: ImageModel;
   video_model: VideoModel;
   video_clips: string[];
+  voiceover_enabled: boolean;
   error_msg: string | null;
   created_at: string;
   updated_at: string;

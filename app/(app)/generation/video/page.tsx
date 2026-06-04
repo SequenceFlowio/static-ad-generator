@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
@@ -12,7 +12,7 @@ import { IMAGE_MODEL_CONFIGS, VIDEO_MODEL_CONFIGS } from "@/lib/model-configs";
 import { ENVIRONMENT_PRESETS } from "@/lib/environment-presets";
 import { AVATAR_PRESETS } from "@/lib/avatar-presets";
 import {
-  Film, MapPin, User, SlidersHorizontal, Package, X, ChevronDown, Check,
+  Film, MapPin, User, SlidersHorizontal, Package, X, ChevronDown, Check, Copy,
   Smartphone, Clapperboard, Cpu, Video,
 } from "lucide-react";
 
@@ -304,6 +304,7 @@ interface SetupConfig {
   videoModel: VideoModel;
   customAvatarId: string | null;
   customEnvId: string | null;
+  voiceover: boolean;
 }
 
 interface GalleryAvatar {
@@ -321,8 +322,9 @@ interface GalleryEnvironment {
 }
 
 function SetupStep({
-  products, desires, angles, customAvatars, customEnvs, onNext,
+  brandId, products, desires, angles, customAvatars, customEnvs, onNext,
 }: {
+  brandId: string;
   products: Product[];
   desires: string[];
   angles: CreativeAngle[];
@@ -346,6 +348,9 @@ function SetupStep({
   const [videoModel, setVideoModel] = useState<VideoModel>("seedance-2");
   const [customAvatarId, setCustomAvatarId] = useState<string | null>(null);
   const [customEnvId, setCustomEnvId] = useState<string | null>(null);
+  const [voiceover, setVoiceover] = useState(true);
+  const [adIdeas, setAdIdeas] = useState<string[]>([]);
+  const [ideasLoading, setIdeasLoading] = useState(false);
 
   const selectedPreset = VIDEO_PRESETS.find(p => p.key === selectedPresetKey) ?? VIDEO_PRESETS[0];
   const videoStyle = selectedPreset.video_style;
@@ -360,6 +365,28 @@ function SetupStep({
   }
 
   const selectedProduct = products.find(p => p.id === productId);
+
+  async function generateIdeas() {
+    setIdeasLoading(true);
+    setAdIdeas([]);
+    try {
+      const res = await fetch(`/api/brands/${brandId}/video-sessions/ideas`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          product_id: productId || undefined,
+          video_style: videoStyle,
+          active_desire: activeDesire ?? undefined,
+          awareness_level: awarenessLevel,
+          notes: notes || undefined,
+        }),
+      });
+      const data = await res.json() as { ideas?: string[] };
+      setAdIdeas(data.ideas ?? []);
+    } finally {
+      setIdeasLoading(false);
+    }
+  }
 
   const [openPanel, setOpenPanel] = useState<string | null>(null);
   const togglePanel = (name: string) => setOpenPanel(p => p === name ? null : name);
@@ -692,15 +719,43 @@ function SetupStep({
           <div className="flex">
             {/* Left: textarea + pills */}
             <div className="flex flex-1 flex-col min-w-0 p-4">
+              <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">
+                {lang === "nl" ? "Jouw idee (optioneel)" : "Your idea (optional)"}
+              </p>
               <textarea
                 value={notes}
                 onChange={e => setNotes(e.target.value)}
                 rows={3}
                 placeholder={lang === "nl"
-                  ? "Beschrijf de video sfeer, doelgroep en tone-of-voice…"
-                  : "Describe the video vibe, target audience and tone-of-voice…"}
+                  ? "Beschrijf je concept, of laat leeg voor AI-suggesties…"
+                  : "Describe your concept, or leave empty for AI suggestions…"}
                 className="w-full bg-transparent text-sm text-gray-800 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none resize-none"
               />
+              {/* Ideas */}
+              <div className="mt-2">
+                <button
+                  onClick={generateIdeas}
+                  disabled={ideasLoading}
+                  className="flex items-center gap-1.5 text-[11px] font-medium text-gray-400 hover:text-[#C7F56F] transition-colors disabled:opacity-50"
+                >
+                  {ideasLoading ? (
+                    <svg className="h-3 w-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                  ) : (
+                    <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
+                  )}
+                  {lang === "nl" ? "Genereer ideeën" : "Generate ideas"}
+                </button>
+                {adIdeas.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1.5">
+                    {adIdeas.map((idea, i) => (
+                      <button key={i} onClick={() => setNotes(idea)}
+                        className="text-left rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-2 text-xs text-gray-700 dark:text-gray-300 hover:border-[#C7F56F] hover:bg-[#C7F56F]/5 transition-colors">
+                        {idea}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
               <div className="mt-3 h-px bg-gray-100 dark:bg-gray-800" />
               {/* Pills row */}
               <div className="mt-3 flex flex-wrap items-center gap-1.5">
@@ -819,6 +874,18 @@ function SetupStep({
                           ))}
                         </div>
                       </div>
+                      <div className="h-px bg-gray-100 dark:bg-gray-800" />
+                      {/* Voice-over */}
+                      <button onClick={() => setVoiceover(v => !v)}
+                        className="flex w-full items-center justify-between rounded-lg px-3 py-2 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
+                        <div>
+                          <p className="text-xs font-semibold text-gray-800 dark:text-gray-200">Voice-over</p>
+                          <p className="text-[10px] text-gray-400">{lang === "nl" ? "Gesproken tekst per scène genereren" : "Generate spoken text per scene"}</p>
+                        </div>
+                        <div className={`relative h-5 w-9 rounded-full transition-colors ${voiceover ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`}>
+                          <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${voiceover ? "translate-x-4" : "translate-x-0.5"}`} />
+                        </div>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -843,7 +910,7 @@ function SetupStep({
               </button>
 
               <button
-                onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel, customAvatarId, customEnvId })}
+                onClick={() => onNext({ productId, productImageIndex, videoStyle, platform, numScenes, includesPerson, activeDesire, awarenessLevel, activeAngleKey, notes, environmentPresetKey, avatarPresetKey, imageModel, videoModel, customAvatarId, customEnvId, voiceover })}
                 disabled={!productId}
                 className="rounded-xl bg-[#C7F56F] px-4 py-3 text-sm font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 whitespace-nowrap transition-colors">
                 {lang === "nl" ? "Volgende →" : "Next →"}
@@ -1135,7 +1202,7 @@ function ReferencesStep({
   videoStyle: VideoStyle;
   initialCharacterUrl?: string | null;
   initialEnvironmentUrl?: string | null;
-  onGenerateScript: (characterPrompt?: string, environmentPrompt?: string) => void;
+  onGenerateScript: (characterPrompt?: string, environmentPrompt?: string, characterUrl?: string, environmentUrl?: string) => void;
 }) {
   const { lang } = useLanguage();
   const isAnimation = videoStyle === "animation";
@@ -1190,6 +1257,8 @@ function ReferencesStep({
               onClick={() => onGenerateScript(
                 character.url ? character.prompt : undefined,
                 environment.url ? environment.prompt : undefined,
+                character.url ?? undefined,
+                environment.url ?? undefined,
               )}
               disabled={isGenerating}
               className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40"
@@ -1442,24 +1511,42 @@ function ScriptStep({
 // ─── Step 3: Frames ───────────────────────────────────────────────────────────
 
 function FrameCard({
-  scene, brandId, sessionId, onUpdated,
+  scene, brandId, sessionId, charRefUrl, envRefUrl, productImageUrl, onUpdated,
 }: {
   scene: SceneScript;
   brandId: string;
   sessionId: string;
-  onUpdated: (index: number, url: string | null, frameError?: boolean) => void;
+  charRefUrl: string | null;
+  envRefUrl: string | null;
+  productImageUrl: string | null;
+  onUpdated: (index: number, updates: Partial<SceneScript>) => void;
 }) {
   const { lang } = useLanguage();
   const [showEdit, setShowEdit] = useState(false);
   const [editMode, setEditMode] = useState<"regenerate" | "adjust">("regenerate");
   const [adjustment, setAdjustment] = useState("");
   const [busy, setBusy] = useState(false);
+  const [excludeRefs, setExcludeRefs] = useState<Set<string>>(new Set());
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const variants = scene.image_url_variants ?? (scene.image_url ? [scene.image_url] : []);
+  const hasFailed = !!scene.frame_error && !busy;
+  const isGenerating = (!scene.image_url && !scene.frame_error) || busy;
+
+  async function handleSelectVariant(variantUrl: string) {
+    if (variantUrl === scene.image_url) return;
+    const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/frames`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ scene_index: scene.index, action: "select_variant", variant_url: variantUrl }),
+    });
+    if (res.ok) onUpdated(scene.index, { image_url: variantUrl });
+  }
 
   async function handleAction() {
     setBusy(true);
     setShowEdit(false);
-    onUpdated(scene.index, null, false); // optimistic: clear error while generating
+    onUpdated(scene.index, { image_url: null, image_url_variants: null, frame_error: false });
     const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/frames`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -1471,10 +1558,10 @@ function FrameCard({
       }),
     });
     if (res.ok) {
-      const { url } = await res.json() as { url: string | null };
-      onUpdated(scene.index, url, !url);
+      const data = await res.json() as { url: string | null; variants?: string[] };
+      onUpdated(scene.index, { image_url: data.url, image_url_variants: data.variants ?? null, frame_error: !data.url });
     } else {
-      onUpdated(scene.index, null, true);
+      onUpdated(scene.index, { image_url: null, frame_error: true });
     }
     setBusy(false);
     setAdjustment("");
@@ -1487,118 +1574,170 @@ function FrameCard({
     const fd = new FormData();
     fd.append("file", file);
     fd.append("scene_index", String(scene.index));
-    const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/frames`, {
-      method: "PATCH",
-      body: fd,
-    });
+    const res = await fetch(`/api/brands/${brandId}/video-sessions/${sessionId}/frames`, { method: "PATCH", body: fd });
     if (res.ok) {
       const { url } = await res.json() as { url: string };
-      onUpdated(scene.index, url, false);
+      onUpdated(scene.index, { image_url: url, image_url_variants: [url], frame_error: false });
     }
     setBusy(false);
     e.target.value = "";
   }
 
-  const hasImage = !!scene.image_url && !busy;
-  const hasFailed = !!scene.frame_error && !busy;
+  const toggleExclude = (key: string) => setExcludeRefs(prev => {
+    const next = new Set(prev);
+    next.has(key) ? next.delete(key) : next.add(key);
+    return next;
+  });
+
+  const refs: Array<{ key: string; url: string; label: string }> = [
+    ...(charRefUrl && scene.character_in_frame ? [{ key: "char", url: charRefUrl, label: lang === "nl" ? "Personage" : "Character" }] : []),
+    ...(envRefUrl ? [{ key: "env", url: envRefUrl, label: lang === "nl" ? "Omgeving" : "Environment" }] : []),
+    ...(productImageUrl && scene.product_in_frame ? [{ key: "product", url: productImageUrl, label: lang === "nl" ? "Product" : "Product" }] : []),
+  ];
 
   return (
-    <div className={`rounded-xl border overflow-hidden ${hasFailed ? "border-red-400 dark:border-red-500" : "border-gray-200 dark:border-gray-700"}`}>
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-gray-100 dark:border-gray-800">
-        <span className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold ${hasFailed ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-[#C7F56F]/20 text-gray-800 dark:text-[#C7F56F]"}`}>
+    <div className={`rounded-xl border overflow-hidden ${hasFailed ? "border-red-400 dark:border-red-500" : "border-gray-200 dark:border-gray-700"} bg-white dark:bg-gray-900`}>
+      {/* Header */}
+      <div className="flex items-center gap-2.5 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+        <span className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${hasFailed ? "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400" : "bg-[#C7F56F]/20 text-gray-800 dark:text-[#C7F56F]"}`}>
           {hasFailed ? "!" : scene.index}
         </span>
-        <span className="text-xs font-medium text-gray-700 dark:text-gray-200 truncate">{scene.title}</span>
-        <span className="ml-auto text-[10px] text-gray-400">{scene.duration_s}s</span>
+        <div className="flex-1 min-w-0">
+          <p className="text-xs font-semibold text-gray-800 dark:text-gray-100 truncate">{scene.title}</p>
+          <p className="text-[10px] text-gray-400 truncate">{scene.visual_description}</p>
+        </div>
+        <span className="shrink-0 text-[10px] text-gray-400">{scene.duration_s}s</span>
       </div>
 
-      <div className={`relative aspect-[9/16] ${hasFailed ? "bg-red-50 dark:bg-red-950/20" : "bg-gray-50 dark:bg-gray-800"}`}>
-        {hasImage ? (
-          <Image src={scene.image_url!} alt={scene.title} fill className="object-cover" unoptimized />
-        ) : (
-          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 px-2 text-center">
-            {busy ? (
-              <>
-                <svg className="h-5 w-5 animate-spin text-[#C7F56F]" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
-                </svg>
-                <p className="text-[10px] text-gray-400">{lang === "nl" ? "Genereren..." : "Generating..."}</p>
-              </>
-            ) : hasFailed ? (
-              <>
-                <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <circle cx="12" cy="12" r="10" />
-                  <path strokeLinecap="round" d="M12 8v4m0 4h.01" />
-                </svg>
-                <p className="text-[10px] text-red-500 font-medium">{lang === "nl" ? "Mislukt" : "Failed"}</p>
-                <button
-                  onClick={() => { setEditMode("regenerate"); handleAction(); }}
-                  className="mt-1 rounded-md bg-red-500 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-red-600"
-                >
-                  {lang === "nl" ? "Opnieuw" : "Retry"}
-                </button>
-              </>
-            ) : (
-              <p className="text-[10px] text-gray-400">{lang === "nl" ? "Wacht..." : "Waiting..."}</p>
+      <div className="p-4 space-y-3">
+        {/* Variants row */}
+        <div className="flex gap-2">
+          {isGenerating && variants.length === 0
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex-1 aspect-[9/16] rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse flex items-center justify-center">
+                  {i === 0 && (
+                    <svg className="h-4 w-4 animate-spin text-[#C7F56F]" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  )}
+                </div>
+              ))
+            : variants.length > 0
+              ? variants.map((url, i) => {
+                  const isSelected = url === scene.image_url;
+                  return (
+                    <button key={i} onClick={() => handleSelectVariant(url)}
+                      className={`relative flex-1 aspect-[9/16] rounded-lg overflow-hidden border-2 transition-all ${isSelected ? "border-[#C7F56F] shadow-md" : "border-transparent hover:border-gray-300 dark:hover:border-gray-600"}`}>
+                      <Image src={url} alt={`Variant ${i + 1}`} fill className="object-cover" unoptimized />
+                      {isSelected && (
+                        <div className="absolute top-1 right-1 rounded-full bg-[#C7F56F] p-0.5">
+                          <Check size={9} className="text-[#1a1a1a]" />
+                        </div>
+                      )}
+                    </button>
+                  );
+                })
+              : hasFailed
+                ? (
+                  <div className="flex-1 rounded-lg bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 flex flex-col items-center justify-center gap-2 py-6">
+                    <svg className="h-5 w-5 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><circle cx="12" cy="12" r="10"/><path strokeLinecap="round" d="M12 8v4m0 4h.01"/></svg>
+                    <p className="text-[10px] text-red-500 font-medium">{lang === "nl" ? "Mislukt" : "Failed"}</p>
+                    <button onClick={() => { setEditMode("regenerate"); handleAction(); }}
+                      className="rounded-md bg-red-500 px-2.5 py-1 text-[10px] font-semibold text-white hover:bg-red-600">
+                      {lang === "nl" ? "Opnieuw" : "Retry"}
+                    </button>
+                  </div>
+                )
+                : (
+                  <div className="flex-1 rounded-lg bg-gray-50 dark:bg-gray-800 flex items-center justify-center py-6 text-[10px] text-gray-400">
+                    {lang === "nl" ? "Wacht..." : "Waiting..."}
+                  </div>
+                )
+          }
+        </div>
+
+        {/* Reference thumbnails */}
+        {refs.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[9px] font-semibold uppercase tracking-wide text-gray-400">{lang === "nl" ? "Refs:" : "Refs:"}</span>
+            {refs.map(ref => (
+              <button key={ref.key} onClick={() => toggleExclude(ref.key)}
+                title={ref.label}
+                className={`relative h-8 w-8 rounded-md overflow-hidden border-2 transition-all ${excludeRefs.has(ref.key) ? "border-gray-200 dark:border-gray-700 opacity-30 grayscale" : "border-[#C7F56F]/60"}`}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={ref.url} alt={ref.label} className="h-full w-full object-cover" />
+              </button>
+            ))}
+            {excludeRefs.size > 0 && (
+              <span className="text-[9px] text-gray-400">
+                {lang === "nl" ? "(grijs = uitgesloten)" : "(grey = excluded)"}
+              </span>
             )}
           </div>
         )}
-      </div>
 
-      <div className="px-3 py-2 text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed border-t border-gray-100 dark:border-gray-800 line-clamp-2">
-        {scene.voiceover}
-      </div>
+        {/* Voiceover */}
+        {scene.voiceover && (
+          <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed italic line-clamp-2">
+            &ldquo;{scene.voiceover}&rdquo;
+          </p>
+        )}
 
-      <div className="flex gap-1.5 px-3 pb-3">
-        <button onClick={() => setShowEdit(v => !v)} disabled={busy}
-          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 disabled:opacity-40">
-          {lang === "nl" ? "Bewerken" : "Edit"}
-        </button>
-        <button onClick={() => fileRef.current?.click()} disabled={busy}
-          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 disabled:opacity-40">
-          {lang === "nl" ? "Uploaden" : "Upload"}
-        </button>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-      </div>
-
-      {showEdit && (
-        <div className="border-t border-gray-100 dark:border-gray-800 px-3 py-3 space-y-2.5 bg-gray-50 dark:bg-gray-800/50">
-          <div className="flex gap-2">
-            {(["regenerate", "adjust"] as const).map(m => (
-              <button key={m} onClick={() => setEditMode(m)}
-                className={`flex-1 rounded-lg border py-1.5 text-[10px] font-medium transition-colors ${
-                  editMode === m ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"
-                }`}>
-                {m === "regenerate" ? (lang === "nl" ? "Nieuwe foto" : "New photo") : (lang === "nl" ? "Aanpassen" : "Adjust")}
-              </button>
-            ))}
-          </div>
-          {editMode === "adjust" && (
-            <textarea
-              value={adjustment}
-              onChange={e => setAdjustment(e.target.value)}
-              rows={2}
-              placeholder={lang === "nl" ? "Bijv: lichter maken, meer product zichtbaar..." : "E.g: make it brighter, show more product..."}
-              className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-2.5 py-2 text-[10px] text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none"
-            />
-          )}
-          <button onClick={handleAction}
-            className="w-full rounded-lg bg-[#C7F56F] py-1.5 text-[10px] font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
-            {lang === "nl" ? "Toepassen" : "Apply"}
+        {/* Actions */}
+        <div className="flex gap-1.5">
+          <button onClick={() => setShowEdit(v => !v)} disabled={busy}
+            className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 disabled:opacity-40 transition-colors">
+            {lang === "nl" ? "Bewerken" : "Edit"}
           </button>
+          <button onClick={() => fileRef.current?.click()} disabled={busy}
+            className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[10px] font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 disabled:opacity-40 transition-colors">
+            {lang === "nl" ? "Uploaden" : "Upload"}
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleUpload} />
         </div>
-      )}
+
+        {showEdit && (
+          <div className="rounded-lg border border-gray-200 dark:border-gray-700 p-3 space-y-2.5 bg-gray-50 dark:bg-gray-800/50">
+            <div className="flex gap-2">
+              {(["regenerate", "adjust"] as const).map(m => (
+                <button key={m} onClick={() => setEditMode(m)}
+                  className={`flex-1 rounded-lg border py-1.5 text-[10px] font-medium transition-colors ${
+                    editMode === m ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"
+                  }`}>
+                  {m === "regenerate" ? (lang === "nl" ? "Nieuwe foto's" : "New photos") : (lang === "nl" ? "Aanpassen" : "Adjust")}
+                </button>
+              ))}
+            </div>
+            {editMode === "adjust" && (
+              <textarea
+                value={adjustment}
+                onChange={e => setAdjustment(e.target.value)}
+                rows={2}
+                placeholder={lang === "nl" ? "Bijv: lichter maken, meer product zichtbaar..." : "E.g: make it brighter, show more product..."}
+                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-700 px-2.5 py-2 text-[10px] text-gray-700 dark:text-gray-200 placeholder-gray-400 focus:outline-none"
+              />
+            )}
+            <button onClick={handleAction}
+              className="w-full rounded-lg bg-[#C7F56F] py-1.5 text-[10px] font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
+              {lang === "nl" ? "Genereer 4 opties" : "Generate 4 options"}
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
 
 function FramesStep({
-  scenes, brandId, sessionId, onScenesUpdate, onNext,
+  scenes, brandId, sessionId, charRefUrl, envRefUrl, productImageUrl, onScenesUpdate, onNext,
 }: {
   scenes: SceneScript[];
   brandId: string;
   sessionId: string;
+  charRefUrl: string | null;
+  envRefUrl: string | null;
+  productImageUrl: string | null;
   onScenesUpdate: (scenes: SceneScript[]) => void;
   onNext: () => void;
 }) {
@@ -1624,7 +1763,6 @@ function FramesStep({
       const updated = session.scenes;
       setLocalScenes(updated);
       onScenesUpdate(updated);
-      // Stop polling when every scene has settled (image_url or frame_error — no more pending)
       const allSettled = updated.every(s => !!s.image_url || !!s.frame_error);
       if (allSettled) {
         clearInterval(pollRef.current!);
@@ -1641,16 +1779,13 @@ function FramesStep({
     pollFrames();
   }
 
-  function handleFrameUpdated(index: number, url: string | null, frameError?: boolean) {
+  function handleFrameUpdated(index: number, updates: Partial<SceneScript>) {
     setLocalScenes(prev => {
-      const updated = prev.map(s =>
-        s.index === index ? { ...s, image_url: url, frame_error: frameError ?? false } : s
-      );
+      const updated = prev.map(s => s.index === index ? { ...s, ...updates } : s);
       onScenesUpdate(updated);
       return updated;
     });
   }
-
 
   const doneCount = localScenes.filter(s => !!s.image_url && !s.frame_error).length;
   const failedCount = localScenes.filter(s => !!s.frame_error).length;
@@ -1668,7 +1803,7 @@ function FramesStep({
             )}
           </h3>
           <p className="text-xs text-gray-400 mt-0.5">
-            {lang === "nl" ? "Genereer alle frames of upload eigen foto's per scène." : "Generate all frames or upload your own photo per scene."}
+            {lang === "nl" ? "Per scène worden 4 opties gegenereerd — kies de beste." : "4 options are generated per scene — pick the best."}
           </p>
         </div>
         <button onClick={handleGenerateAll} disabled={generating}
@@ -1690,13 +1825,16 @@ function FramesStep({
         </div>
       )}
 
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="space-y-4">
         {localScenes.map(scene => (
           <FrameCard
             key={scene.index}
             scene={scene}
             brandId={brandId}
             sessionId={sessionId}
+            charRefUrl={charRefUrl}
+            envRefUrl={envRefUrl}
+            productImageUrl={productImageUrl}
             onUpdated={handleFrameUpdated}
           />
         ))}
@@ -1728,6 +1866,32 @@ function FramesStep({
 
 // ─── Step 4: Prompt ───────────────────────────────────────────────────────────
 
+function parsePrompt(raw: string, numScenes: number): { intro: string; frameActions: string[] } {
+  // Split off @image tagged lines — handles @image1, @Image1, etc.
+  const lines = raw.split(/\n/);
+  const actionMap: Record<number, string> = {};
+  const introLines: string[] = [];
+
+  for (const line of lines) {
+    const match = line.match(/^@[Ii]mage(\d+):\s*(.*)/);
+    if (match) {
+      actionMap[parseInt(match[1])] = match[2].trim();
+    } else {
+      introLines.push(line);
+    }
+  }
+
+  // Build frame actions array indexed 1..numScenes
+  const frameActions = Array.from({ length: numScenes }, (_, i) => actionMap[i + 1] ?? "");
+
+  return { intro: introLines.join("\n").trimEnd(), frameActions };
+}
+
+function assemblePrompt(intro: string, frameActions: string[]): string {
+  const tagged = frameActions.map((a, i) => `@image${i + 1}: ${a}`).join("\n");
+  return `${intro.trimEnd()}\n\n${tagged}`;
+}
+
 function PromptStep({
   scenes, seedancePrompt, numScenes, productImageUrl, onSave, onGenerate,
 }: {
@@ -1739,7 +1903,13 @@ function PromptStep({
   onGenerate: (prompt: string) => void;
 }) {
   const { lang } = useLanguage();
-  const [prompt, setPrompt] = useState(seedancePrompt);
+  const parsed = useMemo(() => parsePrompt(seedancePrompt, numScenes), [seedancePrompt, numScenes]);
+  const [introText, setIntroText] = useState(parsed.intro);
+  const [frameActions, setFrameActions] = useState<string[]>(parsed.frameActions);
+
+  const sortedScenes = useMemo(() => [...scenes].sort((a, b) => a.index - b.index), [scenes]);
+
+  const assembled = assemblePrompt(introText, frameActions);
 
   return (
     <div className="space-y-5">
@@ -1747,51 +1917,75 @@ function PromptStep({
         <h3 className="text-sm font-semibold text-gray-900 dark:text-white">Seedance 2 Prompt</h3>
         <p className="text-xs text-gray-400 mt-0.5">
           {lang === "nl"
-            ? `@Image1–@Image${numScenes} zijn jouw scèneframes. @Image${numScenes + 1} is de productreferentie.`
-            : `@Image1–@Image${numScenes} are your scene frames. @Image${numScenes + 1} is the product reference.`}
+            ? "Pas de globale sfeer aan bovenaan, en de actie per frame hieronder."
+            : "Edit the global mood at the top, and per-frame action below."}
         </p>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-1">
-        {scenes.sort((a, b) => a.index - b.index).map(scene => (
-          <div key={scene.index} className="flex-shrink-0 text-center">
-            <div className="relative h-16 w-12 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
-              {scene.image_url && (
-                <Image src={scene.image_url} alt={scene.title} fill className="object-cover" unoptimized />
-              )}
-            </div>
-            <p className="text-[9px] text-gray-400 mt-0.5">@Image{scene.index}</p>
-          </div>
-        ))}
-        <div className="flex-shrink-0 text-center">
-          <div className="relative h-16 w-12 rounded-lg overflow-hidden border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-100 dark:bg-gray-800 flex items-center justify-center">
-            {productImageUrl
-              ? <Image src={productImageUrl} alt="Product" fill className="object-cover" unoptimized />
-              : <span className="text-[10px] text-gray-400">📦</span>
-            }
-          </div>
-          <p className="text-[9px] text-gray-400 mt-0.5">@Image{numScenes + 1}</p>
-        </div>
-      </div>
-
+      {/* Global intro textarea */}
       <div>
         <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-2">
-          {lang === "nl" ? "Prompt (aanpasbaar)" : "Prompt (editable)"}
+          {lang === "nl" ? "Globale instructies" : "Global instructions"}
         </p>
         <textarea
-          value={prompt}
-          onChange={e => setPrompt(e.target.value)}
-          rows={10}
+          value={introText}
+          onChange={e => setIntroText(e.target.value)}
+          rows={5}
           className="w-full rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-4 py-3 text-xs font-mono text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50 leading-relaxed"
         />
       </div>
 
+      {/* Per-frame action rows */}
+      <div>
+        <p className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-2">
+          {lang === "nl" ? "Actie per frame" : "Action per frame"}
+        </p>
+        <div className="space-y-2">
+          {sortedScenes.map((scene, i) => (
+            <div key={scene.index} className="flex items-center gap-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-3 py-2">
+              {/* Thumbnail */}
+              <div className="relative h-14 w-9 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
+                {scene.image_url && (
+                  <Image src={scene.image_url} alt={scene.title} fill className="object-cover" unoptimized />
+                )}
+              </div>
+              {/* Label + input */}
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                  @image{scene.index} — {scene.title}
+                </p>
+                <input
+                  type="text"
+                  value={frameActions[i] ?? ""}
+                  onChange={e => {
+                    const next = [...frameActions];
+                    next[i] = e.target.value;
+                    setFrameActions(next);
+                  }}
+                  placeholder={lang === "nl" ? "Beschrijf de beweging / actie…" : "Describe the motion / action…"}
+                  className="w-full rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-900 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50"
+                />
+              </div>
+            </div>
+          ))}
+          {/* Product ref row */}
+          <div className="flex items-center gap-3 rounded-xl border border-dashed border-gray-200 dark:border-gray-700 bg-gray-50/50 dark:bg-gray-800/50 px-3 py-2 opacity-60">
+            <div className="relative h-14 w-9 flex-shrink-0 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700">
+              {productImageUrl && (
+                <Image src={productImageUrl} alt="Product" fill className="object-cover" unoptimized />
+              )}
+            </div>
+            <p className="text-[10px] text-gray-500">@image{numScenes + 1} — {lang === "nl" ? "Productreferentie (vast)" : "Product reference (fixed)"}</p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex gap-3">
-        <button onClick={() => onSave(prompt)}
+        <button onClick={() => onSave(assembled)}
           className="rounded-lg border border-gray-200 dark:border-gray-700 px-4 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300">
           {lang === "nl" ? "Opslaan" : "Save"}
         </button>
-        <button onClick={() => onGenerate(prompt)}
+        <button onClick={() => onGenerate(assembled)}
           className="rounded-lg bg-[#C7F56F] px-6 py-2.5 text-sm font-semibold text-[#1a1a1a] hover:bg-[#b8e85e]">
           {lang === "nl" ? "Video genereren →" : "Generate Video →"}
         </button>
@@ -1809,6 +2003,9 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
   const [videoClips, setVideoClips] = useState<string[]>([]);
   const [videoModel, setVideoModel] = useState<VideoModel>("seedance-2");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [scenes, setScenes] = useState<SceneScript[]>([]);
+  const [scriptOpen, setScriptOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(async () => {
@@ -1820,6 +2017,7 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
       if (session.phase === "done") {
         setVideoUrl(session.video_url);
         setVideoClips(session.video_clips ?? []);
+        setScenes((session.scenes ?? []) as SceneScript[]);
         clearInterval(interval);
       } else if (session.phase === "failed") {
         setErrorMsg(session.error_msg);
@@ -1834,6 +2032,16 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
     : (lang === "nl" ? "Renderen met Seedance 2… dit duurt 3–8 minuten" : "Rendering with Seedance 2… this takes 3–8 minutes");
 
   const isMultiClip = videoClips.length > 1;
+  const sortedScenes = useMemo(() => [...scenes].sort((a, b) => a.index - b.index), [scenes]);
+  const hasVoiceover = sortedScenes.some(s => s.voiceover && s.voiceover.trim().length > 0);
+
+  function copyVoiceover() {
+    const text = sortedScenes.map(s => s.voiceover?.trim()).filter(Boolean).join("\n\n");
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }
 
   return (
     <div className="space-y-6">
@@ -1854,7 +2062,7 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
       {phase === "done" && (
         <div className="space-y-4">
           <p className="text-sm font-semibold text-gray-900 dark:text-white">
-            {lang === "nl" ? "Klaar! 🎉" : "Done! 🎉"}
+            {lang === "nl" ? "Klaar!" : "Done!"}
           </p>
 
           {isMultiClip ? (
@@ -1888,6 +2096,56 @@ function VideoStep({ brandId, sessionId }: { brandId: string; sessionId: string 
               </a>
             </>
           ) : null}
+
+          {/* Script & Voice-over collapsible */}
+          {sortedScenes.length > 0 && (
+            <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <button
+                onClick={() => setScriptOpen(v => !v)}
+                className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors"
+              >
+                <span className="text-xs font-semibold text-gray-700 dark:text-gray-200">
+                  {lang === "nl" ? "Script & voice-over" : "Script & voice-over"}
+                </span>
+                <ChevronDown className={`h-4 w-4 text-gray-400 transition-transform ${scriptOpen ? "rotate-180" : ""}`} />
+              </button>
+              {scriptOpen && (
+                <div className="px-4 py-3 space-y-4 bg-white dark:bg-gray-900">
+                  {sortedScenes.map(scene => (
+                    <div key={scene.index} className="flex gap-3">
+                      <div className="relative h-16 w-10 flex-shrink-0 rounded-lg overflow-hidden bg-gray-100 dark:bg-gray-800">
+                        {scene.image_url && (
+                          <Image src={scene.image_url} alt={scene.title} fill className="object-cover" unoptimized />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 mb-0.5">
+                          Scène {scene.index} — {scene.title}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-500 mb-1 line-clamp-1">{scene.visual_description}</p>
+                        {scene.voiceover ? (
+                          <p className="text-xs italic text-gray-700 dark:text-gray-200">&ldquo;{scene.voiceover}&rdquo;</p>
+                        ) : (
+                          <p className="text-xs text-gray-400 italic">{lang === "nl" ? "(geen voice-over)" : "(no voiceover)"}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  {hasVoiceover && (
+                    <button
+                      onClick={copyVoiceover}
+                      className="flex items-center gap-2 rounded-lg border border-gray-200 dark:border-gray-700 px-3 py-2 text-xs font-medium text-gray-600 dark:text-gray-300 hover:border-gray-300 transition-colors"
+                    >
+                      {copied
+                        ? <><Check className="h-3.5 w-3.5 text-[#C7F56F]" /> {lang === "nl" ? "Gekopieerd!" : "Copied!"}</>
+                        : <><Copy className="h-3.5 w-3.5" /> {lang === "nl" ? "Kopieer voice-over" : "Copy voice-over"}</>
+                      }
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -1920,6 +2178,8 @@ function VideoWizard({
   const [error, setError] = useState<string | null>(null);
   const [customAvatars, setCustomAvatars] = useState<GalleryAvatar[]>([]);
   const [customEnvs, setCustomEnvs] = useState<GalleryEnvironment[]>([]);
+  const [charRefUrl, setCharRefUrl] = useState<string | null>(initialSession?.character_ref_url ?? null);
+  const [envRefUrl, setEnvRefUrl] = useState<string | null>(initialSession?.environment_ref_url ?? null);
   const { lang } = useLanguage();
 
   useEffect(() => {
@@ -1956,6 +2216,7 @@ function VideoWizard({
         includes_person: cfg.includesPerson,
         image_model: cfg.imageModel,
         video_model: cfg.videoModel,
+        voiceover_enabled: cfg.voiceover,
       }),
     });
 
@@ -1973,7 +2234,9 @@ function VideoWizard({
   }
 
   // Step 1 → 2: generate script using stored setup config + reference prompts
-  async function handleGenerateScript(characterRefPrompt?: string, environmentRefPrompt?: string) {
+  async function handleGenerateScript(characterRefPrompt?: string, environmentRefPrompt?: string, characterUrl?: string, environmentUrl?: string) {
+    if (characterUrl) setCharRefUrl(characterUrl);
+    if (environmentUrl) setEnvRefUrl(environmentUrl);
     if (!sessionId) return;
     setLoading(true);
     setError(null);
@@ -2090,6 +2353,7 @@ function VideoWizard({
 
       {step === 0 && (
         <SetupStep
+          brandId={brand.id}
           products={products}
           desires={dna?.data?.customer_desires ?? []}
           angles={strategy?.creative_angles ?? []}
@@ -2126,6 +2390,9 @@ function VideoWizard({
           scenes={scenes}
           brandId={brand.id}
           sessionId={sessionId}
+          charRefUrl={charRefUrl}
+          envRefUrl={envRefUrl}
+          productImageUrl={products.find(p => p.id === productId)?.image_urls?.[productImageIndex] ?? null}
           onScenesUpdate={setScenes}
           onNext={() => setStep(4)}
         />

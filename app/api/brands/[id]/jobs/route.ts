@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 
 // GET /api/brands/[id]/jobs — list generation jobs, optionally filtered by ?prompt_set_id=
-// Also lazily deletes any generation_jobs older than 48 hours.
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -12,10 +11,6 @@ export async function GET(
   const promptSetId = searchParams.get("prompt_set_id");
 
   const db = getServerSupabase();
-
-  // Lazy cleanup: delete generation_jobs older than 7 days (fire-and-forget)
-  const cutoff = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
-  db.from("generation_jobs").delete().lt("created_at", cutoff).then(() => {/* no-op */});
 
   let query = db
     .from("generation_jobs")
