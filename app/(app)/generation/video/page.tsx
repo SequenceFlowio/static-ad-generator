@@ -322,9 +322,8 @@ interface GalleryEnvironment {
 }
 
 function SetupStep({
-  brandId, products, desires, angles, customAvatars, customEnvs, onNext,
+  products, desires, angles, customAvatars, customEnvs, onNext,
 }: {
-  brandId: string;
   products: Product[];
   desires: string[];
   angles: CreativeAngle[];
@@ -2420,7 +2419,6 @@ function VideoWizard({
 
       {step === 0 && (
         <SetupStep
-          brandId={brand.id}
           products={products}
           desires={dna?.data?.customer_desires ?? []}
           angles={strategy?.creative_angles ?? []}
