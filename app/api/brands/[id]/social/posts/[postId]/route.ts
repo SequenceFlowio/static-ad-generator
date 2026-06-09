@@ -14,9 +14,9 @@ export async function PATCH(
   const body = await req.json();
   const db = getServerSupabase();
 
-  // Recalculate status if scheduled_at changed
   const updates: Record<string, unknown> = { ...body, updated_at: new Date().toISOString() };
-  if ("scheduled_at" in body) {
+  // Auto-set status from scheduled_at only if status is not explicitly provided
+  if ("scheduled_at" in body && !("status" in body)) {
     updates.status = body.scheduled_at ? "scheduled" : "draft";
   }
 

@@ -18,16 +18,19 @@ interface SocialPost {
   caption: string | null;
   scheduled_at: string | null;
   published_at: string | null;
-  status: "draft" | "scheduled" | "publishing" | "published" | "failed";
+  status: "draft" | "approved" | "scheduled" | "publishing" | "published" | "failed";
   fb_post_id: string | null;
   ig_post_id: string | null;
   source: string;
+  content_type_key: string | null;
+  topic_used: string | null;
   error_message: string | null;
   created_at: string;
 }
 
 const STATUS_STYLES: Record<string, string> = {
   draft: "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400",
+  approved: "bg-[#C7F56F]/20 text-green-700 dark:text-[#C7F56F]",
   scheduled: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400",
   publishing: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400",
   published: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
@@ -253,7 +256,7 @@ function PlannerInner() {
   const [posts, setPosts] = useState<SocialPost[]>([]);
   const [loading, setLoading] = useState(false);
   const [showNewPost, setShowNewPost] = useState(!!initialImageUrl);
-  const [filter, setFilter] = useState<"all" | "scheduled" | "published" | "draft">("all");
+  const [filter, setFilter] = useState<"review" | "approved" | "scheduled" | "published" | "draft" | "all">("review");
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
   const loadPosts = useCallback(async (b: Brand) => {
@@ -280,13 +283,41 @@ function PlannerInner() {
     setPosts(prev => prev.filter(p => p.id !== post.id));
   }
 
+  async function handleApprove(post: SocialPost) {
+    if (!brand) return;
+    await fetch(`/api/brands/${brand.id}/social/posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "approved" }),
+    });
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, status: "approved" as const } : p));
+  }
+
+  async function handleSchedule(post: SocialPost) {
+    if (!brand) return;
+    // Schedule for next posting slot (tomorrow 09:00 as default)
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(9, 0, 0, 0);
+    const scheduledAt = tomorrow.toISOString();
+    await fetch(`/api/brands/${brand.id}/social/posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "scheduled", scheduled_at: scheduledAt }),
+    });
+    setPosts(prev => prev.map(p => p.id === post.id ? { ...p, status: "scheduled" as const, scheduled_at: scheduledAt } : p));
+  }
+
   function formatDate(iso: string) {
     return new Date(iso).toLocaleString(lang === "nl" ? "nl-NL" : "en-GB", {
       day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
     });
   }
 
-  const filtered = posts.filter(p => filter === "all" || p.status === filter);
+  const reviewCount = posts.filter(p => p.status === "draft" && p.source === "generated").length;
+  const filtered = filter === "all" ? posts
+    : filter === "review" ? posts.filter(p => p.status === "draft" && p.source === "generated")
+    : posts.filter(p => p.status === filter);
 
   if (brandCtxLoading) {
     return (
@@ -345,20 +376,26 @@ function PlannerInner() {
       </div>
 
       {/* Filter tabs */}
-      <div className="mb-6 flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 w-fit">
-        {(["all", "scheduled", "published", "draft"] as const).map(f => (
-          <button key={f} onClick={() => setFilter(f)}
-            className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
-              filter === f ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"
+      <div className="mb-6 flex gap-1 rounded-xl bg-gray-100 dark:bg-gray-800 p-1 w-fit flex-wrap">
+        {([
+          { key: "review", label: lang === "nl" ? "Te beoordelen" : "Review", count: reviewCount, highlight: reviewCount > 0 },
+          { key: "approved", label: lang === "nl" ? "Goedgekeurd" : "Approved", count: posts.filter(p => p.status === "approved").length },
+          { key: "scheduled", label: lang === "nl" ? "Ingepland" : "Scheduled", count: posts.filter(p => p.status === "scheduled").length },
+          { key: "published", label: lang === "nl" ? "Gepubliceerd" : "Published", count: posts.filter(p => p.status === "published").length },
+          { key: "all", label: lang === "nl" ? "Alles" : "All", count: posts.length },
+        ] as const).map(tab => (
+          <button key={tab.key} onClick={() => setFilter(tab.key)}
+            className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors ${
+              filter === tab.key ? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm" : "text-gray-500 dark:text-gray-400"
             }`}>
-            {f === "all" ? (lang === "nl" ? "Alles" : "All") :
-             f === "scheduled" ? (lang === "nl" ? "Ingepland" : "Scheduled") :
-             f === "published" ? (lang === "nl" ? "Gepubliceerd" : "Published") :
-             (lang === "nl" ? "Concept" : "Draft")}
-            {" "}
-            <span className="text-gray-400 font-normal">
-              {f === "all" ? posts.length : posts.filter(p => p.status === f).length}
-            </span>
+            {tab.label}
+            {tab.count > 0 && (
+              <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${
+                "highlight" in tab && tab.highlight ? "bg-[#C7F56F] text-[#1a1a1a]" : "bg-gray-200 dark:bg-gray-600 text-gray-600 dark:text-gray-300"
+              }`}>
+                {tab.count}
+              </span>
+            )}
           </button>
         ))}
       </div>
@@ -405,6 +442,11 @@ function PlannerInner() {
                       Ad creative
                     </span>
                   )}
+                  {post.content_type_key && (
+                    <span className="rounded-full bg-gray-100 dark:bg-gray-800 px-2 py-0.5 text-[10px] text-gray-500 dark:text-gray-400">
+                      {post.content_type_key.replace(/-/g, " ")}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm text-gray-700 dark:text-gray-200 leading-snug line-clamp-2">
                   {post.caption || <span className="italic text-gray-400">No caption</span>}
@@ -423,7 +465,19 @@ function PlannerInner() {
 
               {/* Actions */}
               <div className="flex flex-col gap-1.5 flex-shrink-0">
-                {(post.status === "draft" || post.status === "failed") && (
+                {post.status === "draft" && post.source === "generated" && (
+                  <button onClick={() => handleApprove(post)}
+                    className="rounded-lg bg-[#C7F56F] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] whitespace-nowrap">
+                    {lang === "nl" ? "Goedkeuren" : "Approve"}
+                  </button>
+                )}
+                {post.status === "approved" && (
+                  <button onClick={() => handleSchedule(post)}
+                    className="rounded-lg bg-[#C7F56F] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] whitespace-nowrap">
+                    {lang === "nl" ? "Inplannen" : "Schedule"}
+                  </button>
+                )}
+                {(post.status === "draft" && post.source !== "generated" || post.status === "failed") && (
                   <button onClick={() => handlePublishNow(post)} disabled={publishingId === post.id}
                     className="rounded-lg bg-[#C7F56F] px-3 py-1.5 text-xs font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50 whitespace-nowrap">
                     {publishingId === post.id ? "…" : (lang === "nl" ? "Nu publiceren" : "Publish now")}

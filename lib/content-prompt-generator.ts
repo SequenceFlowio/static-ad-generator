@@ -1,4 +1,4 @@
-import type { BrandDnaData, CreativeStrategy } from "@/types";
+import type { BrandDnaData, CreativeStrategy, ContentGoal } from "@/types";
 import type { Platform } from "./content-templates";
 import { getPlatformAspectRatio } from "./content-templates";
 import { buildNanoBananaPrompt, CONTENT_TEMPLATE_CAMERA_PRESETS } from "./prompt-utils";
@@ -115,6 +115,16 @@ const TEMPLATE_SCHEMAS: Record<string, Partial<ImagePromptJson>> = {
     lighting: "matched lighting both sides — flat and even for clarity",
     mood: "transformative and clear",
   },
+  "style-choice": {
+    style: "editorial",
+    realism: "photorealistic",
+    camera: "matched angle both panels — consistent framing and distance",
+    text_density: "low",
+    overlay: { allowed: true, type: "Option A label left panel, Option B label right panel — minimal pill-style labels" },
+    composition: "horizontal split 50/50 — left=option A, right=option B, identical framing",
+    lighting: "soft studio or natural — matched across both panels",
+    mood: "inviting comparison, aspirational, clean",
+  },
 };
 
 const VARIATION_AXES = ["scene_type", "camera_angle", "lighting", "emotional_tone", "product_placement"];
@@ -213,6 +223,14 @@ Background Color: ${dna.background_color ?? "N/A"} ← describe visually
 `.trim();
 }
 
+const CONTENT_GOAL_INSTRUCTIONS: Record<ContentGoal, string> = {
+  saves: "GOAL — SAVES: Include a genuinely useful tip, list, or reference that people will want to save and come back to. Add a 'save this post' CTA.",
+  engagement: "GOAL — ENGAGEMENT: End with a direct, easy-to-answer question that invites comments or votes (e.g. 'A or B? Tell us below ↓'). Make it feel like a conversation starter.",
+  reach: "GOAL — REACH: Use a relatable hook that makes people want to tag a friend or share. Frame it as something broadly recognisable.",
+  sales: "GOAL — SALES: Include a clear product CTA. Use a specific benefit, anchor the value, and add urgency or social proof. Link in bio CTA.",
+  trust: "GOAL — TRUST: Use social proof framing — quote, stat, testimonial, or third-party validation. Build credibility over selling.",
+};
+
 export async function generateContentPost({
   brandDna,
   templateName,
@@ -227,6 +245,8 @@ export async function generateContentPost({
   creativeStrategy,
   activeAngleKey,
   activePillarKey,
+  contentGoal,
+  seasonalContext,
 }: {
   brandDna: BrandDnaData;
   templateName: string;
@@ -241,6 +261,8 @@ export async function generateContentPost({
   creativeStrategy?: CreativeStrategy | null;
   activeAngleKey?: string | null;
   activePillarKey?: string | null;
+  contentGoal?: ContentGoal | null;
+  seasonalContext?: string | null;
 }): Promise<ContentGenerationResult> {
   const platformTone = PLATFORM_TONE[platform];
   const aspectRatio = getPlatformAspectRatio(platform);
@@ -321,6 +343,8 @@ JSON Schema:
 
   const strategyBlock = buildStrategyBlock(creativeStrategy, activeAngleKey, activePillarKey);
 
+  const goalInstruction = contentGoal ? CONTENT_GOAL_INSTRUCTIONS[contentGoal] : null;
+
   const userMessage = `${brandDnaToText(brandDna)}
 ${strategyBlock}
 
@@ -333,11 +357,14 @@ ${schemaJson}
 
 Platform: ${platform}
 Caption tone & length: ${platformTone}
+${goalInstruction ? `\nContent Goal: ${goalInstruction}` : ""}
+${seasonalContext ? `\nSeasonal Context: ${seasonalContext} — subtly incorporate this seasonal atmosphere into the scene description where appropriate.` : ""}
 ${productName ? `\nProduct: ${productName}${productDescription ? `\nProduct Description: ${productDescription}` : ""}` : ""}
 ${selectedDesire ? `\nCustomer Desire to focus on: ${selectedDesire}` : ""}
 ${topicHint ? `\nTopic / Angle hint from user: ${topicHint}` : ""}
 ${templateName === "testimonial" && customerQuote ? `\nUse this EXACT customer quote verbatim in the testimonial: "${customerQuote}"` : ""}
 ${templateName === "testimonial" && !customerQuote ? `\nNo real customer quote provided — generate a plausible one and note in caption_note that it is a placeholder.` : ""}
+${templateName === "style-choice" ? `\nFor style-choice: The image must show two distinct aesthetic options side-by-side. The topic hint describes the comparison (e.g. 'Nude vs Zwart'). Each panel should be a complete, beautiful scene in that aesthetic. Label panels A and B.` : ""}
 
 ---
 

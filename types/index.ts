@@ -313,12 +313,15 @@ export interface SocialPost {
   caption: string | null;
   scheduled_at: string | null;
   published_at: string | null;
-  status: "draft" | "scheduled" | "publishing" | "published" | "failed";
+  status: "draft" | "approved" | "scheduled" | "publishing" | "published" | "failed";
   fb_post_id: string | null;
   ig_post_id: string | null;
   source: string;
   source_creative_url: string | null;
   error_message: string | null;
+  content_type_key: string | null;
+  topic_id: string | null;
+  topic_used: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -341,4 +344,47 @@ export interface SseEvent {
   image_urls?: string[];
   error?: string;
   job_id?: string;
+}
+
+// ─── Content Automation ───────────────────────────────────────────────────────
+
+export type ContentGoal = "saves" | "engagement" | "reach" | "sales" | "trust";
+
+export interface ContentTypeConfig {
+  key: string;            // "kitchen-inspiration"
+  label: string;          // "Kitchen Inspiration"
+  template_key: string;   // "lifestyle"
+  percentage: number;     // 30 (target % of total posts)
+  auto_enabled: boolean;
+  goal: ContentGoal;
+  min_pct: number;        // minimum percentage to enforce (e.g. 20)
+  max_consecutive: number; // max posts of this type in a row (e.g. 2)
+  color: string;          // tailwind color name: "green" | "blue" | "purple" | etc.
+}
+
+export interface ContentPlan {
+  id: string;
+  brand_id: string;
+  content_types: ContentTypeConfig[];
+  product_weights: Record<string, number>; // { productId: weight }
+  weekly_posts: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ContentTopic {
+  id: string;
+  brand_id: string;
+  content_type_key: string;
+  topic: string;
+  last_used_at: string | null;
+  usage_count: number;
+  performance_score: number;
+  created_at: string;
+}
+
+export interface GenerateSlot {
+  content_type_key: string;
+  scheduled_date: string; // ISO date string "YYYY-MM-DD"
+  product_id?: string | null;
 }

@@ -72,6 +72,15 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
     icon: "🔄",
     thumb: "/template thumbnails/content/before_after.jpg",
   },
+  {
+    name: "style-choice",
+    label: "Choose Your Style",
+    description: "Side-by-side comparison of two aesthetic options — invites votes and comments.",
+    needs_product: false,
+    product_optional: true,
+    icon: "⚖️",
+    thumb: "/template thumbnails/content/style_choice.jpg",
+  },
 ];
 
 export const PLATFORMS = [
