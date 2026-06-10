@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
-import type { ContentPlan, ContentTypeConfig, GenerateSlot } from "@/types";
+import type { ContentPlan, GenerateSlot } from "@/types";
 
 export const maxDuration = 300;
 
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
       if (!planRow) continue;
 
       const plan = planRow as ContentPlan;
-      const autoTypes = plan.content_types.filter((t: ContentTypeConfig) => t.auto_enabled);
+      const autoTypes = plan.content_types.filter(t => t.auto_enabled);
       if (autoTypes.length === 0) continue;
 
       // Pick content type for today: least recently used auto type
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
       }
 
       // Pick the auto type with fewest recent posts relative to its percentage
-      const scored = autoTypes.map((t: ContentTypeConfig) => ({
+      const scored = autoTypes.map(t => ({
         key: t.key,
         score: (recentCount[t.key] ?? 0) / (t.percentage / 100),
       }));

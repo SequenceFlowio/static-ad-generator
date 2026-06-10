@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSupabase } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
-import type { ContentPlan, ContentTypeConfig, GenerateSlot } from "@/types";
+import type { ContentPlan, GenerateSlot } from "@/types";
 
 export const maxDuration = 300;
 
