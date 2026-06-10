@@ -3,7 +3,7 @@ import { getServerSupabase, uploadToStorage } from "@/lib/supabase";
 import { getAuthUser } from "@/lib/auth";
 import { generateContentPost } from "@/lib/content-prompt-generator";
 import { generateImages } from "@/lib/kie";
-import type { BrandDnaData, ContentPlan, ContentTopic, GenerateSlot, SocialPost, ContentTypeConfig, ContentGoal } from "@/types";
+import type { BrandDnaData, ContentPlan, ContentTopic, GenerateSlot, SocialPost, ContentGoal } from "@/types";
 import type { Platform } from "@/lib/content-templates";
 
 export const maxDuration = 300;
@@ -50,7 +50,7 @@ async function generateOnePost(
 ): Promise<SocialPost | null> {
   const db = getServerSupabase();
 
-  const typeConfig: ContentTypeConfig | undefined = plan.content_types.find(t => t.key === slot.content_type_key);
+  const typeConfig = plan.content_types.find(t => t.key === slot.content_type_key);
   if (!typeConfig) return null;
 
   // 1. Pick topic — least recently used first
