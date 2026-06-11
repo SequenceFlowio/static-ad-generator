@@ -90,7 +90,7 @@ async function generateOnePost(
   // 5. Generate image
   const imageUrls = await generateImages({
     prompt: result.image_prompt,
-    aspect_ratio: platform === "instagram" ? "4:5" : "1:1",
+    aspect_ratio: platform === "instagram" ? "9:16" : "1:1",
     resolution: "2K",
     num_images: 1,
     model: "nano-banana-2",

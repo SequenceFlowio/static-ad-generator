@@ -128,8 +128,8 @@ export default function ContentStudioPage() {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
         <div className="h-8 w-48 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse mb-6" />
-        <div className="grid grid-cols-2 gap-3">
-          {[1,2,3,4,5].map(i => <div key={i} className="h-48 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {[1,2,3,4,5].map(i => <div key={i} className="aspect-[9/16] rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
         </div>
       </div>
     );
@@ -212,7 +212,7 @@ export default function ContentStudioPage() {
             return (
               <div key={type.key} className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 flex flex-col">
                 {/* Image area — 4:5 ratio */}
-                <div className="relative w-full" style={{ aspectRatio: "4/5" }}>
+                <div className="relative w-full" style={{ aspectRatio: "9/16" }}>
                   {sample?.image_urls?.[0] ? (
                     <Image src={sample.image_urls[0]} alt={type.label} fill className="object-cover" unoptimized />
                   ) : isRendering ? (

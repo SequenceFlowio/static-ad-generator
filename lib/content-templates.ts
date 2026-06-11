@@ -84,7 +84,7 @@ export const CONTENT_TEMPLATES: ContentTemplate[] = [
 ];
 
 export const PLATFORMS = [
-  { value: "instagram", label: "Instagram", aspectRatio: "4:5" },
+  { value: "instagram", label: "Instagram", aspectRatio: "9:16" },
   { value: "facebook", label: "Facebook", aspectRatio: "1:1" },
   { value: "linkedin", label: "LinkedIn", aspectRatio: "1:1" },
   { value: "pinterest", label: "Pinterest", aspectRatio: "2:3" },

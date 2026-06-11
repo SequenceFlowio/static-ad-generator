@@ -266,6 +266,9 @@ export async function generateContentPost({
 }): Promise<ContentGenerationResult> {
   const platformTone = PLATFORM_TONE[platform];
   const aspectRatio = getPlatformAspectRatio(platform);
+  const safeZoneNote = aspectRatio === "9:16"
+    ? "SAFE ZONE: This is a 9:16 vertical format. ALL critical content (faces, product, key text, logos) MUST be placed in the center 4:5 safe zone — the middle portion of the frame, avoiding the top 12% and bottom 12% of height. Those edges will be cropped in Instagram feed. Compose as if the image is 4:5 but with extra breathing room top and bottom."
+    : null;
   const templateSchema = TEMPLATE_SCHEMAS[templateName];
   const schemaJson = templateSchema ? JSON.stringify(templateSchema, null, 2) : "{}";
 
@@ -352,7 +355,7 @@ ${strategyBlock}
 
 Template: ${templateName}
 Canvas: ${aspectRatio} (${platform}) — composition must suit this aspect ratio
-Template schema constraints (RESPECT these fixed fields):
+${safeZoneNote ? safeZoneNote + "\n" : ""}Template schema constraints (RESPECT these fixed fields):
 ${schemaJson}
 
 Platform: ${platform}
