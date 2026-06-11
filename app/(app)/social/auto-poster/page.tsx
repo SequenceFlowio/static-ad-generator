@@ -1,400 +1,136 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
+import Image from "next/image";
 import { useLanguage } from "@/components/LanguageProvider";
 import { useBrand } from "@/lib/brand-context";
-import type { ContentPlan, ContentTypeConfig, ContentTopic, ContentGoal } from "@/types";
+import type { ContentPlan, ContentTypeConfig, SocialPost } from "@/types";
 
-interface SocialSettings {
-  enabled: boolean;
-  platforms: string[];
-  post_time: string;
-  require_approval: boolean;
-  frequency: string;
-  content_types: string[];
-}
-
-interface Product {
-  id: string;
-  name: string;
-  image_urls: string[];
-}
-
-const COLOR_MAP: Record<string, string> = {
-  green: "bg-green-500",
-  blue: "bg-blue-500",
-  purple: "bg-purple-500",
-  orange: "bg-orange-500",
-  yellow: "bg-yellow-500",
-  gray: "bg-gray-400",
-  red: "bg-red-500",
-  pink: "bg-pink-500",
+const COLOR_DOT: Record<string, string> = {
+  green: "bg-green-500", blue: "bg-blue-500", purple: "bg-purple-500",
+  orange: "bg-orange-500", yellow: "bg-yellow-500", gray: "bg-gray-400",
 };
 
-const GOAL_LABELS: Record<ContentGoal, { nl: string; en: string }> = {
-  saves: { nl: "Saves", en: "Saves" },
-  engagement: { nl: "Engagement", en: "Engagement" },
-  reach: { nl: "Bereik", en: "Reach" },
-  sales: { nl: "Sales", en: "Sales" },
-  trust: { nl: "Vertrouwen", en: "Trust" },
-};
-
-const GOAL_OPTIONS: ContentGoal[] = ["saves", "engagement", "reach", "sales", "trust"];
-
-// ─── Topic Library ────────────────────────────────────────────────────────────
-
-function TopicLibrary({
-  brandId, contentType, topics, onTopicsChange,
-}: {
-  brandId: string;
-  contentType: ContentTypeConfig;
-  topics: ContentTopic[];
-  onTopicsChange: (topics: ContentTopic[]) => void;
-}) {
-  const { lang } = useLanguage();
-  const [newTopic, setNewTopic] = useState("");
-  const [suggesting, setSuggesting] = useState(false);
-
-  async function addTopic() {
-    if (!newTopic.trim()) return;
-    const res = await fetch(`/api/brands/${brandId}/social/topics`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ content_type_key: contentType.key, topic: newTopic.trim() }),
-    });
-    if (res.ok) {
-      const { topic } = await res.json() as { topic: ContentTopic };
-      onTopicsChange([...topics, topic]);
-      setNewTopic("");
-    }
-  }
-
-  async function deleteTopic(id: string) {
-    await fetch(`/api/brands/${brandId}/social/topics/${id}`, { method: "DELETE" });
-    onTopicsChange(topics.filter(t => t.id !== id));
-  }
-
-  async function suggestTopics() {
-    setSuggesting(true);
-    try {
-      const res = await fetch(`/api/brands/${brandId}/social/topics/suggest`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          content_type_key: contentType.key,
-          content_type_label: contentType.label,
-          template_key: contentType.template_key,
-          count: 6,
-        }),
-      });
-      const data = await res.json() as { topics?: string[] };
-      if (data.topics?.length) {
-        // Bulk insert suggested topics
-        const added: ContentTopic[] = [];
-        for (const topic of data.topics) {
-          const r = await fetch(`/api/brands/${brandId}/social/topics`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ content_type_key: contentType.key, topic }),
-          });
-          if (r.ok) {
-            const { topic: t } = await r.json() as { topic: ContentTopic };
-            added.push(t);
-          }
-        }
-        onTopicsChange([...topics, ...added]);
-      }
-    } finally {
-      setSuggesting(false);
-    }
-  }
-
-  return (
-    <div className="mt-3 border-t border-gray-100 dark:border-gray-800 pt-3 space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          {lang === "nl" ? "Topic bibliotheek" : "Topic library"}
-          <span className="ml-1.5 rounded-full bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] font-normal text-gray-500">{topics.length}</span>
-        </p>
-        <button onClick={suggestTopics} disabled={suggesting}
-          className="flex items-center gap-1 text-[11px] font-medium text-[#C7F56F] hover:text-[#b8e85e] disabled:opacity-50 transition-colors">
-          {suggesting ? (
-            <svg className="h-3 w-3 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-          ) : (
-            <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/></svg>
-          )}
-          {lang === "nl" ? "AI suggesties" : "AI suggest"}
-        </button>
-      </div>
-
-      {topics.length > 0 ? (
-        <div className="space-y-1 max-h-40 overflow-y-auto">
-          {topics.map(t => (
-            <div key={t.id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-100 dark:border-gray-800 px-2.5 py-1.5 text-xs text-gray-700 dark:text-gray-300 group">
-              <span className="flex-1 truncate">{t.topic}</span>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {t.last_used_at && (
-                  <span className="text-[10px] text-gray-400">
-                    {new Date(t.last_used_at).toLocaleDateString("nl-NL", { day: "numeric", month: "short" })}
-                  </span>
-                )}
-                <button onClick={() => deleteTopic(t.id)}
-                  className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all">
-                  <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="text-xs text-gray-400 italic">
-          {lang === "nl" ? "Nog geen topics. Voeg ze toe of genereer ze met AI." : "No topics yet. Add them or generate with AI."}
-        </p>
-      )}
-
-      <div className="flex gap-2">
-        <input
-          value={newTopic}
-          onChange={e => setNewTopic(e.target.value)}
-          onKeyDown={e => e.key === "Enter" && addTopic()}
-          placeholder={lang === "nl" ? "Topic toevoegen…" : "Add topic…"}
-          className="flex-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-xs text-gray-700 dark:text-gray-200 placeholder:text-gray-400 focus:outline-none focus:ring-1 focus:ring-[#C7F56F]/50"
-        />
-        <button onClick={addTopic} disabled={!newTopic.trim()}
-          className="rounded-lg bg-gray-100 dark:bg-gray-800 px-3 py-1.5 text-xs font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 transition-colors">
-          +
-        </button>
-      </div>
-    </div>
-  );
+interface GeneratedPost extends SocialPost {
+  scheduling?: boolean;
+  scheduled?: boolean;
 }
 
-// ─── Content Type Card ────────────────────────────────────────────────────────
-
-function ContentTypeCard({
-  brandId, type, topics, onUpdate, onTopicsChange,
-}: {
-  brandId: string;
-  type: ContentTypeConfig;
-  topics: ContentTopic[];
-  onUpdate: (updated: ContentTypeConfig) => void;
-  onTopicsChange: (topics: ContentTopic[]) => void;
-}) {
-  const { lang } = useLanguage();
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className={`rounded-xl border transition-colors ${expanded ? "border-gray-300 dark:border-gray-600" : "border-gray-200 dark:border-gray-700"} bg-white dark:bg-gray-900`}>
-      {/* Header row */}
-      <div className="flex items-center gap-3 px-4 py-3">
-        <div className={`h-3 w-3 rounded-full shrink-0 ${COLOR_MAP[type.color] ?? "bg-gray-400"}`} />
-        <button onClick={() => setExpanded(e => !e)} className="flex-1 text-left">
-          <span className="text-sm font-semibold text-gray-900 dark:text-white">{type.label}</span>
-          <span className="ml-2 text-xs text-gray-400">{type.percentage}%</span>
-          {type.goal && (
-            <span className="ml-2 rounded-full bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 text-[10px] text-gray-500 dark:text-gray-400">
-              {lang === "nl" ? GOAL_LABELS[type.goal].nl : GOAL_LABELS[type.goal].en}
-            </span>
-          )}
-        </button>
-        <div className="flex items-center gap-3 shrink-0">
-          <span className="text-[11px] text-gray-400">{lang === "nl" ? (type.auto_enabled ? "Auto" : "Handmatig") : (type.auto_enabled ? "Auto" : "Manual")}</span>
-          <button onClick={() => onUpdate({ ...type, auto_enabled: !type.auto_enabled })}
-            className={`relative h-5 w-9 rounded-full transition-colors ${type.auto_enabled ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`}>
-            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${type.auto_enabled ? "translate-x-4" : "translate-x-0.5"}`} />
-          </button>
-          <button onClick={() => setExpanded(e => !e)} className="text-gray-400">
-            <svg className={`h-4 w-4 transition-transform ${expanded ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7"/></svg>
-          </button>
-        </div>
-      </div>
-
-      {/* Expanded edit panel */}
-      {expanded && (
-        <div className="px-4 pb-4 space-y-3 border-t border-gray-100 dark:border-gray-800 pt-3">
-          <div className="grid grid-cols-3 gap-3">
-            {/* Percentage */}
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">% doel</label>
-              <input type="number" min={0} max={100} value={type.percentage}
-                onChange={e => onUpdate({ ...type, percentage: Math.min(100, Math.max(0, parseInt(e.target.value) || 0)) })}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2.5 py-1.5 text-sm text-center font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#C7F56F]/50"
-              />
-            </div>
-            {/* Max consecutive */}
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Max op rij</label>
-              <input type="number" min={1} max={5} value={type.max_consecutive}
-                onChange={e => onUpdate({ ...type, max_consecutive: Math.min(5, Math.max(1, parseInt(e.target.value) || 1)) })}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2.5 py-1.5 text-sm text-center font-bold text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#C7F56F]/50"
-              />
-            </div>
-            {/* Goal */}
-            <div>
-              <label className="block text-[10px] font-semibold uppercase tracking-wide text-gray-400 mb-1">Doel</label>
-              <select value={type.goal}
-                onChange={e => onUpdate({ ...type, goal: e.target.value as ContentGoal })}
-                className="w-full rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 px-2 py-1.5 text-xs text-gray-800 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#C7F56F]/50">
-                {GOAL_OPTIONS.map(g => (
-                  <option key={g} value={g}>{lang === "nl" ? GOAL_LABELS[g].nl : GOAL_LABELS[g].en}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <TopicLibrary brandId={brandId} contentType={type} topics={topics} onTopicsChange={onTopicsChange} />
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── Main Page ────────────────────────────────────────────────────────────────
-
-export default function AutoPosterPage() {
+export default function ContentStudioPage() {
   const { lang } = useLanguage();
   const { brand, loading: brandCtxLoading } = useBrand();
 
-  const [settings, setSettings] = useState<SocialSettings>({
-    enabled: false,
-    platforms: ["instagram"],
-    post_time: "09:00",
-    require_approval: true,
-    frequency: "4x_week",
-    content_types: [],
-  });
   const [plan, setPlan] = useState<ContentPlan | null>(null);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [topicsByType, setTopicsByType] = useState<Record<string, ContentTopic[]>>({});
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [generating, setGenerating] = useState<"week" | "month" | "samples" | null>(null);
-  const [generateResult, setGenerateResult] = useState<{ created: number; errors: string[] } | null>(null);
+  const [platform, setPlatform] = useState("instagram");
+  const [loadingPlan, setLoadingPlan] = useState(false);
 
-  const loadData = useCallback(async (brandId: string) => {
-    setLoading(true);
+  // Per-type render state
+  const [rendering, setRendering] = useState<Record<string, boolean>>({});
+  const [samples, setSamples] = useState<Record<string, GeneratedPost>>({});
+
+  // Week generation
+  const [generatingWeek, setGeneratingWeek] = useState(false);
+  const [weekPosts, setWeekPosts] = useState<GeneratedPost[]>([]);
+
+  // Settings panel
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [postTime, setPostTime] = useState("09:00");
+
+  const loadPlan = useCallback(async (brandId: string) => {
+    setLoadingPlan(true);
     try {
-      const [settingsRes, planRes, productsRes] = await Promise.all([
-        fetch(`/api/brands/${brandId}/social/settings`),
+      const [planRes, settingsRes] = await Promise.all([
         fetch(`/api/brands/${brandId}/social/content-plan`),
-        fetch(`/api/brands/${brandId}/products`),
+        fetch(`/api/brands/${brandId}/social/settings`),
       ]);
-
-      if (settingsRes.ok) {
-        const d = await settingsRes.json() as SocialSettings;
-        setSettings(s => ({ ...s, ...d }));
-      }
       if (planRes.ok) {
         const { plan: p } = await planRes.json() as { plan: ContentPlan };
         setPlan(p);
-        // Load topics for each content type
-        const topicMap: Record<string, ContentTopic[]> = {};
-        await Promise.all(p.content_types.map(async (ct) => {
-          const r = await fetch(`/api/brands/${brandId}/social/topics?content_type_key=${ct.key}`);
-          if (r.ok) {
-            const { topics } = await r.json() as { topics: ContentTopic[] };
-            topicMap[ct.key] = topics;
-          }
-        }));
-        setTopicsByType(topicMap);
       }
-      if (productsRes.ok) {
-        const d = await productsRes.json() as { products?: Product[] };
-        setProducts(d.products ?? []);
+      if (settingsRes.ok) {
+        const s = await settingsRes.json() as { platforms?: string[]; post_time?: string };
+        if (s.platforms?.[0]) setPlatform(s.platforms[0]);
+        if (s.post_time) setPostTime(s.post_time);
       }
     } finally {
-      setLoading(false);
+      setLoadingPlan(false);
     }
   }, []);
 
-  useEffect(() => {
-    if (brand) loadData(brand.id);
-  }, [brand, loadData]);
+  useEffect(() => { if (brand) loadPlan(brand.id); }, [brand, loadPlan]);
 
-  async function handleSave() {
-    if (!brand || !plan) return;
-    setSaving(true);
-    setSaved(false);
-    await Promise.all([
-      fetch(`/api/brands/${brand.id}/social/settings`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(settings),
-      }),
-      fetch(`/api/brands/${brand.id}/social/content-plan`, {
-        method: "PUT",
+  async function renderSample(type: ContentTypeConfig) {
+    if (!brand) return;
+    setRendering(r => ({ ...r, [type.key]: true }));
+    try {
+      const res = await fetch(`/api/brands/${brand.id}/social/generate`, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          content_types: plan.content_types,
-          product_weights: plan.product_weights,
-          weekly_posts: plan.weekly_posts,
+          slots: [{ content_type_key: type.key, scheduled_date: new Date().toISOString().split("T")[0] }],
+          platform,
+          require_approval: true,
         }),
-      }),
-    ]);
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+      });
+      const data = await res.json() as { posts?: GeneratedPost[] };
+      if (data.posts?.[0]) {
+        setSamples(s => ({ ...s, [type.key]: data.posts![0] }));
+      }
+    } finally {
+      setRendering(r => ({ ...r, [type.key]: false }));
+    }
   }
 
-  async function handleGenerate(weeks: number) {
+  async function generateWeek() {
     if (!brand) return;
-    setGenerating(weeks === 1 ? "week" : "month");
-    setGenerateResult(null);
+    setGeneratingWeek(true);
     try {
       const res = await fetch(`/api/brands/${brand.id}/social/generate-schedule`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          weeks,
-          platform: settings.platforms[0] ?? "instagram",
-          require_approval: settings.require_approval,
-        }),
+        body: JSON.stringify({ weeks: 1, platform, require_approval: true }),
       });
-      const d = await res.json() as { created: number; errors?: string[] };
-      setGenerateResult({ created: d.created ?? 0, errors: d.errors ?? [] });
+      const data = await res.json() as { posts?: GeneratedPost[] };
+      setWeekPosts((data.posts ?? []) as GeneratedPost[]);
     } finally {
-      setGenerating(null);
+      setGeneratingWeek(false);
     }
   }
 
-  async function handleGenerateSamples() {
+  async function schedulePost(post: GeneratedPost, date: string) {
     if (!brand) return;
-    setGenerating("samples");
-    setGenerateResult(null);
-    try {
-      const res = await fetch(`/api/brands/${brand.id}/social/generate-samples`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ platform: settings.platforms[0] ?? "instagram" }),
-      });
-      const d = await res.json() as { created: number; errors?: string[] };
-      setGenerateResult({ created: d.created ?? 0, errors: d.errors ?? [] });
-    } finally {
-      setGenerating(null);
+    setWeekPosts(prev => prev.map(p => p.id === post.id ? { ...p, scheduling: true } : p));
+    const scheduledAt = `${date}T${postTime}:00Z`;
+    await fetch(`/api/brands/${brand.id}/social/posts/${post.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "scheduled", scheduled_at: scheduledAt }),
+    });
+    setWeekPosts(prev => prev.map(p =>
+      p.id === post.id ? { ...p, scheduling: false, scheduled: true, scheduled_at: scheduledAt } : p
+    ));
+  }
+
+  async function scheduleAll() {
+    if (!brand) return;
+    const unscheduled = weekPosts.filter(p => !p.scheduled && p.scheduled_at);
+    for (const post of unscheduled) {
+      if (post.scheduled_at) {
+        await schedulePost(post, post.scheduled_at.split("T")[0]);
+      }
     }
   }
 
-  function updateContentType(updatedType: ContentTypeConfig) {
-    if (!plan) return;
-    setPlan(p => p ? { ...p, content_types: p.content_types.map(t => t.key === updatedType.key ? updatedType : t) } : p);
-  }
+  const autoTypes = plan?.content_types.filter(t => t.auto_enabled) ?? [];
+  const allScheduled = weekPosts.length > 0 && weekPosts.every(p => p.scheduled);
 
-  function updateTopicsForType(typeKey: string, topics: ContentTopic[]) {
-    setTopicsByType(prev => ({ ...prev, [typeKey]: topics }));
-  }
-
-  function setProductWeight(productId: string, weight: number) {
-    if (!plan) return;
-    setPlan(p => p ? { ...p, product_weights: { ...p.product_weights, [productId]: weight } } : p);
-  }
-
-  if (brandCtxLoading) {
+  if (brandCtxLoading || loadingPlan) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <div className="h-8 w-40 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse mb-4" />
-        <div className="h-40 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />
+        <div className="h-8 w-48 rounded-lg bg-gray-100 dark:bg-gray-800 animate-pulse mb-6" />
+        <div className="grid grid-cols-2 gap-3">
+          {[1,2,3,4,5].map(i => <div key={i} className="h-48 rounded-2xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+        </div>
       </div>
     );
   }
@@ -402,231 +138,259 @@ export default function AutoPosterPage() {
   if (!brand) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">Auto-poster</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400">
-          {lang === "nl" ? "Selecteer een brand via het menu linksonder." : "Select a brand from the bottom-left menu."}
-        </p>
+        <p className="text-sm text-gray-500">{lang === "nl" ? "Selecteer een brand." : "Select a brand."}</p>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-10">
-      <div className="mb-8">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{brand.name}</p>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Auto-poster</h1>
-        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-          {lang === "nl"
-            ? "Configureer je content strategie en genereer automatisch posts."
-            : "Configure your content strategy and automatically generate posts."}
-        </p>
+    <div className="mx-auto max-w-2xl px-4 py-10 space-y-8">
+
+      {/* Header */}
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-gray-400 mb-1">{brand.name}</p>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+            {lang === "nl" ? "Content Studio" : "Content Studio"}
+          </h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            {lang === "nl"
+              ? "Test per type, genereer je week, plan in."
+              : "Test per type, generate your week, schedule."}
+          </p>
+        </div>
+        <button onClick={() => setSettingsOpen(s => !s)}
+          className="rounded-xl border border-gray-200 dark:border-gray-700 p-2.5 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
+          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-16"><div className="h-6 w-6 animate-spin rounded-full border-2 border-[#C7F56F] border-t-transparent" /></div>
-      ) : (
-        <div className="space-y-6">
-
-          {/* Enable toggle */}
-          <div className="flex items-center justify-between rounded-2xl border-2 border-gray-200 dark:border-gray-700 p-5">
-            <div>
-              <p className="font-semibold text-gray-900 dark:text-white">
-                {lang === "nl" ? "Auto-poster inschakelen" : "Enable auto-poster"}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                {lang === "nl" ? "Dagelijks automatisch content genereren op postdagen" : "Auto-generate content daily on posting days"}
-              </p>
-            </div>
-            <button onClick={() => setSettings(s => ({ ...s, enabled: !s.enabled }))}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.enabled ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`}>
-              <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.enabled ? "translate-x-6" : "translate-x-1"}`} />
-            </button>
-          </div>
-
-          {/* Content Types */}
-          {plan && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-              <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800">
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                  {lang === "nl" ? "Content types" : "Content types"}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {lang === "nl" ? "Klik op een type om topics te beheren en instellingen aan te passen." : "Click a type to manage topics and edit settings."}
-                </p>
-              </div>
-              <div className="p-3 space-y-2">
-                {plan.content_types.map(type => (
-                  <ContentTypeCard
-                    key={type.key}
-                    brandId={brand.id}
-                    type={type}
-                    topics={topicsByType[type.key] ?? []}
-                    onUpdate={updateContentType}
-                    onTopicsChange={topics => updateTopicsForType(type.key, topics)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Product Weights */}
-          {products.length > 0 && plan && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {lang === "nl" ? "Product rotatie" : "Product rotation"}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {lang === "nl" ? "Hogere score = vaker in gegenereerde content" : "Higher weight = appears more in generated content"}
-                  </p>
-                </div>
-                <button onClick={() => {
-                  const equal = Math.floor(100 / products.length);
-                  const weights: Record<string, number> = {};
-                  products.forEach(p => { weights[p.id] = equal; });
-                  setPlan(pl => pl ? { ...pl, product_weights: weights } : pl);
-                }}
-                  className="text-xs font-medium text-[#C7F56F] hover:text-[#b8e85e]">
-                  {lang === "nl" ? "Alle gelijk" : "Equal"}
-                </button>
-              </div>
-              <div className="space-y-2">
-                {products.map(p => {
-                  const weight = plan.product_weights[p.id] ?? 0;
-                  return (
-                    <div key={p.id} className="flex items-center gap-3">
-                      <span className="flex-1 text-sm text-gray-700 dark:text-gray-200 truncate">{p.name}</span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <input type="range" min={0} max={100} value={weight}
-                          onChange={e => setProductWeight(p.id, parseInt(e.target.value))}
-                          className="w-24 accent-[#C7F56F]" />
-                        <span className="w-8 text-right text-xs font-bold text-gray-600 dark:text-gray-300">{weight}%</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* General Settings */}
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4">
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              {lang === "nl" ? "Algemene instellingen" : "General settings"}
-            </p>
-
-            {/* Platforms */}
+      {/* Settings panel (collapsible) */}
+      {settingsOpen && (
+        <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-4 bg-gray-50 dark:bg-gray-900">
+          <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+            {lang === "nl" ? "Instellingen" : "Settings"}
+          </p>
+          <div className="flex gap-6 flex-wrap">
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">Platform</p>
+              <p className="text-xs text-gray-500">Platform</p>
               <div className="flex gap-2">
                 {["instagram", "facebook"].map(p => (
-                  <button key={p} onClick={() => setSettings(s => ({
-                    ...s,
-                    platforms: s.platforms.includes(p) ? s.platforms.filter(x => x !== p) : [...s.platforms, p],
-                  }))}
-                    className={`rounded-xl border-2 px-4 py-2 text-sm font-medium transition-colors ${
-                      settings.platforms.includes(p) ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400"
+                  <button key={p} onClick={() => setPlatform(p)}
+                    className={`rounded-lg border px-3 py-1.5 text-xs font-medium transition-colors ${
+                      platform === p ? "border-[#C7F56F] bg-[#C7F56F]/10 text-gray-900 dark:text-white" : "border-gray-200 dark:border-gray-700 text-gray-500"
                     }`}>
                     {p.charAt(0).toUpperCase() + p.slice(1)}
                   </button>
                 ))}
               </div>
             </div>
-
-            {/* Post time */}
             <div className="space-y-1.5">
-              <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
-                {lang === "nl" ? "Posttijd" : "Post time"}
-              </p>
-              <input type="time" value={settings.post_time}
-                onChange={e => setSettings(s => ({ ...s, post_time: e.target.value }))}
-                className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-[#C7F56F]/50" />
-            </div>
-
-            {/* Approval toggle */}
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                  {lang === "nl" ? "Goedkeuring vereist" : "Require approval"}
-                </p>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  {lang === "nl" ? "Posts verschijnen als concept voor je goedkeurt" : "Posts land as drafts until you approve"}
-                </p>
-              </div>
-              <button onClick={() => setSettings(s => ({ ...s, require_approval: !s.require_approval }))}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${settings.require_approval ? "bg-[#C7F56F]" : "bg-gray-200 dark:bg-gray-700"}`}>
-                <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${settings.require_approval ? "translate-x-6" : "translate-x-1"}`} />
-              </button>
+              <p className="text-xs text-gray-500">{lang === "nl" ? "Posttijd" : "Post time"}</p>
+              <input type="time" value={postTime} onChange={e => setPostTime(e.target.value)}
+                className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-1 focus:ring-[#C7F56F]/50" />
             </div>
           </div>
+          <a href="/social/auto-poster/advanced" className="text-xs text-gray-400 underline hover:text-gray-600">
+            {lang === "nl" ? "Geavanceerde instellingen (topics, product rotatie)" : "Advanced settings (topics, product rotation)"}
+          </a>
+        </div>
+      )}
 
-          {/* Generate buttons */}
-          <div className="rounded-2xl border border-gray-200 dark:border-gray-700 p-5 space-y-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                {lang === "nl" ? "Nu genereren" : "Generate now"}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">
-                {lang === "nl"
-                  ? "Maak posts aan voor de aankomende week of maand. Posts met goedkeuring vereist verschijnen als concept in de planner."
-                  : "Create posts for the upcoming week or month. Posts requiring approval land as drafts in the planner."}
-              </p>
-            </div>
+      {/* Step 1: Content type cards */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">
+          {lang === "nl" ? "Stap 1 — Test per type" : "Step 1 — Test per type"}
+        </p>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+          {autoTypes.map(type => {
+            const sample = samples[type.key];
+            const isRendering = rendering[type.key];
+            return (
+              <div key={type.key} className="rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden bg-white dark:bg-gray-900 flex flex-col">
+                {/* Image area — 4:5 ratio */}
+                <div className="relative w-full" style={{ aspectRatio: "4/5" }}>
+                  {sample?.image_urls?.[0] ? (
+                    <Image src={sample.image_urls[0]} alt={type.label} fill className="object-cover" unoptimized />
+                  ) : isRendering ? (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-50 dark:bg-gray-800 gap-2">
+                      <svg className="h-5 w-5 animate-spin text-[#C7F56F]" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                      </svg>
+                      <p className="text-[10px] text-gray-400">{lang === "nl" ? "Genereren…" : "Generating…"}</p>
+                    </div>
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-gray-50 dark:bg-gray-800">
+                      <div className={`h-8 w-8 rounded-full ${COLOR_DOT[type.color] ?? "bg-gray-400"} opacity-30`} />
+                    </div>
+                  )}
+                  {/* Download button on hover */}
+                  {sample?.image_urls?.[0] && (
+                    <a href={sample.image_urls[0]} download target="_blank" rel="noopener noreferrer"
+                      className="absolute top-2 right-2 rounded-lg bg-black/50 p-1.5 text-white opacity-0 hover:opacity-100 transition-opacity group-hover:opacity-100">
+                      <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                      </svg>
+                    </a>
+                  )}
+                </div>
 
-            {/* Test sample button */}
-            <button onClick={handleGenerateSamples} disabled={!!generating}
-              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:border-[#C7F56F] hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 transition-colors">
-              {generating === "samples" ? (
-                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-              ) : (
-                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.82-1.516 2.585l-1.83-.31m-5.62 2.273a1.5 1.5 0 01-2.122 0l-4.243-4.243" /></svg>
-              )}
-              {lang === "nl" ? "Test: 1 van elk type genereren" : "Test: generate 1 of each type"}
-            </button>
+                {/* Card footer */}
+                <div className="p-3 flex flex-col gap-2 flex-1">
+                  <div className="flex items-center gap-1.5">
+                    <div className={`h-2 w-2 rounded-full shrink-0 ${COLOR_DOT[type.color] ?? "bg-gray-400"}`} />
+                    <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 truncate">{type.label}</span>
+                  </div>
 
-            <div className="flex gap-3">
-              <button onClick={() => handleGenerate(1)} disabled={!!generating}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-[#C7F56F] py-3 text-sm font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 transition-colors">
-                {generating === "week" ? (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                ) : null}
-                {lang === "nl" ? "Genereer deze week" : "Generate this week"}
-              </button>
-              <button onClick={() => handleGenerate(4)} disabled={!!generating}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl border-2 border-[#C7F56F] py-3 text-sm font-bold text-gray-800 dark:text-white hover:bg-[#C7F56F]/10 disabled:opacity-40 transition-colors">
-                {generating === "month" ? (
-                  <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
-                ) : null}
-                {lang === "nl" ? "Genereer deze maand" : "Generate this month"}
-              </button>
-            </div>
+                  {sample?.caption && (
+                    <p className="text-[10px] text-gray-400 line-clamp-2 leading-relaxed">{sample.caption}</p>
+                  )}
 
-            {generateResult && (
-              <div className={`rounded-xl px-4 py-3 text-sm ${generateResult.created > 0 ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300" : "bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400"}`}>
-                {generateResult.created > 0 ? (
-                  <span>
-                    {lang === "nl" ? `${generateResult.created} posts aangemaakt. ` : `${generateResult.created} posts created. `}
-                    <Link href="/social/planner" className="font-semibold underline">
-                      {lang === "nl" ? "Bekijk in de planner →" : "View in planner →"}
-                    </Link>
-                  </span>
-                ) : (
-                  <span>{lang === "nl" ? "Alle slots zijn al ingevuld." : "All slots already have content."}</span>
-                )}
-                {generateResult.errors.length > 0 && (
-                  <p className="mt-1 text-xs text-red-500">{generateResult.errors.length} {lang === "nl" ? "fout(en)" : "error(s)"}</p>
-                )}
+                  <div className="flex gap-1.5 mt-auto">
+                    {sample?.image_urls?.[0] ? (
+                      <>
+                        <a href={sample.image_urls[0]} download target="_blank" rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1 rounded-lg bg-[#C7F56F] py-1.5 text-[11px] font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] transition-colors">
+                          <svg className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                          </svg>
+                          {lang === "nl" ? "Download" : "Download"}
+                        </a>
+                        <button onClick={() => renderSample(type)} disabled={isRendering}
+                          className="rounded-lg border border-gray-200 dark:border-gray-700 px-2.5 py-1.5 text-[11px] text-gray-500 hover:border-gray-300 disabled:opacity-40 transition-colors">
+                          ↺
+                        </button>
+                      </>
+                    ) : (
+                      <button onClick={() => renderSample(type)} disabled={isRendering}
+                        className="w-full rounded-lg border border-gray-200 dark:border-gray-700 py-1.5 text-[11px] font-medium text-gray-600 dark:text-gray-300 hover:border-[#C7F56F] hover:text-gray-800 dark:hover:text-white disabled:opacity-40 transition-colors">
+                        {isRendering ? (lang === "nl" ? "Bezig…" : "Generating…") : (lang === "nl" ? "Render test" : "Render test")}
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Step 2: Generate week */}
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400 mb-3">
+          {lang === "nl" ? "Stap 2 — Genereer volledige week" : "Step 2 — Generate full week"}
+        </p>
+        <button onClick={generateWeek} disabled={generatingWeek}
+          className="w-full flex items-center justify-center gap-2 rounded-2xl bg-[#C7F56F] py-4 text-base font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 transition-colors">
+          {generatingWeek ? (
+            <>
+              <svg className="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+              </svg>
+              {lang === "nl" ? "Week genereren… (~2-4 min)" : "Generating week… (~2-4 min)"}
+            </>
+          ) : (
+            lang === "nl" ? "Genereer volledige week →" : "Generate full week →"
+          )}
+        </button>
+        <p className="text-xs text-gray-400 text-center mt-2">
+          {lang === "nl"
+            ? `Maakt ${autoTypes.length > 0 ? "4" : "0"} posts aan verdeeld over de ${autoTypes.length} actieve types`
+            : `Creates 4 posts spread across ${autoTypes.length} active types`}
+        </p>
+      </div>
+
+      {/* Step 3: Review + schedule */}
+      {weekPosts.length > 0 && (
+        <div>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              {lang === "nl" ? "Stap 3 — Beoordeel & plan in" : "Step 3 — Review & schedule"}
+            </p>
+            {!allScheduled && (
+              <button onClick={scheduleAll}
+                className="text-xs font-semibold text-[#C7F56F] hover:text-[#b8e85e] transition-colors">
+                {lang === "nl" ? "Alles inplannen →" : "Schedule all →"}
+              </button>
             )}
           </div>
 
-          {/* Save button */}
-          <button onClick={handleSave} disabled={saving}
-            className="w-full rounded-xl bg-[#C7F56F] py-3 text-sm font-bold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-40 transition-colors">
-            {saved ? (lang === "nl" ? "✓ Opgeslagen" : "✓ Saved") : saving ? "…" : (lang === "nl" ? "Instellingen opslaan" : "Save settings")}
-          </button>
+          <div className="space-y-3">
+            {weekPosts.map(post => {
+              const scheduledDate = post.scheduled_at
+                ? new Date(post.scheduled_at).toLocaleDateString(lang === "nl" ? "nl-NL" : "en-GB", { weekday: "long", day: "numeric", month: "short" })
+                : null;
+              return (
+                <div key={post.id} className="flex gap-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-3">
+                  {/* Thumbnail */}
+                  {post.image_urls?.[0] && (
+                    <div className="relative h-20 w-16 shrink-0 rounded-xl overflow-hidden">
+                      <Image src={post.image_urls[0]} alt="" fill className="object-cover" unoptimized />
+                    </div>
+                  )}
 
+                  {/* Info */}
+                  <div className="flex-1 min-w-0 flex flex-col justify-between">
+                    <div>
+                      {post.content_type_key && (
+                        <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide">
+                          {post.content_type_key.replace(/-/g, " ")}
+                        </span>
+                      )}
+                      <p className="text-xs text-gray-600 dark:text-gray-300 line-clamp-2 mt-0.5 leading-relaxed">
+                        {post.caption}
+                      </p>
+                    </div>
+                    {scheduledDate && (
+                      <p className="text-[10px] text-gray-400 mt-1">📅 {scheduledDate}</p>
+                    )}
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col gap-1.5 shrink-0">
+                    {post.image_urls?.[0] && (
+                      <a href={post.image_urls[0]} download target="_blank" rel="noopener noreferrer"
+                        className="flex items-center justify-center rounded-lg border border-gray-200 dark:border-gray-700 p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                        <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                        </svg>
+                      </a>
+                    )}
+                    {post.scheduled ? (
+                      <span className="rounded-lg bg-[#C7F56F]/20 px-2.5 py-1.5 text-[11px] font-semibold text-green-700 dark:text-[#C7F56F] text-center whitespace-nowrap">
+                        ✓ {lang === "nl" ? "Ingepland" : "Scheduled"}
+                      </span>
+                    ) : (
+                      <button
+                        onClick={() => post.scheduled_at && schedulePost(post, post.scheduled_at.split("T")[0])}
+                        disabled={post.scheduling}
+                        className="rounded-lg bg-[#C7F56F] px-2.5 py-1.5 text-[11px] font-semibold text-[#1a1a1a] hover:bg-[#b8e85e] disabled:opacity-50 whitespace-nowrap transition-colors">
+                        {post.scheduling ? "…" : (lang === "nl" ? "Inplannen" : "Schedule")}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {allScheduled && (
+            <div className="mt-4 rounded-2xl bg-[#C7F56F]/10 border border-[#C7F56F]/30 px-5 py-4 text-center">
+              <p className="text-sm font-semibold text-gray-800 dark:text-white">
+                {lang === "nl" ? "Week ingepland ✓" : "Week scheduled ✓"}
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                {lang === "nl"
+                  ? "Alle posts worden automatisch gepubliceerd op de geplande tijd."
+                  : "All posts will be automatically published at the scheduled time."}
+              </p>
+            </div>
+          )}
         </div>
       )}
     </div>

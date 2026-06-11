@@ -11,7 +11,7 @@ export const translations: Record<string, Record<Lang, string>> = {
   "nav.analytics": { en: "Analytics", nl: "Analytics" },
   "nav.socialCreate": { en: "Create", nl: "Maken" },
   "nav.socialPlanner": { en: "Planner", nl: "Planner" },
-  "nav.autoPoster": { en: "Auto-poster", nl: "Auto-poster" },
+  "nav.autoPoster": { en: "Studio", nl: "Studio" },
   "nav.tutorial": { en: "Tutorial", nl: "Tutorial" },
   "nav.feedback": { en: "Feedback", nl: "Feedback" },
   "nav.support": { en: "Support", nl: "Support" },
