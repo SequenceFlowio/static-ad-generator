@@ -270,7 +270,7 @@ export default function AutoPosterPage() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [generating, setGenerating] = useState<"week" | "month" | null>(null);
+  const [generating, setGenerating] = useState<"week" | "month" | "samples" | null>(null);
   const [generateResult, setGenerateResult] = useState<{ created: number; errors: string[] } | null>(null);
 
   const loadData = useCallback(async (brandId: string) => {
@@ -351,6 +351,23 @@ export default function AutoPosterPage() {
           platform: settings.platforms[0] ?? "instagram",
           require_approval: settings.require_approval,
         }),
+      });
+      const d = await res.json() as { created: number; errors?: string[] };
+      setGenerateResult({ created: d.created ?? 0, errors: d.errors ?? [] });
+    } finally {
+      setGenerating(null);
+    }
+  }
+
+  async function handleGenerateSamples() {
+    if (!brand) return;
+    setGenerating("samples");
+    setGenerateResult(null);
+    try {
+      const res = await fetch(`/api/brands/${brand.id}/social/generate-samples`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ platform: settings.platforms[0] ?? "instagram" }),
       });
       const d = await res.json() as { created: number; errors?: string[] };
       setGenerateResult({ created: d.created ?? 0, errors: d.errors ?? [] });
@@ -556,6 +573,17 @@ export default function AutoPosterPage() {
                   : "Create posts for the upcoming week or month. Posts requiring approval land as drafts in the planner."}
               </p>
             </div>
+
+            {/* Test sample button */}
+            <button onClick={handleGenerateSamples} disabled={!!generating}
+              className="w-full flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 dark:border-gray-600 py-2.5 text-sm font-medium text-gray-500 dark:text-gray-400 hover:border-[#C7F56F] hover:text-gray-700 dark:hover:text-gray-200 disabled:opacity-40 transition-colors">
+              {generating === "samples" ? (
+                <svg className="h-4 w-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+              ) : (
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}><path strokeLinecap="round" strokeLinejoin="round" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5 14.5M9.75 3.104c-.251.023-.501.05-.75.082m.75-.082a24.301 24.301 0 014.5 0m0 0v5.714c0 .597.237 1.17.659 1.591L19.8 15.3M14.25 3.104c.251.023.501.05.75.082M19.8 15.3l-1.57.393A9.065 9.065 0 0112 15a9.065 9.065 0 00-6.23-.693L5 14.5m14.8.8l1.402 1.402c1 1 .03 2.82-1.516 2.585l-1.83-.31m-5.62 2.273a1.5 1.5 0 01-2.122 0l-4.243-4.243" /></svg>
+              )}
+              {lang === "nl" ? "Test: 1 van elk type genereren" : "Test: generate 1 of each type"}
+            </button>
 
             <div className="flex gap-3">
               <button onClick={() => handleGenerate(1)} disabled={!!generating}
